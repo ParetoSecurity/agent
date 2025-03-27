@@ -55,6 +55,7 @@
 
         checks.pwd-manager = pkgs.testers.runNixOSTest ./test/integration/pwd-manager.nix;
         checks.firewall = pkgs.testers.runNixOSTest ./test/integration/firewall.nix;
+        checks.secureboot = pkgs.testers.runNixOSTest ./test/integration/secureboot.nix;
         checks.screenlock = pkgs.testers.runNixOSTest ./test/integration/screenlock.nix;
 
         packages.test-debian = testPackage {
