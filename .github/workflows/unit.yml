@@ -80,4 +80,3 @@ jobs:
       with:
         coverage-artifact-name: "code-coverage"
         coverage-file-name: "coverage.txt"
-

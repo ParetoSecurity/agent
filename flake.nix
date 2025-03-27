@@ -57,6 +57,7 @@
         checks.firewall = pkgs.testers.runNixOSTest ./test/integration/firewall.nix;
         checks.secureboot = pkgs.testers.runNixOSTest ./test/integration/secureboot.nix;
         checks.screenlock = pkgs.testers.runNixOSTest ./test/integration/screenlock.nix;
+        checks.luks = pkgs.testers.runNixOSTest ./test/integration/luks.nix;
 
         packages.test-debian = testPackage {
           distro = "debian";
