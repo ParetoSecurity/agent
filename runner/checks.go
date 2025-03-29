@@ -57,7 +57,7 @@ func Check(ctx context.Context, claimsTorun []claims.Claim, skipUUIDs []string, 
 
 					// Skip checks that are not runnable
 					if !chk.IsRunnable() {
-						checkLogger.Warn(fmt.Sprintf("%s: %s > %s", claim.Title, chk.Name(), chk.Status()))
+						checkLogger.Warn(fmt.Sprintf("%s: %s > %s %s", claim.Title, chk.Name(), color.YellowString("[DISABLED]"), chk.Status()))
 						return
 					}
 
