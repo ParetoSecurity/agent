@@ -127,7 +127,7 @@ func (f *SSHKeysAlgo) IsRunnable() bool {
 		if strings.HasSuffix(file.Name(), ".pub") {
 			privateKeyPath := filepath.Join(sshPath, strings.TrimSuffix(file.Name(), ".pub"))
 			if _, err := os.Stat(privateKeyPath); err == nil {
-				log.WithField("file", file.Name()).Info("Found private key")
+				log.WithField("file", file.Name()).Debug("Found private key")
 				f.details = "Found private key: " + file.Name()
 				return true
 			}
