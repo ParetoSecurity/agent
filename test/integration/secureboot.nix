@@ -51,7 +51,7 @@ in {
       imports = [
         (pareto {inherit pkgs lib;})
       ];
-      # NixOS SecureBook test VM configuration taken from
+      # NixOS SecureBoot test VM configuration taken from
       # https://github.com/NixOS/nixpkgs/blob/master/nixos/tests/systemd-boot.nix
 
       virtualisation.useSecureBoot = true;
@@ -75,7 +75,7 @@ in {
     out = regularboot.fail("paretosecurity check --only c96524f2-850b-4bb9-abc7-517051b6c14e")
     expected = (
         "  • Starting checks...\n"
-        "  • System Integrity: SecureBoot is enabled > [FAIL] Could not find SecureBoot EFI variable\n"
+        "  • System Integrity: SecureBoot is enabled > [FAIL] System is not running in UEFI mode\n"
         "  • Checks completed.\n"
     )
     assert out == expected, f"Expected did not match actual, got \n{out}"
@@ -96,7 +96,7 @@ in {
     out = secureboot.succeed("paretosecurity check --only c96524f2-850b-4bb9-abc7-517051b6c14e")
     expected = (
         "  • Starting checks...\n"
-        "  • System Integrity: SecureBoot is enabled >\n"
+        "  • System Integrity: SecureBoot is enabled > [OK] SecureBoot is enabled\n"
         "  • Checks completed.\n"
     )
     assert out == expected, f"Expected did not match actual, got \n{out}"
