@@ -41,7 +41,7 @@ var enableCmd = &cobra.Command{
 var disableCmd = &cobra.Command{
 	Use:   "disable [check UUID]",
 	Short: "Disable a specific check",
-	Long:  "Disable a specific check by providing its name.",
+	Long:  "Disable a specific check by providing its id.",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		check := args[0]
