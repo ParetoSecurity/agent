@@ -69,3 +69,47 @@ func TestSaveConfig_Failure(t *testing.T) {
 		t.Errorf("expected error when configPath is a directory, got nil")
 	}
 }
+
+func TestIsCheckDisabled(t *testing.T) {
+	tests := []struct {
+		name           string
+		disabledChecks []string
+		checkUUID      string
+		expected       bool
+	}{
+		{
+			name:           "Check is disabled",
+			disabledChecks: []string{"uuid1", "uuid2"},
+			checkUUID:      "uuid1",
+			expected:       true,
+		},
+		{
+			name:           "Check is not disabled",
+			disabledChecks: []string{"uuid1", "uuid2"},
+			checkUUID:      "uuid3",
+			expected:       false,
+		},
+		{
+			name:           "No checks are disabled",
+			disabledChecks: []string{},
+			checkUUID:      "uuid1",
+			expected:       false,
+		},
+		{
+			name:           "Empty check UUID",
+			disabledChecks: []string{"uuid1", "uuid2", ""},
+			checkUUID:      "",
+			expected:       true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			Config.DisableChecks = tt.disabledChecks
+			actual := IsCheckDisabled(tt.checkUUID)
+			if actual != tt.expected {
+				t.Errorf("IsCheckDisabled() = %v, want %v", actual, tt.expected)
+			}
+		})
+	}
+}

@@ -55,9 +55,13 @@ func Check(ctx context.Context, claimsTorun []claims.Claim, skipUUIDs []string, 
 						return
 					}
 
-					// Skip checks that are not runnable
-					if !chk.IsRunnable() {
-						checkLogger.Warn(fmt.Sprintf("%s: %s > %s %s", claim.Title, chk.Name(), color.YellowString("[DISABLED]"), chk.Status()))
+					// Skip checks that are not runnable or are disabled
+					if !chk.IsRunnable() || shared.IsCheckDisabled(chk.UUID()) {
+						reason := chk.Status()
+						if shared.IsCheckDisabled(chk.UUID()) {
+							reason = "Disabled by the config file"
+						}
+						checkLogger.Warn(fmt.Sprintf("%s: %s > %s %s", claim.Title, chk.Name(), color.YellowString("[DISABLED]"), reason))
 						return
 					}
 

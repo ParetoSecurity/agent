@@ -11,13 +11,10 @@ import (
 var Config ParetoConfig
 var configPath string
 
-type CheckStatus struct {
-	Disabled bool
-}
-
 type ParetoConfig struct {
-	TeamID    string
-	AuthToken string
+	TeamID        string
+	AuthToken     string
+	DisableChecks []string
 }
 
 func init() {
@@ -63,4 +60,17 @@ func LoadConfig() error {
 	}
 
 	return nil
+}
+
+// IsCheckDisabled checks if a given check UUID is present in the list of disabled checks.
+func IsCheckDisabled(checkUUID string) bool {
+	if len(Config.DisableChecks) == 0 {
+		return false
+	}
+	for _, check := range Config.DisableChecks {
+		if check == checkUUID {
+			return true
+		}
+	}
+	return false
 }
