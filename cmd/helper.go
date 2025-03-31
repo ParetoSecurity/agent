@@ -1,18 +1,21 @@
 package cmd
 
 import (
-	"encoding/json"
 	"net"
 	"os"
 
-	"github.com/ParetoSecurity/agent/claims"
+	"github.com/ParetoSecurity/agent/runner"
 	shared "github.com/ParetoSecurity/agent/shared"
 	"github.com/caarlos0/log"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 )
 
-func runHelper() {
+// runHelperServer listens on a socket (passed via file descriptor 0) and handles incoming connections.
+// It's designed to be run in a systemd context where systemd provides the socket.
+// The server accepts a single connection, handles it using runner.HandleConnection, and then exits.
+// It logs the socket path and version information upon startup and logs any errors encountered during socket creation or connection acceptance.
+func runHelperServer() {
 	// Get the socket from file descriptor 0
 	file := os.NewFile(0, "socket")
 	listener, err := net.FileListener(file)
@@ -20,7 +23,7 @@ func runHelper() {
 		log.WithError(err).Fatal("Failed to create listener, not running in systemd context")
 	}
 	defer listener.Close()
-	log.WithField("socket", shared.SocketPath).WithField("version", shared.Version).Info("Listening on socket")
+	log.WithField("socket", runner.SocketPath).WithField("version", shared.Version).Info("Listening on socket")
 
 	for {
 		conn, err := listener.Accept()
@@ -29,59 +32,8 @@ func runHelper() {
 			continue
 		}
 
-		handleConnection(conn)
+		runner.HandleConnection(conn)
 		break
-	}
-}
-
-// handleConnection handles an incoming network connection.
-// It reads input from the connection, processes the input to run checks,
-// and sends back the status of the checks as a JSON response.
-//
-// The input is expected to be a JSON object containing a "uuid" key.
-// The function will look for checks that are runnable, require root,
-// and match the provided UUID. It will run those checks and collect their status.
-func handleConnection(conn net.Conn) {
-	defer conn.Close()
-	log.Info("Connection received")
-
-	// Read input from connection
-	decoder := json.NewDecoder(conn)
-	var input map[string]string
-	if err := decoder.Decode(&input); err != nil {
-		log.Debugf("Failed to decode input: %v\n", err)
-		return
-	}
-	uuid, ok := input["uuid"]
-	if !ok {
-		log.Debugf("UUID not found in input")
-		return
-	}
-	log.Debugf("Received UUID: %s", uuid)
-
-	status := map[string]bool{}
-	for _, claim := range claims.All {
-		for _, chk := range claim.Checks {
-			if chk.IsRunnable() && chk.RequiresRoot() && uuid == chk.UUID() {
-				log.Infof("Running check %s\n", chk.UUID())
-				if chk.Run() != nil {
-					log.Warnf("Failed to run check %s\n", chk.UUID())
-					continue
-				}
-				log.Infof("Check %s completed\n", chk.UUID())
-				status[chk.UUID()] = chk.Passed()
-			}
-		}
-	}
-
-	// Handle the request
-	response, err := json.Marshal(status)
-	if err != nil {
-		log.Debugf("Failed to marshal response: %v\n", err)
-		return
-	}
-	if _, err = conn.Write(response); err != nil {
-		log.Debugf("Failed to write to connection: %v\n", err)
 	}
 }
 
@@ -93,10 +45,10 @@ var helperCmd = &cobra.Command{
 
 		socketFlag, _ := cmd.Flags().GetString("socket")
 		if lo.IsNotEmpty(socketFlag) {
-			shared.SocketPath = socketFlag
+			runner.SocketPath = socketFlag
 		}
 
-		runHelper()
+		runHelperServer()
 	},
 }
 

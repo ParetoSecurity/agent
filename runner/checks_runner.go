@@ -65,22 +65,43 @@ func Check(ctx context.Context, claimsTorun []claims.Claim, skipUUIDs []string, 
 						return
 					}
 
-					if err := chk.Run(); err != nil {
-						log.WithError(err).Warnf("%s: %s > %s", claim.Title, chk.Name(), err.Error())
-					}
+					if chk.RequiresRoot() {
+						log.Debug("Running check via root helper")
+						// Run as root
+						status, err := RunCheckViaRoot(chk.UUID())
+						if err != nil {
+							log.WithError(err).Warn("Failed to run check via root helper")
+						}
 
-					if chk.Passed() {
-						checkLogger.Info(fmt.Sprintf("%s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk)))
+						if status.Passed {
+							checkLogger.Info(fmt.Sprintf("[root] %s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk)))
+						} else {
+							checkLogger.Warn(fmt.Sprintf("[root] %s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk)))
+						}
+						shared.UpdateLastState(shared.LastState{
+							UUID:    chk.UUID(),
+							Name:    chk.Name(),
+							State:   status.Passed,
+							Details: status.Details,
+						})
 					} else {
-						checkLogger.Warn(fmt.Sprintf("%s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk)))
+						if err := chk.Run(); err != nil {
+							log.WithError(err).Warnf("%s: %s > %s", claim.Title, chk.Name(), err.Error())
+						}
+
+						if chk.Passed() {
+							checkLogger.Info(fmt.Sprintf("%s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk)))
+						} else {
+							checkLogger.Warn(fmt.Sprintf("%s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk)))
+						}
+						shared.UpdateLastState(shared.LastState{
+							UUID:    chk.UUID(),
+							Name:    chk.Name(),
+							State:   chk.Passed(),
+							Details: chk.Status(),
+						})
 					}
 
-					shared.UpdateLastState(shared.LastState{
-						UUID:    chk.UUID(),
-						Name:    chk.Name(),
-						State:   chk.Passed(),
-						Details: chk.Status(),
-					})
 				}
 			}(claim, chk)
 		}

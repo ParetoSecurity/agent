@@ -26,20 +26,6 @@ func (s *SSHConfigCheck) FailedMessage() string {
 }
 
 func (s *SSHConfigCheck) Run() error {
-	if s.RequiresRoot() && !shared.IsRoot() {
-		log.Debug("Running check via root helper")
-		// Run as root
-		passed, err := shared.RunCheckViaHelper(s.UUID())
-		if err != nil {
-			log.WithError(err).Warn("Failed to run check via root helper")
-			return err
-		}
-		s.passed = passed
-		return nil
-	}
-	log.Debug("Running check directly")
-
-	s.passed = true
 
 	//run sshd -T to get the sshd config
 	configRaw, err := shared.RunCommand("sshd", "-T")
@@ -71,7 +57,6 @@ func (s *SSHConfigCheck) Passed() bool {
 }
 
 func (s *SSHConfigCheck) IsRunnable() bool {
-	s.status = "SSHd is not installed or not running"
 
 	// Check if sshd service is running via systemd
 	sshdStatus, _ := shared.RunCommand("systemctl", "is-active", "sshd")
