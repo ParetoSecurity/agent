@@ -26,6 +26,7 @@ func (s *SSHConfigCheck) FailedMessage() string {
 }
 
 func (s *SSHConfigCheck) Run() error {
+	s.passed = true
 
 	//run sshd -T to get the sshd config
 	configRaw, err := shared.RunCommand("sshd", "-T")
