@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"errors"
 	"os"
 	"testing"
 
@@ -10,10 +11,12 @@ import (
 
 func TestSecureBoot_Run(t *testing.T) {
 	tests := []struct {
-		name           string
-		mockFiles      map[string][]byte
-		expectedPassed bool
-		expectedStatus string
+		name            string
+		mockFiles       map[string][]byte
+		expectedPassed  bool
+		expectedStatus  string
+		osStatError     error
+		osReadFileError error
 	}{
 		{
 			name: "SecureBoot enabled",
@@ -37,6 +40,20 @@ func TestSecureBoot_Run(t *testing.T) {
 			expectedPassed: false,
 			expectedStatus: "Could not find SecureBoot EFI variable",
 		},
+		{
+			name:           "System is not running in UEFI mode",
+			mockFiles:      map[string][]byte{},
+			expectedPassed: false,
+			expectedStatus: "System is not running in UEFI mode",
+			osStatError:    os.ErrNotExist,
+		},
+		{
+			name:            "Could not read SecureBoot status",
+			mockFiles:       map[string][]byte{"/sys/firmware/efi/efivars/SecureBoot-1234": {}},
+			expectedPassed:  false,
+			expectedStatus:  "Could not read SecureBoot status",
+			osReadFileError: errors.New("read error"),
+		},
 	}
 
 	for _, tt := range tests {
@@ -46,56 +63,15 @@ func TestSecureBoot_Run(t *testing.T) {
 				return lo.Keys(tt.mockFiles), nil
 			}
 			osReadFileMock = func(file string) ([]byte, error) {
-				return tt.mockFiles[file], nil
+				return tt.mockFiles[file], tt.osReadFileError
+			}
+			osStatMock = func(_ string) (os.FileInfo, error) {
+				return nil, tt.osStatError
 			}
 			sb := &SecureBoot{}
 			err := sb.Run()
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedPassed, sb.Passed())
-			assert.Equal(t, tt.expectedStatus, sb.Status())
-		})
-	}
-}
-
-func TestSecureBoot_IsRunnable(t *testing.T) {
-	tests := []struct {
-		name           string
-		mockStatError  error
-		expectedResult bool
-		expectedStatus string
-	}{
-		{
-			name:           "System running in UEFI mode",
-			mockStatError:  nil,
-			expectedResult: true,
-			expectedStatus: "System is not running in UEFI mode",
-		},
-		{
-			name:           "Some other errror",
-			mockStatError:  os.ErrPermission,
-			expectedResult: true,
-			expectedStatus: "System is not running in UEFI mode",
-		},
-		{
-			name:           "System not running in UEFI mode",
-			mockStatError:  os.ErrNotExist,
-			expectedResult: false,
-			expectedStatus: "System is not running in UEFI mode",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Mock os.Stat
-			osStatMock = func(_ string) (os.FileInfo, error) {
-				if tt.mockStatError != nil {
-					return nil, tt.mockStatError
-				}
-				return nil, nil
-			}
-			sb := &SecureBoot{}
-			result := sb.IsRunnable()
-			assert.Equal(t, tt.expectedResult, result)
 			assert.Equal(t, tt.expectedStatus, sb.Status())
 		})
 	}
@@ -147,4 +123,13 @@ func TestSecureBoot_PassedMessage(t *testing.T) {
 	if sb.PassedMessage() != expectedPassedMessage {
 		t.Errorf("Expected PassedMessage %s, got %s", expectedPassedMessage, sb.PassedMessage())
 	}
+}
+func TestSecureBoot_IsRunnable(t *testing.T) {
+	sb := &SecureBoot{}
+	assert.True(t, sb.IsRunnable(), "SecureBoot should be runnable")
+}
+
+func TestSecureBoot_RequiresRoot(t *testing.T) {
+	sb := &SecureBoot{}
+	assert.False(t, sb.RequiresRoot(), "SecureBoot should not require root")
 }

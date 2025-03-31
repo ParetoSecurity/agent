@@ -2,7 +2,6 @@
 package checks
 
 import (
-	"path/filepath"
 	"strings"
 
 	"github.com/ParetoSecurity/agent/shared"
@@ -24,7 +23,7 @@ func (f *Autologin) Run() error {
 	f.passed = true
 
 	// Check KDE (SDDM) autologin
-	sddmFiles, _ := filepath.Glob("/etc/sddm.conf.d/*.conf")
+	sddmFiles, _ := filepathGlob("/etc/sddm.conf.d/*.conf")
 	for _, file := range sddmFiles {
 		content, err := shared.ReadFile(file)
 		if err == nil {

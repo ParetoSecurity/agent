@@ -9,12 +9,13 @@ import (
 
 func TestAutologin_Run(t *testing.T) {
 	tests := []struct {
-		name           string
-		mockFiles      map[string]string
-		mockCommand    string
-		mockCommandOut string
-		expectedPassed bool
-		expectedStatus string
+		name             string
+		mockFiles        map[string]string
+		mockFilepathGlob map[string][]string
+		mockCommand      string
+		mockCommandOut   string
+		expectedPassed   bool
+		expectedStatus   string
 	}{
 		{
 			name: "SDDM autologin enabled in conf.d",
@@ -57,6 +58,18 @@ func TestAutologin_Run(t *testing.T) {
 			expectedStatus: "Automatic login is enabled in GNOME",
 		},
 		{
+			name: "Multiple SDDM configs with autologin enabled",
+			mockFiles: map[string]string{
+				"/etc/sddm.conf.d/10-test.conf": "Autologin=true",
+				"/etc/sddm.conf.d/20-test.conf": "Autologin=true",
+			},
+			mockFilepathGlob: map[string][]string{
+				"/etc/sddm.conf.d/*.conf": {"/etc/sddm.conf.d/10-test.conf", "/etc/sddm.conf.d/20-test.conf"},
+			},
+			expectedPassed: false,
+			expectedStatus: "Autologin=true in SDDM is enabled",
+		},
+		{
 			name:           "No autologin enabled",
 			expectedPassed: true,
 			expectedStatus: "Automatic login is off",
@@ -67,6 +80,16 @@ func TestAutologin_Run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Mock shared.ReadFile
 			shared.ReadFileMocks = tt.mockFiles
+
+			// Mock filepath.Glob
+			filepathGlobMock = func(pattern string) ([]string, error) {
+				if tt.mockFilepathGlob != nil {
+					if files, ok := tt.mockFilepathGlob[pattern]; ok {
+						return files, nil
+					}
+				}
+				return nil, nil
+			}
 			// Mock shared.RunCommand
 			shared.RunCommandMocks = convertCommandMapToMocks(map[string]string{
 				tt.mockCommand: tt.mockCommandOut,
@@ -129,4 +152,9 @@ func TestAutologin_PassedMessage(t *testing.T) {
 	if a.PassedMessage() != expectedPassedMessage {
 		t.Errorf("Expected PassedMessage %s, got %s", expectedPassedMessage, a.PassedMessage())
 	}
+}
+
+func TestAutologin_IsRunnable(t *testing.T) {
+	a := &Autologin{}
+	assert.True(t, a.IsRunnable(), "Autologin check should be runnable")
 }
