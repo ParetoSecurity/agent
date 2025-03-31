@@ -130,3 +130,8 @@ func TestAutologin_PassedMessage(t *testing.T) {
 		t.Errorf("Expected PassedMessage %s, got %s", expectedPassedMessage, a.PassedMessage())
 	}
 }
+
+func TestAutologin_IsRunnable(t *testing.T) {
+	a := &Autologin{}
+	assert.True(t, a.IsRunnable(), "Autologin check should be runnable")
+}

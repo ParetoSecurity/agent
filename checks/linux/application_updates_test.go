@@ -152,3 +152,8 @@ func TestApplicationUpdates_PassedMessage(t *testing.T) {
 		t.Errorf("Expected PassedMessage %s, got %s", expectedPassedMessage, su.PassedMessage())
 	}
 }
+
+func TestApplicationUpdates_IsRunnable(t *testing.T) {
+	su := &ApplicationUpdates{}
+	assert.True(t, su.IsRunnable(), "ApplicationUpdates should always be runnable")
+}
