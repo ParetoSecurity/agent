@@ -53,8 +53,8 @@
           inherit pkgs system flakePackage;
         };
 
+        checks.pwd-manager = pkgs.testers.runNixOSTest ./test/integration/pwd-manager.nix;
         checks.firewall = pkgs.testers.runNixOSTest ./test/integration/firewall.nix;
-
         checks.screenlock = pkgs.testers.runNixOSTest ./test/integration/screenlock.nix;
 
         packages.test-debian = testPackage {
