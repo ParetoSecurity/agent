@@ -16,8 +16,8 @@ func TestSaveConfig_Success(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	// Set configPath to a temporary file.
-	configPath = filepath.Join(tempDir, "pareto.toml")
+	// Set ConfigPath to a temporary file.
+	ConfigPath = filepath.Join(tempDir, "pareto.toml")
 
 	// Prepare a test configuration.
 
@@ -32,7 +32,7 @@ func TestSaveConfig_Success(t *testing.T) {
 	}
 
 	// Read the written file.
-	data, err := os.ReadFile(configPath)
+	data, err := os.ReadFile(ConfigPath)
 	if err != nil {
 		t.Fatalf("failed to read config file: %v", err)
 	}
@@ -61,12 +61,12 @@ func TestSaveConfig_Failure(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	// Set configPath to a directory to simulate a failure (os.Create should fail).
-	configPath = tempDir
+	// Set ConfigPath to a directory to simulate a failure (os.Create should fail).
+	ConfigPath = tempDir
 
 	// Call SaveConfig expecting an error.
 	if err := SaveConfig(); err == nil {
-		t.Errorf("expected error when configPath is a directory, got nil")
+		t.Errorf("expected error when ConfigPath is a directory, got nil")
 	}
 }
 
