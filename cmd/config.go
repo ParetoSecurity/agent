@@ -25,7 +25,7 @@ var resetCmd = &cobra.Command{
 var enableCmd = &cobra.Command{
 	Use:   "enable [check UUID]",
 	Short: "Enable a specific check",
-	Long:  "Enable a specific check by providing its name.",
+	Long:  "Enable a specific check by providing its id.",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		check := args[0]
