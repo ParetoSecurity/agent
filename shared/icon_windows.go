@@ -13,4 +13,7 @@ var (
 
 	//go:embed icon.ico
 	IconBlack []byte
+
+	//go:embed icon_large.png
+	IconLarge []byte
 )
