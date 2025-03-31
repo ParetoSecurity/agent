@@ -1,8 +1,6 @@
 package checks
 
-import (
-	"os"
-)
+import "os"
 
 // SecureBoot checks secure boot configuration.
 type SecureBoot struct {
@@ -17,6 +15,12 @@ func (f *SecureBoot) Name() string {
 
 // Run executes the check
 func (f *SecureBoot) Run() error {
+
+	if _, err := osStat("/sys/firmware/efi/efivars/"); err != nil && os.IsNotExist(err) {
+		f.passed = false
+		f.status = "System is not running in UEFI mode"
+		return nil
+	}
 
 	// Find and read the SecureBoot EFI variable
 	pattern := "/sys/firmware/efi/efivars/SecureBoot-*"
@@ -53,10 +57,6 @@ func (f *SecureBoot) Passed() bool {
 
 // IsRunnable returns whether SecureBoot is runnable.
 func (f *SecureBoot) IsRunnable() bool {
-	f.status = "System is not running in UEFI mode"
-	if _, err := osStat("/sys/firmware/efi/efivars/"); err != nil && os.IsNotExist(err) {
-		return false
-	}
 	return true
 }
 
