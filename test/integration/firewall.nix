@@ -27,6 +27,9 @@ in {
         (nginx {inherit pkgs;})
       ];
       networking.firewall.enable = false;
+      environment.systemPackages = with pkgs; [
+        iptables
+      ];
     };
 
     walled = {
@@ -39,6 +42,9 @@ in {
         (nginx {inherit pkgs;})
       ];
       networking.firewall.enable = true;
+      environment.systemPackages = with pkgs; [
+        iptables
+      ];
     };
   };
 
