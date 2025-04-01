@@ -12,32 +12,11 @@ import (
 // Firewall checks the system firewall.
 type Firewall struct {
 	passed bool
-	status string
 }
 
 // Name returns the name of the check
 func (f *Firewall) Name() string {
 	return "Firewall is on"
-}
-
-func (f *Firewall) checkUFW() bool {
-	output, err := shared.RunCommand("ufw", "status")
-	if err != nil {
-		log.WithError(err).WithField("output", output).Warn("Failed to check UFW status")
-		return false
-	}
-	log.WithField("output", output).Debug("UFW status")
-	return strings.Contains(output, "Status: active")
-}
-
-func (f *Firewall) checkFirewalld() bool {
-	output, err := shared.RunCommand("systemctl", "is-active", "firewalld")
-	if err != nil {
-		log.WithError(err).WithField("output", output).Warn("Failed to check firewalld status")
-		return false
-	}
-	log.WithField("output", output).Debug("Firewalld status")
-	return output == "active"
 }
 
 // checkIptables checks if iptables is active
@@ -127,28 +106,7 @@ func (f *Firewall) checkIptables() bool {
 
 // Run executes the check
 func (f *Firewall) Run() error {
-	if f.status == "Neither ufw, firewalld nor iptables are present, check cannot run" {
-		f.passed = false
-		return nil
-	}
-
-	f.passed = false
-	if !f.passed {
-		f.passed = f.checkUFW()
-	}
-
-	if !f.passed {
-		f.passed = f.checkFirewalld()
-	}
-
-	if !f.passed {
-		f.passed = f.checkIptables()
-	}
-
-	if !f.passed {
-		f.status = f.FailedMessage()
-	}
-
+	f.passed = f.checkIptables()
 	return nil
 }
 
@@ -157,25 +115,8 @@ func (f *Firewall) Passed() bool {
 	return f.passed
 }
 
-func (f *Firewall) fwCmdsAreAvailable() bool {
-	// Check if ufw or firewalld are present
-	_, errUFW := lookPath("ufw")
-	_, errFirewalld := lookPath("firewalld")
-	_, errIptables := lookPath("iptables")
-	if errUFW != nil && errFirewalld != nil && errIptables != nil {
-		f.status = "Neither ufw, firewalld nor iptables are present, check cannot run"
-		return false
-	}
-	return true
-}
-
 // IsRunnable returns whether Firewall is runnable.
 func (f *Firewall) IsRunnable() bool {
-	if !f.fwCmdsAreAvailable() {
-		f.status = "Neither ufw, firewalld nor iptables are present, check cannot run"
-		return true
-	}
-
 	return true
 }
 
@@ -203,9 +144,6 @@ func (f *Firewall) RequiresRoot() bool {
 func (f *Firewall) Status() string {
 	if f.Passed() {
 		return f.PassedMessage()
-	}
-	if f.status != "" {
-		return f.status
 	}
 
 	return f.FailedMessage()
