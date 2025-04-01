@@ -60,7 +60,7 @@ in {
     walled.succeed("curl --fail --connect-timeout 2 http://wideopen")
 
     # Test 1: check fails with iptables disabled
-    out = wideopen.fail("paretosecurity check --only 2e46c89a-5461-4865-a92e-3b799c12034a")
+    out = wideopen.fail("paretosecurity check --only 2e46c89a-5461-4865-a92e-3b799c12034a --verbose")
     expected = (
         "  • Starting checks...\n"
         "  • [root] Firewall & Sharing: Firewall is on > [FAIL] Firewall is off\n"
@@ -69,7 +69,7 @@ in {
     assert out == expected, f"{expected} did not match actual, got \n{out}"
 
     # Test 2: check succeeds with iptables enabled
-    out = walled.succeed("paretosecurity check --only 2e46c89a-5461-4865-a92e-3b799c12034a")
+    out = walled.succeed("paretosecurity check --only 2e46c89a-5461-4865-a92e-3b799c12034a --verbose")
     expected = (
         "  • Starting checks...\n"
         "  • [root] Firewall & Sharing: Firewall is on > [OK] Firewall is on\n"
