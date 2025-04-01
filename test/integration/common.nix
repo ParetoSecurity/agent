@@ -9,6 +9,10 @@
       enable = true;
       package = pkgs.callPackage ../../package.nix {inherit lib;};
     };
+    environment.systemPackages = with pkgs; [
+      iptables
+      ip6tables
+    ];
   };
 
   # Easier tests debugging by SSH-ing into nodes
