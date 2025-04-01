@@ -1,5 +1,5 @@
 package notify
 
-func Blocking(message string) {
-
+func Blocking(message string) (string, error) {
+	return "", nil
 }
