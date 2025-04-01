@@ -137,7 +137,7 @@ func (f *Firewall) FailedMessage() string {
 
 // RequiresRoot returns whether the check requires root access
 func (f *Firewall) RequiresRoot() bool {
-	return false
+	return true
 }
 
 // Status returns the status of the check
