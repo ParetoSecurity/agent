@@ -16,7 +16,7 @@ type Firewall struct {
 
 // Name returns the name of the check
 func (f *Firewall) Name() string {
-	return "Firewall is on"
+	return "Firewall is configured"
 }
 
 // checkIptables checks if iptables is active
