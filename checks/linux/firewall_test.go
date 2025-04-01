@@ -9,7 +9,7 @@ import (
 
 func TestFirewall_Name(t *testing.T) {
 	f := &Firewall{}
-	expectedName := "Firewall is on"
+	expectedName := "Firewall is configured"
 	if f.Name() != expectedName {
 		t.Errorf("Expected Name %s, got %s", expectedName, f.Name())
 	}
