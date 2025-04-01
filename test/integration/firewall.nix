@@ -66,7 +66,7 @@ in {
         "  • [root] Firewall & Sharing: Firewall is on > [FAIL] Neither ufw, firewalld nor iptables are present, check cannot run\n"
         "  • Checks completed.\n"
     )
-    assert out == expected, f"Expected did not match actual, got \n{out}"
+    assert out == expected, f"{expected} did not match actual, got \n{out}"
 
     # Test 2: check succeeds with iptables enabled
     out = walled.succeed("paretosecurity check --only 2e46c89a-5461-4865-a92e-3b799c12034a")
@@ -75,6 +75,6 @@ in {
         "  • [root] Firewall & Sharing: Firewall is on > [OK] Firewall is on\n"
         "  • Checks completed.\n"
     )
-    assert out == expected, f"Expected did not match actual, got \n{out}"
+    assert out == expected, f"{expected} did not match actual, got \n{out}"
   '';
 }
