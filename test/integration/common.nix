@@ -11,7 +11,6 @@
     };
     environment.systemPackages = with pkgs; [
       iptables
-      ip6tables
     ];
   };
 
