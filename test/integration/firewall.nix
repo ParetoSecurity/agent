@@ -63,7 +63,7 @@ in {
     out = wideopen.fail("paretosecurity check --only 2e46c89a-5461-4865-a92e-3b799c12034a")
     expected = (
         "  • Starting checks...\n"
-        "  • [root] Firewall & Sharing: Firewall is on > [FAIL] Neither ufw, firewalld nor iptables are present, check cannot run\n"
+        "  • [root] Firewall & Sharing: Firewall is on > [FAIL] Firewall is off\n"
         "  • Checks completed.\n"
     )
     assert out == expected, f"{expected} did not match actual, got \n{out}"
