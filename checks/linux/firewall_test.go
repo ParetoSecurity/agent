@@ -7,137 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCheckUFW(t *testing.T) {
-	tests := []struct {
-		name           string
-		mockOutput     string
-		mockError      error
-		expectedResult bool
-	}{
-		{
-			name:           "UFW is active",
-			mockOutput:     "Status: active",
-			mockError:      nil,
-			expectedResult: true,
-		},
-		{
-			name:           "UFW is inactive",
-			mockOutput:     "Status: inactive",
-			mockError:      nil,
-			expectedResult: false,
-		},
-		{
-			name:           "UFW command error",
-			mockOutput:     "",
-			mockError:      assert.AnError,
-			expectedResult: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			shared.RunCommandMocks = convertCommandMapToMocks(map[string]string{
-				"ufw status": tt.mockOutput,
-			})
-			f := &Firewall{}
-			result := f.checkUFW()
-			assert.Equal(t, tt.expectedResult, result)
-		})
-	}
-}
-
-func TestCheckFirewalld(t *testing.T) {
-	tests := []struct {
-		name           string
-		mockOutput     string
-		mockError      error
-		expectedResult bool
-	}{
-		{
-			name:           "Firewalld is active",
-			mockOutput:     "active",
-			mockError:      nil,
-			expectedResult: true,
-		},
-		{
-			name:           "Firewalld is inactive",
-			mockOutput:     "inactive",
-			mockError:      nil,
-			expectedResult: false,
-		},
-		{
-			name:           "Firewalld command error",
-			mockOutput:     "",
-			mockError:      assert.AnError,
-			expectedResult: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			shared.RunCommandMocks = convertCommandMapToMocks(map[string]string{
-				"systemctl is-active firewalld": tt.mockOutput,
-			})
-
-			f := &Firewall{}
-			result := f.checkFirewalld()
-			assert.Equal(t, tt.expectedResult, result)
-			assert.NotEmpty(t, f.UUID())
-			assert.True(t, f.RequiresRoot())
-		})
-	}
-}
-
-func TestFirewall_Run(t *testing.T) {
-	tests := []struct {
-		name                string
-		mockUFWOutput       string
-		mockFirewalldOutput string
-		expectedPassed      bool
-		expectedStatus      string
-	}{
-		{
-			name:                "UFW is active",
-			mockUFWOutput:       "Status: active",
-			mockFirewalldOutput: "",
-			expectedPassed:      true,
-			expectedStatus:      "Firewall is on",
-		},
-		{
-			name:                "Firewalld is active",
-			mockUFWOutput:       "Status: inactive",
-			mockFirewalldOutput: "active",
-			expectedPassed:      true,
-			expectedStatus:      "Firewall is on",
-		},
-		{
-			name:                "Both UFW and Firewalld are inactive",
-			mockUFWOutput:       "Status: inactive",
-			mockFirewalldOutput: "inactive",
-			expectedPassed:      false,
-			expectedStatus:      "Firewall is off",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			shared.RunCommandMocks = convertCommandMapToMocks(map[string]string{
-				"ufw status":                    tt.mockUFWOutput,
-				"systemctl is-active firewalld": tt.mockFirewalldOutput,
-			})
-
-			f := &Firewall{}
-			err := f.Run()
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expectedPassed, f.Passed())
-			assert.Equal(t, tt.expectedStatus, f.Status())
-		})
-	}
-}
-
 func TestFirewall_Name(t *testing.T) {
 	f := &Firewall{}
-	expectedName := "Firewall is on"
+	expectedName := "Firewall is configured"
 	if f.Name() != expectedName {
 		t.Errorf("Expected Name %s, got %s", expectedName, f.Name())
 	}
@@ -181,6 +53,16 @@ func TestFirewall_PassedMessage(t *testing.T) {
 	if f.PassedMessage() != expectedPassedMessage {
 		t.Errorf("Expected PassedMessage %s, got %s", expectedPassedMessage, f.PassedMessage())
 	}
+}
+
+func TestFirewall_IsRunnable(t *testing.T) {
+	firewall := &Firewall{}
+	assert.True(t, firewall.IsRunnable(), "Firewall should always be runnable")
+}
+
+func TestFirewall_RequiresRoot(t *testing.T) {
+	f := &Firewall{}
+	assert.True(t, f.RequiresRoot(), "Firewall check should require root access")
 }
 
 func TestCheckIptables(t *testing.T) {
@@ -235,8 +117,8 @@ abc  ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0
 		{
 			name: "NixOS style custom chain",
 			mockOutput: `Chain INPUT (policy ACCEPT)
-num  target     prot opt source               destination         
-1    nixos-fw   all  --  anywhere             anywhere            
+num  target     prot opt source               destination
+1    nixos-fw   all  --  anywhere             anywhere
 `,
 			mockError:      nil,
 			expectedResult: true,
@@ -255,84 +137,106 @@ num  target     prot opt source               destination
 	}
 }
 
-func TestFirewall_fwCmdsAreAvailable(t *testing.T) {
+func TestCheckIptables_CommandError(t *testing.T) {
+	shared.RunCommandMocks = convertCommandMapToMocks(map[string]string{
+		"iptables -L INPUT --line-numbers": "",
+	})
+	shared.RunCommandMocks = []shared.RunCommandMock{
+		{
+			Command: "iptables",
+			Args:    []string{"-L", "INPUT", "--line-numbers"},
+			Out:     "",
+			Err:     assert.AnError,
+		},
+	}
 
+	f := &Firewall{}
+	result := f.checkIptables()
+	assert.False(t, result, "Expected checkIptables to return false when RunCommand fails")
+}
+
+func TestCheckIptables_PolicyParsing(t *testing.T) {
 	tests := []struct {
 		name           string
-		mockLookPath   func(string) (string, error)
+		mockOutput     string
 		expectedResult bool
-		expectedStatus string
 	}{
 		{
-			name: "All firewall commands are available",
-			mockLookPath: func(cmd string) (string, error) {
-				return "/usr/bin/" + cmd, nil
-			},
+			name: "Policy DROP",
+			mockOutput: `Chain INPUT (policy DROP)
+num  target     prot opt source               destination         
+`,
 			expectedResult: true,
-			expectedStatus: "",
 		},
 		{
-			name: "Only UFW is available",
-			mockLookPath: func(cmd string) (string, error) {
-				if cmd == "ufw" {
-					return "/usr/bin/ufw", nil
-				}
-				return "", assert.AnError
-			},
+			name: "Policy REJECT",
+			mockOutput: `Chain INPUT (policy REJECT)
+num  target     prot opt source               destination         
+`,
 			expectedResult: true,
-			expectedStatus: "",
 		},
 		{
-			name: "Only firewalld is available",
-			mockLookPath: func(cmd string) (string, error) {
-				if cmd == "firewalld" {
-					return "/usr/bin/firewalld", nil
-				}
-				return "", assert.AnError
-			},
-			expectedResult: true,
-			expectedStatus: "",
-		},
-		{
-			name: "Only iptables is available",
-			mockLookPath: func(cmd string) (string, error) {
-				if cmd == "iptables" {
-					return "/usr/bin/iptables", nil
-				}
-				return "", assert.AnError
-			},
-			expectedResult: true,
-			expectedStatus: "",
-		},
-		{
-			name: "No firewall commands are available",
-			mockLookPath: func(cmd string) (string, error) {
-				return "", assert.AnError
-			},
+			name: "Policy ACCEPT",
+			mockOutput: `Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+`,
 			expectedResult: false,
-			expectedStatus: "Neither ufw, firewalld nor iptables are present, check cannot run",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lookPathMock = tt.mockLookPath
+			shared.RunCommandMocks = convertCommandMapToMocks(map[string]string{
+				"iptables -L INPUT --line-numbers": tt.mockOutput,
+			})
 			f := &Firewall{}
-			result := f.fwCmdsAreAvailable()
+			result := f.checkIptables()
 			assert.Equal(t, tt.expectedResult, result)
-			assert.Equal(t, tt.expectedStatus, f.status)
 		})
 	}
 }
 
-func TestFirewall_Run_NoFirewallCommands(t *testing.T) {
-	f := &Firewall{
-		status: "Neither ufw, firewalld nor iptables are present, check cannot run",
-		passed: false,
+func TestFirewall_Run(t *testing.T) {
+	tests := []struct {
+		name           string
+		mockOutput     string
+		mockError      error
+		expectedPassed bool
+	}{
+		{
+			name: "Iptables active",
+			mockOutput: `Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+1    ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           tcp dpt:22
+`,
+			mockError:      nil,
+			expectedPassed: true,
+		},
+		{
+			name: "Iptables inactive",
+			mockOutput: `Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+`,
+			mockError:      nil,
+			expectedPassed: false,
+		},
+		{
+			name:           "Iptables command error",
+			mockOutput:     "",
+			mockError:      assert.AnError,
+			expectedPassed: false,
+		},
 	}
 
-	err := f.Run()
-	assert.NoError(t, err)
-	assert.False(t, f.Passed())
-	assert.Equal(t, "Neither ufw, firewalld nor iptables are present, check cannot run", f.status)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			shared.RunCommandMocks = convertCommandMapToMocks(map[string]string{
+				"iptables -L INPUT --line-numbers": tt.mockOutput,
+			})
+			f := &Firewall{}
+			err := f.Run()
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedPassed, f.Passed())
+		})
+	}
 }

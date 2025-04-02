@@ -15,6 +15,7 @@ import (
 	"fyne.io/systray"
 	"github.com/ParetoSecurity/agent/check"
 	"github.com/ParetoSecurity/agent/claims"
+	"github.com/ParetoSecurity/agent/notify"
 	"github.com/ParetoSecurity/agent/shared"
 	"github.com/ParetoSecurity/agent/systemd"
 	"github.com/caarlos0/log"
@@ -84,13 +85,13 @@ func addOptions() {
 			if !systemd.IsTimerEnabled() {
 				if err := systemd.EnableTimer(); err != nil {
 					log.WithError(err).Error("failed to enable timer")
-					Notify("Failed to enable timer, please check the logs for more information.")
+					notify.Blocking("Failed to enable timer, please check the logs for more information.")
 				}
 
 			} else {
 				if err := systemd.DisableTimer(); err != nil {
 					log.WithError(err).Error("failed to enable timer")
-					Notify("Failed to enable timer, please check the logs for more information.")
+					notify.Blocking("Failed to enable timer, please check the logs for more information.")
 				}
 			}
 			if systemd.IsTimerEnabled() {
@@ -106,13 +107,13 @@ func addOptions() {
 			if !systemd.IsTrayIconEnabled() {
 				if err := systemd.EnableTrayIcon(); err != nil {
 					log.WithError(err).Error("failed to enable tray icon")
-					Notify("Failed to enable tray icon, please check the logs for more information.")
+					notify.Blocking("Failed to enable tray icon, please check the logs for more information.")
 				}
 
 			} else {
 				if err := systemd.DisableTrayIcon(); err != nil {
 					log.WithError(err).Error("failed to disable tray icon")
-					Notify("Failed to disable tray icon, please check the logs for more information.")
+					notify.Blocking("Failed to disable tray icon, please check the logs for more information.")
 				}
 			}
 			if systemd.IsTrayIconEnabled() {

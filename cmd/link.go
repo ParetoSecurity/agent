@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/ParetoSecurity/agent/notify"
 	shared "github.com/ParetoSecurity/agent/shared"
 	"github.com/ParetoSecurity/agent/team"
 	"github.com/caarlos0/log"
@@ -48,9 +49,9 @@ var linkCmd = &cobra.Command{
 		err := runLinkCommand(args[0])
 		if err != nil {
 			log.WithError(err).Fatal("Failed to link team")
-			NotifyBlocking("Failed to add device to the team!")
+			notify.Blocking("Failed to add device to the team!")
 		}
-		NotifyBlocking("Device successfully linked to the team!")
+		notify.Blocking("Device successfully linked to the team!")
 	},
 }
 
