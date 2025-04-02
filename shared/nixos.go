@@ -1,10 +1,11 @@
 package shared
 
 import (
-	"log"
 	"os"
 	"sync"
 	"testing"
+
+	"github.com/caarlos0/log"
 )
 
 var isNixOSOnce sync.Once
@@ -18,10 +19,9 @@ func IsNixOS() bool {
 		return false
 	}
 	isNixOSOnce.Do(func() {
-
 		_, err := os.Stat("/run/current-system/sw")
 		isNixOS = err == nil
-		log.Println("Checking if system is NixOS", isNixOS)
+		log.WithField("isNixOS", isNixOS).Debug("Checking if system is NixOS")
 	})
 	return isNixOS
 }
