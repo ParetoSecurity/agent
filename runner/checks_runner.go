@@ -16,6 +16,18 @@ import (
 	"github.com/samber/lo"
 )
 
+// wrapStatusRoot formats the check status with color-coded indicators.
+func wrapStatusRoot(status *CheckStatus, chk check.Check) string {
+	msg := status.Details
+	if lo.IsEmpty(msg) {
+		msg = chk.Status()
+	}
+	if status.Passed {
+		return fmt.Sprintf("%s %s", color.GreenString("[OK]"), msg)
+	}
+	return fmt.Sprintf("%s %s", color.RedString("[FAIL]"), msg)
+}
+
 // wrapStatus formats the check status with color-coded indicators.
 func wrapStatus(chk check.Check) string {
 	if chk.Passed() {
@@ -74,9 +86,9 @@ func Check(ctx context.Context, claimsTorun []claims.Claim, skipUUIDs []string, 
 						}
 
 						if status.Passed {
-							checkLogger.Info(fmt.Sprintf("[root] %s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk)))
+							checkLogger.Info(fmt.Sprintf("[root] %s: %s > %s", claim.Title, chk.Name(), wrapStatusRoot(status, chk)))
 						} else {
-							checkLogger.Warn(fmt.Sprintf("[root] %s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk)))
+							checkLogger.Warn(fmt.Sprintf("[root] %s: %s > %s", claim.Title, chk.Name(), wrapStatusRoot(status, chk)))
 						}
 						shared.UpdateLastState(shared.LastState{
 							UUID:    chk.UUID(),

@@ -117,8 +117,8 @@ abc  ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0
 		{
 			name: "NixOS style custom chain",
 			mockOutput: `Chain INPUT (policy ACCEPT)
-num  target     prot opt source               destination         
-1    nixos-fw   all  --  anywhere             anywhere            
+num  target     prot opt source               destination
+1    nixos-fw   all  --  anywhere             anywhere
 `,
 			mockError:      nil,
 			expectedResult: true,

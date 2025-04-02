@@ -30,7 +30,7 @@ func (f *Firewall) checkIptables() bool {
 		log.WithError(err).WithField("output", output).Warn("Failed to check iptables status")
 		return false
 	}
-	log.WithField("output", output).Info("Iptables status")
+	log.WithField("output", output).Debug("Iptables status")
 
 	// Define a struct to hold iptables rule information
 	type IptablesRule struct {

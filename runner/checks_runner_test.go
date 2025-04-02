@@ -172,3 +172,57 @@ func TestPrintSchemaJSON(t *testing.T) {
 		t.Errorf("PrintSchemaJSON output mismatch.\nExpected:\n%s\nGot:\n%s", expectedOutput, output)
 	}
 }
+func TestWrapStatusRoot(t *testing.T) {
+	tests := []struct {
+		name     string
+		status   *CheckStatus
+		check    check.Check
+		expected string
+	}{
+		{
+			name: "passed with details",
+			status: &CheckStatus{
+				Passed:  true,
+				Details: "test details",
+			},
+			check:    &DummyCheck{statusMsg: "should not use this"},
+			expected: "[OK] test details",
+		},
+		{
+			name: "passed without details",
+			status: &CheckStatus{
+				Passed:  true,
+				Details: "",
+			},
+			check:    &DummyCheck{statusMsg: "check status"},
+			expected: "[OK] check status",
+		},
+		{
+			name: "failed with details",
+			status: &CheckStatus{
+				Passed:  false,
+				Details: "test failure details",
+			},
+			check:    &DummyCheck{statusMsg: "should not use this"},
+			expected: "[FAIL] test failure details",
+		},
+		{
+			name: "failed without details",
+			status: &CheckStatus{
+				Passed:  false,
+				Details: "",
+			},
+			check:    &DummyCheck{statusMsg: "check failure status"},
+			expected: "[FAIL] check failure status",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := wrapStatusRoot(tt.status, tt.check)
+			if result != tt.expected {
+				t.Errorf("wrapStatusRoot() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
