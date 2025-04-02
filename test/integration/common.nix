@@ -9,9 +9,6 @@
       enable = true;
       package = pkgs.callPackage ../../package.nix {inherit lib;};
     };
-    environment.systemPackages = with pkgs; [
-      iptables
-    ];
   };
 
   # Easier tests debugging by SSH-ing into nodes
