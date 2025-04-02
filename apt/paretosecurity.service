@@ -8,7 +8,6 @@ Group=root
 StandardInput=socket
 Type=oneshot
 RemainAfterExit=no
-StartLimitInterval=1
 StartLimitBurst=100
 ProtectSystem=full
 ProtectHome=yes
