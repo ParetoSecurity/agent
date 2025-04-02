@@ -21,8 +21,11 @@ func (f *Firewall) Name() string {
 
 // checkIptables checks if iptables is active
 func (f *Firewall) checkIptables() bool {
-
-	output, err := shared.RunCommand("iptables", "-L", "INPUT", "--line-numbers")
+	cmd := "iptables"
+	if shared.IsNixOS() {
+		cmd = "/run/current-system/sw/bin/iptables"
+	}
+	output, err := shared.RunCommand(cmd, "-L", "INPUT", "--line-numbers")
 	if err != nil {
 		log.WithError(err).WithField("output", output).Warn("Failed to check iptables status")
 		return false
