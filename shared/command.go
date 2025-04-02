@@ -39,6 +39,7 @@ func RunCommand(name string, arg ...string) (string, error) {
 	}
 
 	cmd := exec.Command(name, arg...)
+	cmd.Env = append(cmd.Env, "PATH=/run/current-system/sw/sbin/:/run/current-system/sw/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
 	output, err := cmd.CombinedOutput()
 	log.WithField("cmd", string(name+" "+strings.TrimSpace(strings.Join(arg, " ")))).WithError(err).Debug(string(output))
 	return string(output), err
