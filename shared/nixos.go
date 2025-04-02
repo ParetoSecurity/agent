@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"os"
 	"sync"
 	"testing"
 )
@@ -16,7 +17,7 @@ func IsNixOS() bool {
 		return false
 	}
 	isNixOSOnce.Do(func() {
-		_, err := RunCommand("nixos-version")
+		_, err := os.Stat("/run/current-system/sw")
 		isNixOS = err == nil
 	})
 	return isNixOS
