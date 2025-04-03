@@ -45,9 +45,6 @@ in {
       programs.swaylock = {
         enable = true;
       };
-      programs.swayidle = {
-        enable = true;
-      };
       programs.sway = {
         enable = true;
         wrapperFeatures.gtk = true;
