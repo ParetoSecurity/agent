@@ -68,7 +68,7 @@ func checkSway() bool {
 			continue
 		}
 
-		lines := strings.Split(string(content), "\\")
+		lines := strings.Split(string(content), "\\") // Split lines by backslash since this is a config file with inline newlines
 		for _, line := range lines {
 			trimmed := strings.TrimSpace(line)
 			if strings.HasPrefix(trimmed, "exec swayidle") && !strings.HasPrefix(trimmed, "#") && strings.Contains(trimmed, "swaylock") {
