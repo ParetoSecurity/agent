@@ -101,7 +101,7 @@ func generateTabs(window fyne.Window) *container.AppTabs {
 		case "About":
 			window.Resize(fyne.NewSize(420, 200))
 		case "General":
-			window.Resize(fyne.NewSize(420, 210))
+			window.Resize(fyne.NewSize(420, 290))
 		}
 	}
 
@@ -121,6 +121,6 @@ func CreatePreferencesWindow() {
 	window.SetContent(generateTabs(window))
 
 	// Show the window and run the application
-	window.Resize(fyne.NewSize(420, 210)) // Default to Checks tab size
+	window.Resize(fyne.NewSize(420, 290)) // Default to Checks tab size
 	window.ShowAndRun()
 }

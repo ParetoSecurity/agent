@@ -15,9 +15,7 @@ import (
 	"fyne.io/systray"
 	"github.com/ParetoSecurity/agent/check"
 	"github.com/ParetoSecurity/agent/claims"
-	"github.com/ParetoSecurity/agent/notify"
 	"github.com/ParetoSecurity/agent/shared"
-	"github.com/ParetoSecurity/agent/systemd"
 	"github.com/caarlos0/log"
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/browser"
@@ -56,73 +54,17 @@ func getIcon() []byte {
 }
 
 func addOptions() {
-	mOptions := systray.AddMenuItem("Options", "Settings")
-	mlink := mOptions.AddSubMenuItemCheckbox("Send reports to the dashboard", "Configure sending device reports to the team", shared.IsLinked())
+	mOptions := systray.AddMenuItem("Preferences", "Open app Preferences")
 	go func() {
-		for range mlink.ClickedCh {
-			if !shared.IsLinked() {
-				//open browser with help link
-				if err := browser.OpenURL("https://paretosecurity.com/docs/linux/link"); err != nil {
-					log.WithError(err).Error("failed to open help URL")
-				}
-			} else {
-				// execute the command in the system terminal
-				err := exec.Command(shared.SelfExe(), "unlink").Run()
-				if err != nil {
-					log.WithError(err).Error("failed to run unlink command")
-				}
-			}
-			if shared.IsLinked() {
-				mlink.Check()
-			} else {
-				mlink.Uncheck()
+		for range mOptions.ClickedCh {
+			// execute the command in the system terminal
+			err := exec.Command(shared.SelfExe(), "preferences").Run()
+			if err != nil {
+				log.WithError(err).Error("failed to run preferences command")
 			}
 		}
 	}()
-	mrun := mOptions.AddSubMenuItemCheckbox("Run checks in the background", "Run checks periodically in the background while the user is logged in.", systemd.IsTimerEnabled())
-	go func() {
-		for range mrun.ClickedCh {
-			if !systemd.IsTimerEnabled() {
-				if err := systemd.EnableTimer(); err != nil {
-					log.WithError(err).Error("failed to enable timer")
-					notify.Blocking("Failed to enable timer, please check the logs for more information.")
-				}
 
-			} else {
-				if err := systemd.DisableTimer(); err != nil {
-					log.WithError(err).Error("failed to enable timer")
-					notify.Blocking("Failed to enable timer, please check the logs for more information.")
-				}
-			}
-			if systemd.IsTimerEnabled() {
-				mrun.Check()
-			} else {
-				mrun.Uncheck()
-			}
-		}
-	}()
-	mshow := mOptions.AddSubMenuItemCheckbox("Run the tray icon at startup", "Show tray icon", systemd.IsTrayIconEnabled())
-	go func() {
-		for range mshow.ClickedCh {
-			if !systemd.IsTrayIconEnabled() {
-				if err := systemd.EnableTrayIcon(); err != nil {
-					log.WithError(err).Error("failed to enable tray icon")
-					notify.Blocking("Failed to enable tray icon, please check the logs for more information.")
-				}
-
-			} else {
-				if err := systemd.DisableTrayIcon(); err != nil {
-					log.WithError(err).Error("failed to disable tray icon")
-					notify.Blocking("Failed to disable tray icon, please check the logs for more information.")
-				}
-			}
-			if systemd.IsTrayIconEnabled() {
-				mshow.Check()
-			} else {
-				mshow.Uncheck()
-			}
-		}
-	}()
 }
 
 func onReady() {
