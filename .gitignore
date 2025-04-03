@@ -18,3 +18,13 @@ coverage.txt
 # nix stuff
 result
 .nixos-test-history
+
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
