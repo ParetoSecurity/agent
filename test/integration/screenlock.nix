@@ -32,6 +32,27 @@ in {
       services.xserver.displayManager.sddm.enable = true;
       services.colord.enable = false;
     };
+
+    sway = {
+      pkgs,
+      lib,
+      ...
+    }: {
+      imports = [
+        (pareto {inherit pkgs lib;})
+      ];
+      # enable Sway window manager
+      programs.swaylock = {
+        enable = true;
+      };
+      programs.swayidle = {
+        enable = true;
+      };
+      programs.sway = {
+        enable = true;
+        wrapperFeatures.gtk = true;
+      };
+    };
   };
 
   interactive.nodes.gnome = {...}:
@@ -75,6 +96,16 @@ in {
     # Test 2: Check fails when lock is disabled
     kde.succeed("kwriteconfig5 --file kscreenlockerrc --group Daemon --key Autolock false")
     status, out = kde.execute("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
+    expected = (
+        "  • Starting checks...\n"
+        "  • Access Security: Password is required to unlock the screen > [FAIL] Password after sleep or screensaver is off\n"
+        "  • Checks completed.\n"
+    )
+    assert out == expected, f"Expected did not match actual, got \n{out}"
+
+
+    # Test sway, swaylock is disabled by default
+    status, out = sway.execute("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
     expected = (
         "  • Starting checks...\n"
         "  • Access Security: Password is required to unlock the screen > [FAIL] Password after sleep or screensaver is off\n"
