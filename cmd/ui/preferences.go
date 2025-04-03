@@ -70,6 +70,16 @@ func createGeneralTab() *container.TabItem {
 		widget.NewLabel("Improve default colors for accessibility."), // Footer description
 	))
 
+	// Run checks in the background
+	backgroundChecksToggle := widget.NewCheck("Run checks in the background", func(state bool) {
+		// Handle enabling/disabling background checks
+	})
+	backgroundChecksToggle.SetChecked(true) // Default to enabled
+	generalContent.Add(container.NewVBox(
+		backgroundChecksToggle,
+		widget.NewLabel("Enable continuous checks without user interaction."), // Footer description
+	))
+
 	return container.NewTabItem("General", container.NewPadded(container.NewScroll(generalContent)))
 }
 
