@@ -17,14 +17,6 @@ runs:
         sudo mkdir /nix
         sudo chown $USER /nix
 
-    - uses: namespacelabs/nscloud-cache-action@v1
-      with:
-        path: |
-          /home/runner/go/pkg/mod
-          /nix
-          ~/.cache
-          .devenv
-
     - uses: cachix/install-nix-action@v31
       with:
         extra_nix_config: |
