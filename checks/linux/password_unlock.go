@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"os"
 	"strings"
 
 	"github.com/ParetoSecurity/agent/shared"
@@ -39,6 +40,48 @@ func (f *PasswordToUnlock) checkKDE() bool {
 	return result
 }
 
+func checkSway() bool {
+	paths := []string{"/etc/sway/config"}
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		log.WithError(err).Debug("Failed to get home directory")
+		return false
+	}
+
+	for _, path := range []string{"/etc/sway/config.d", homedir + "/.config/sway/config.d", homedir + "/.config/sway/config"} {
+		files, err := filepathGlob(path)
+		if err != nil {
+			log.WithError(err).Debugf("Failed to read files from path: %s", path)
+			continue
+		}
+		if len(files) == 0 {
+			log.WithField("path", path).Debug("No files found in path")
+			continue
+		}
+		paths = append(paths, files...)
+	}
+
+	for _, file := range paths {
+		content, err := osReadFile(file)
+		if err != nil {
+			log.WithError(err).Debugf("Failed to read file: %s", file)
+			continue
+		}
+
+		lines := strings.Split(string(content), "\\")
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasPrefix(trimmed, "exec swayidle") && !strings.HasPrefix(trimmed, "#") && strings.Contains(trimmed, "swaylock") {
+				log.WithField("file", file).Debug("Sway idle lock configuration found")
+				return true
+			}
+		}
+	}
+
+	log.Debug("Sway idle lock configuration not found")
+	return false
+}
+
 // Run executes the check
 func (f *PasswordToUnlock) Run() error {
 	anyCheckPerformed := false
@@ -58,6 +101,14 @@ func (f *PasswordToUnlock) Run() error {
 		allChecksPassed = allChecksPassed && f.checkKDE()
 	} else {
 		log.Debug("KDE environment not detected for screensaver lock check")
+	}
+
+	// Check if running Sway
+	if _, err := lookPath("sway"); err == nil {
+		anyCheckPerformed = true
+		allChecksPassed = allChecksPassed && checkSway()
+	} else {
+		log.Debug("Sway environment not detected for screensaver lock check")
 	}
 
 	// Performed at least one check and all performed checks passed
