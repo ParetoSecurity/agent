@@ -246,7 +246,7 @@ func TestCheckSway(t *testing.T) {
 			expectedDebug: "Sway idle lock configuration found",
 		},
 		{
-			name:    "Sway idle lock configuration found",
+			name:    "Sway idle lock configuration found with newlines",
 			homeDir: "/home/testuser",
 			fileContents: map[string]string{
 				"/etc/sway/config":                           "",
