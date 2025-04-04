@@ -42,9 +42,6 @@ in {
         (pareto {inherit pkgs lib;})
       ];
       # enable Sway window manager
-      programs.swaylock = {
-        enable = true;
-      };
       programs.sway = {
         enable = true;
         wrapperFeatures.gtk = true;
