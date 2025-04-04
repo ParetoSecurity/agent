@@ -17,15 +17,41 @@ func TestPasswordManagerCheck_Run_Linux(t *testing.T) {
 		expectedStatus string
 	}{
 		{
-			name: "1Password present via apt",
+			name: "1Password found in PATH",
 			mockCommands: map[string]string{
-				"which dpkg":      "/usr/bin/dpkg",
-				"sh -c dpkg -l":   "ii  1password  1.0  all  Password manager",
-				"which snap":      "not found",
-				"which yum":       "not found",
-				"which flatpak":   "not found",
-				"which pacman":    "not found",
-				"which nix-store": "not found",
+				"which 1password": "/usr/bin/1password",
+			},
+			expectedPassed: true,
+			expectedStatus: "Password manager is present",
+		},
+		{
+			name: "Bitwarden found in PATH",
+			mockCommands: map[string]string{
+				"which bitwarden": "/usr/bin/bitwarden",
+			},
+			expectedPassed: true,
+			expectedStatus: "Password manager is present",
+		},
+		{
+			name: "Dashlane found in PATH",
+			mockCommands: map[string]string{
+				"which dashlane": "/usr/bin/dashlane",
+			},
+			expectedPassed: true,
+			expectedStatus: "Password manager is present",
+		},
+		{
+			name: "KeePassX found in PATH",
+			mockCommands: map[string]string{
+				"which keepassx": "/usr/bin/keepassx",
+			},
+			expectedPassed: true,
+			expectedStatus: "Password manager is present",
+		},
+		{
+			name: "KeePassXC found in PATH",
+			mockCommands: map[string]string{
+				"which keepassxc": "/usr/bin/keepassxc",
 			},
 			expectedPassed: true,
 			expectedStatus: "Password manager is present",
@@ -33,27 +59,10 @@ func TestPasswordManagerCheck_Run_Linux(t *testing.T) {
 		{
 			name: "Bitwarden present via snap",
 			mockCommands: map[string]string{
-				"which dpkg":      "not found",
+				"which bitwarden": "not found",
 				"which snap":      "/usr/bin/snap",
 				"sh -c snap list": "bitwarden  1.0  stable  password manager",
-				"which yum":       "not found",
 				"which flatpak":   "not found",
-				"which pacman":    "not found",
-				"which nix-store": "not found",
-			},
-			expectedPassed: true,
-			expectedStatus: "Password manager is present",
-		},
-		{
-			name: "Dashlane present via yum",
-			mockCommands: map[string]string{
-				"which dpkg":               "not found",
-				"which snap":               "not found",
-				"which yum":                "/usr/bin/yum",
-				"sh -c yum list installed": "dashlane  1.0  installed  password manager",
-				"which flatpak":            "not found",
-				"which pacman":             "not found",
-				"which nix-store":          "not found",
 			},
 			expectedPassed: true,
 			expectedStatus: "Password manager is present",
@@ -61,41 +70,10 @@ func TestPasswordManagerCheck_Run_Linux(t *testing.T) {
 		{
 			name: "KeePassX present via flatpak",
 			mockCommands: map[string]string{
-				"which dpkg":         "not found",
+				"which keepassx":     "not found",
 				"which snap":         "not found",
-				"which yum":          "not found",
 				"which flatpak":      "/usr/bin/flatpak",
 				"sh -c flatpak list": "keepassx  1.0  stable  password manager",
-				"which pacman":       "not found",
-				"which nix-store":    "not found",
-			},
-			expectedPassed: true,
-			expectedStatus: "Password manager is present",
-		},
-		{
-			name: "KeePassXC present via apt",
-			mockCommands: map[string]string{
-				"which dpkg":      "/usr/bin/dpkg",
-				"sh -c dpkg -l":   "ii  keepassxc  1.0  all  Password manager",
-				"which snap":      "not found",
-				"which yum":       "not found",
-				"which flatpak":   "not found",
-				"which pacman":    "not found",
-				"which nix-store": "not found",
-			},
-			expectedPassed: true,
-			expectedStatus: "Password manager is present",
-		},
-		{
-			name: "Bitwarden present via nix",
-			mockCommands: map[string]string{
-				"which dpkg":      "not found",
-				"which snap":      "not found",
-				"which yum":       "not found",
-				"which flatpak":   "not found",
-				"which pacman":    "not found",
-				"which nix-store": "/run/current-system/sw/bin/nix-store",
-				"sh -c if [ -e ~/.nix-profile ]; then nix-store -q --requisites /run/current-system ~/.nix-profile; else nix-store -q --requisites /run/current-system; fi": "  /nix/store/m2hv2xvfrq51pd8ya3blqk1xxbazpp5p-bitwarden-desktop-2025.1.1",
 			},
 			expectedPassed: true,
 			expectedStatus: "Password manager is present",
@@ -103,15 +81,15 @@ func TestPasswordManagerCheck_Run_Linux(t *testing.T) {
 		{
 			name: "No password manager present",
 			mockCommands: map[string]string{
-				"which dpkg":               "/usr/bin/dpkg",
-				"sh -c dpkg -l":            "",
-				"which snap":               "/usr/bin/snap",
-				"sh -c snap list":          "",
-				"which yum":                "/usr/bin/yum",
-				"sh -c yum list installed": "",
-				"which flatpak":            "not found",
-				"which pacman":             "not found",
-				"which nix-store":          "not found",
+				"which 1password":    "not found",
+				"which bitwarden":    "not found",
+				"which dashlane":     "not found",
+				"which keepassx":     "not found",
+				"which keepassxc":    "not found",
+				"which snap":         "/usr/bin/snap",
+				"sh -c snap list":    "no password managers here",
+				"which flatpak":      "/usr/bin/flatpak",
+				"sh -c flatpak list": "no password managers here",
 			},
 			expectedPassed: false,
 			expectedStatus: "No password manager found",
@@ -121,12 +99,8 @@ func TestPasswordManagerCheck_Run_Linux(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Mock shared.RunCommand
-			shared.SetCache("pkg_apt", "", 0)
 			shared.SetCache("pkg_snap", "", 0)
-			shared.SetCache("pkg_yum", "", 0)
 			shared.SetCache("pkg_flatpak", "", 0)
-			shared.SetCache("pkg_pacman", "", 0)
-			shared.SetCache("pkg_nix", "", 0)
 
 			shared.RunCommandMocks = convertCommandMapToMocks(tt.mockCommands)
 
@@ -141,6 +115,7 @@ func TestPasswordManagerCheck_Run_BrowserExtensions(t *testing.T) {
 	tests := []struct {
 		name           string
 		mockFileSystem []string
+		mockCommands   map[string]string
 		expectedPassed bool
 	}{
 		{
@@ -148,11 +123,33 @@ func TestPasswordManagerCheck_Run_BrowserExtensions(t *testing.T) {
 			mockFileSystem: []string{
 				"/home/user/.config/google-chrome/Default/Extensions/aeblfdkhhhdcdjpifhhbdiojplfjncoa",
 			},
+			mockCommands: map[string]string{
+				"which 1password":    "not found",
+				"which bitwarden":    "not found",
+				"which dashlane":     "not found",
+				"which keepassx":     "not found",
+				"which keepassxc":    "not found",
+				"which snap":         "/usr/bin/snap",
+				"sh -c snap list":    "no password managers here",
+				"which flatpak":      "/usr/bin/flatpak",
+				"sh -c flatpak list": "no password managers here",
+			},
 			expectedPassed: true,
 		},
 		{
 			name:           "No password manager extensions present",
 			mockFileSystem: []string{},
+			mockCommands: map[string]string{
+				"which 1password":    "not found",
+				"which bitwarden":    "not found",
+				"which dashlane":     "not found",
+				"which keepassx":     "not found",
+				"which keepassxc":    "not found",
+				"which snap":         "/usr/bin/snap",
+				"sh -c snap list":    "no password managers here",
+				"which flatpak":      "/usr/bin/flatpak",
+				"sh -c flatpak list": "no password managers here",
+			},
 			expectedPassed: false,
 		},
 	}
@@ -160,12 +157,18 @@ func TestPasswordManagerCheck_Run_BrowserExtensions(t *testing.T) {
 	for _, tt := range tests {
 		os.Setenv("HOME", "/home/user")
 		t.Run(tt.name, func(t *testing.T) {
-			// Mock os.Stat
+			// Mock shared.RunCommand
+			shared.SetCache("pkg_snap", "", 0)
+			shared.SetCache("pkg_flatpak", "", 0)
+			shared.RunCommandMocks = convertCommandMapToMocks(tt.mockCommands)
+
+			// Mock os.ReadDir
 			osReadDirMock = func(_ string) ([]os.DirEntry, error) {
 				return lo.Map(tt.mockFileSystem, func(name string, _ int) os.DirEntry {
 					return &mockDirEntry{name: name}
 				}), nil
 			}
+
 			pmc := &PasswordManagerCheck{}
 			err := pmc.Run()
 			assert.NoError(t, err)

@@ -77,32 +77,25 @@ func checkForBrowserExtensions() bool {
 }
 
 func isPackageInstalled(pkgName string) bool {
+	output, err := shared.RunCommand("which", pkgName)
+	if err == nil && !strings.Contains(output, "not found") {
+		log.Debug("Package found in PATH: " + pkgName)
+		return true
+	}
+
 	pkgManagers := make(map[string]string)
 
 	// Check which package managers are available
-	if _, err := shared.RunCommand("which", "dpkg"); err == nil {
-		pkgManagers["apt"] = "dpkg -l"
-		log.Debug("apt package manager found")
-	}
+	// We only need to check for package managers that don't inject
+	// the binaries into the $PATH. Those that do are not needed
+	// because we always first check the $PATH with `which`
 	if _, err := shared.RunCommand("which", "snap"); err == nil {
 		pkgManagers["snap"] = "snap list"
 		log.Debug("snap package manager found")
 	}
-	if _, err := shared.RunCommand("which", "yum"); err == nil {
-		pkgManagers["yum"] = "yum list installed"
-		log.Debug("yum package manager found")
-	}
 	if _, err := shared.RunCommand("which", "flatpak"); err == nil {
 		pkgManagers["flatpak"] = "flatpak list"
 		log.Debug("flatpak package manager found")
-	}
-	if _, err := shared.RunCommand("which", "pacman"); err == nil {
-		pkgManagers["pacman"] = "pacman -Q"
-		log.Debug("pacman package manager found")
-	}
-	if _, err := shared.RunCommand("which", "nix-store"); err == nil {
-		pkgManagers["nix"] = "if [ -e ~/.nix-profile ]; then nix-store -q --requisites /run/current-system ~/.nix-profile; else nix-store -q --requisites /run/current-system; fi"
-		log.Debug("nix package manager found")
 	}
 
 	for pkgManager, baseCmd := range pkgManagers {
