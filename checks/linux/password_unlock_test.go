@@ -1,8 +1,10 @@
 package checks
 
 import (
+	"os"
 	"os/exec"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/ParetoSecurity/agent/shared"
@@ -221,5 +223,94 @@ func TestPasswordToUnlock_PassedMessage(t *testing.T) {
 	expectedPassedMessage := "Password after sleep or screensaver is on"
 	if f.PassedMessage() != expectedPassedMessage {
 		t.Errorf("Expected PassedMessage %s, got %s", expectedPassedMessage, f.PassedMessage())
+	}
+}
+
+func TestCheckSway(t *testing.T) {
+	tests := []struct {
+		name          string
+		homeDir       string
+		fileContents  map[string]string
+		expected      bool
+		expectedDebug string
+	}{
+		{
+			name:    "Sway idle lock configuration found",
+			homeDir: "/home/testuser",
+			fileContents: map[string]string{
+				"/etc/sway/config":                           "",
+				"/etc/sway/config.d/file1":                   "exec swayidle -w timeout 300 'swaylock'",
+				"/home/testuser/.config/sway/config.d/file2": "",
+			},
+			expected:      true,
+			expectedDebug: "Sway idle lock configuration found",
+		},
+		{
+			name:    "Sway idle lock configuration found with newlines",
+			homeDir: "/home/testuser",
+			fileContents: map[string]string{
+				"/etc/sway/config":                           "",
+				"/etc/sway/config.d/file1":                   "exec swayidle \n -w timeout 300 'swaylock'",
+				"/home/testuser/.config/sway/config.d/file2": "",
+			},
+			expected:      true,
+			expectedDebug: "Sway idle lock configuration found",
+		},
+		{
+			name:    "No swayidle configuration found",
+			homeDir: "/home/testuser",
+			fileContents: map[string]string{
+				"/etc/sway/config":                           "",
+				"/etc/sway/config.d/file1":                   "",
+				"/home/testuser/.config/sway/config.d/file2": "",
+			},
+			expected:      false,
+			expectedDebug: "Sway idle lock configuration not found",
+		},
+		{
+			name:    "Commented swayidle configuration",
+			homeDir: "/home/testuser",
+			fileContents: map[string]string{
+				"/etc/sway/config":                           "# exec swayidle -w timeout 300 'swaylock'",
+				"/etc/sway/config.d/file1":                   "",
+				"/home/testuser/.config/sway/config.d/file2": "",
+			},
+			expected:      false,
+			expectedDebug: "Sway idle lock configuration not found",
+		},
+		{
+			name:    "Error reading files",
+			homeDir: "/home/testuser",
+			fileContents: map[string]string{
+				"/etc/sway/config": "",
+			},
+			expected:      false,
+			expectedDebug: "Failed to read file",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			filepathGlobMock = func(pattern string) ([]string, error) {
+				var files []string
+				for path := range tt.fileContents {
+					if strings.HasPrefix(path, pattern) {
+						files = append(files, path)
+					}
+				}
+				return files, nil
+			}
+
+			osReadFileMock = func(filename string) ([]byte, error) {
+				if content, exists := tt.fileContents[filename]; exists {
+					return []byte(content), nil
+				}
+				return nil, os.ErrNotExist
+			}
+
+			result := checkSway()
+			assert.Equal(t, tt.expected, result)
+		})
 	}
 }
