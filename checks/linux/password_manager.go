@@ -77,6 +77,12 @@ func checkForBrowserExtensions() bool {
 }
 
 func isPackageInstalled(pkgName string) bool {
+	output, err := shared.RunCommand("which", pkgName)
+	if err == nil && !strings.Contains(output, "not found") {
+		log.Debug("Package found in PATH: " + pkgName)
+		return true
+	}
+
 	pkgManagers := make(map[string]string)
 
 	// Check which package managers are available
