@@ -12,7 +12,7 @@ on:
 
 jobs:
   check:
-    name: "Integration test for check: ${{ matrix.check }}"
+    name: "Check: ${{ matrix.check }}"
     runs-on: namespace-profile-pareto-linux
     strategy:
       fail-fast: false
