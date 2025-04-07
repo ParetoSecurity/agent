@@ -67,12 +67,6 @@ in {
           command = "${pkgs.swaylock}/bin/swaylock -fF";
         }
       ];
-      services.swayidle.timeouts.events = [
-        {
-          event = "lock";
-          command = "${pkgs.swaylock}/bin/swaylock -fF";
-        }
-      ];
     };
   };
 
