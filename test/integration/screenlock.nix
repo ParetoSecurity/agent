@@ -2,7 +2,7 @@ let
   common = import ./common.nix;
   inherit (common) pareto ssh;
 in {
-  name = "Check test: screensaver password";
+  name = "Screen Lock";
 
   nodes = {
     gnome = {

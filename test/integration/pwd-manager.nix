@@ -2,7 +2,7 @@ let
   common = import ./common.nix;
   inherit (common) pareto ssh;
 in {
-  name = "Check test: pwd manager";
+  name = "Password Manager";
 
   nodes = {
     withPwdManager = {
