@@ -47,6 +47,26 @@ in {
         wrapperFeatures.gtk = true;
       };
     };
+    swaylock = {
+      pkgs,
+      lib,
+      ...
+    }: {
+      imports = [
+        (pareto {inherit pkgs lib;})
+      ];
+      # enable Sway window manager
+      programs.sway = {
+        enable = true;
+        wrapperFeatures.gtk = true;
+      };
+      services.swayidle.tmeouts.events = [
+        {
+          event = "lock";
+          command = "/run/current-system/sw/bin/swaylock";
+        }
+      ];
+    };
   };
 
   interactive.nodes.gnome = {...}:
@@ -100,6 +120,15 @@ in {
 
     # Test sway, swaylock is disabled by default
     status, out = sway.execute("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
+    expected = (
+        "  • Starting checks...\n"
+        "  • Access Security: Password is required to unlock the screen > [FAIL] Password after sleep or screensaver is off\n"
+        "  • Checks completed.\n"
+    )
+    assert out == expected, f"Expected did not match actual, got \n{out}"
+
+    # Test swaylock
+    status, out = swaylock.execute("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
     expected = (
         "  • Starting checks...\n"
         "  • Access Security: Password is required to unlock the screen > [FAIL] Password after sleep or screensaver is off\n"
