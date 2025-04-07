@@ -60,10 +60,17 @@ in {
         enable = true;
         wrapperFeatures.gtk = true;
       };
-      services.swayidle.tmeouts.events = [
+      services.swayidle.enable = true;
+      services.swayidle.timeouts = [
+        {
+          timeout = 60;
+          command = "${pkgs.swaylock}/bin/swaylock -fF";
+        }
+      ];
+      services.swayidle.timeouts.events = [
         {
           event = "lock";
-          command = "/run/current-system/sw/bin/swaylock";
+          command = "${pkgs.swaylock}/bin/swaylock -fF";
         }
       ];
     };
