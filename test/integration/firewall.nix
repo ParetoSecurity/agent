@@ -14,7 +14,7 @@ let
     };
   };
 in {
-  name = "Check test: firewall is on";
+  name = "Firewall";
 
   nodes = {
     wideopen = {
