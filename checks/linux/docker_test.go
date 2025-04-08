@@ -143,7 +143,7 @@ func TestDockerAccess_DeprecatedDockerPackage(t *testing.T) {
 		// Mock "which dpkg-query" to succeed
 		{Command: "which", Args: []string{"dpkg-query"}, Out: "/usr/bin/dpkg-query", Err: nil},
 		// Mock "dpkg-query -W -f='${Package}\n' docker.io" to return a deprecated package
-		{Command: "dpkg-query", Args: []string{"-W", "-f='${Package}\n'", "docker.io"}, Out: "docker.io", Err: nil},
+		{Command: "dpkg-query", Args: []string{"-W", "-f='${Package}'", "docker.io"}, Out: "docker.io", Err: nil},
 	}
 
 	dockerAccess := &DockerAccess{}
