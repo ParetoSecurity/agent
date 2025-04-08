@@ -22,7 +22,7 @@ func (f *DockerAccess) Run() error {
 	// Check if we deprecate packages installed via apt
 	// https://docs.docker.com/engine/install/ubuntu/#uninstall-old-versions
 	if _, err := shared.RunCommand("which", "dpkg-query"); err == nil {
-		out, err := shared.RunCommand("dpkg-query", "-W", "-f='${Package}\n'", "docker.io")
+		out, err := shared.RunCommand("dpkg-query", "-W", "-f='${Package}'", "docker.io")
 		if err == nil && strings.Contains(out, "docker") {
 			f.passed = false
 			f.status = "Deprecated docker.io package installed via apt"
