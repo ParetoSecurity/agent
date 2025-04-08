@@ -60,38 +60,6 @@ in {
         enable = true;
         wrapperFeatures.gtk = true;
       };
-      programs.swayidle = {
-        enable = true;
-        timeouts = [
-          # Lock screen after 300 seconds of inactivity
-          {
-            timeout = 300;
-            command = "${pkgs.swaylock}/bin/swaylock -f -c 000000";
-          }
-
-          # Turn off displays after 600 seconds of inactivity
-          {
-            timeout = 600;
-            command = "${pkgs.sway}/bin/swaymsg 'output * dpms off'";
-            resumeCommand = "${pkgs.sway}/bin/swaymsg 'output * dpms on'";
-          }
-        ];
-
-        # Also lock screen before going to sleep
-        events = [
-          {
-            event = "before-sleep";
-            command = "${pkgs.swaylock}/bin/swaylock -f -c 000000";
-          }
-          {
-            event = "lock";
-            command = "${pkgs.swaylock}/bin/swaylock -f -c 000000";
-          }
-        ];
-      };
-      environment.systemPackages = with pkgs; [
-        swaylock
-      ];
     };
   };
 
