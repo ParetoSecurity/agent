@@ -53,11 +53,12 @@
           inherit pkgs system flakePackage;
         };
 
-        checks.pwd-manager = pkgs.testers.runNixOSTest ./test/integration/pwd-manager.nix;
         checks.firewall = pkgs.testers.runNixOSTest ./test/integration/firewall.nix;
-        checks.secureboot = pkgs.testers.runNixOSTest ./test/integration/secureboot.nix;
-        checks.screenlock = pkgs.testers.runNixOSTest ./test/integration/screenlock.nix;
+        checks.help = pkgs.testers.runNixOSTest ./test/integration/help.nix;
         checks.luks = pkgs.testers.runNixOSTest ./test/integration/luks.nix;
+        checks.pwd-manager = pkgs.testers.runNixOSTest ./test/integration/pwd-manager.nix;
+        checks.screenlock = pkgs.testers.runNixOSTest ./test/integration/screenlock.nix;
+        checks.secureboot = pkgs.testers.runNixOSTest ./test/integration/secureboot.nix;
 
         packages.test-debian = testPackage {
           distro = "debian";
