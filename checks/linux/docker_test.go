@@ -136,3 +136,21 @@ func TestDockerAccess_PassedMessage(t *testing.T) {
 		t.Errorf("Expected PassedMessage %s, got %s", expectedPassedMessage, dockerAccess.PassedMessage())
 	}
 }
+
+func TestDockerAccess_DeprecatedDockerPackage(t *testing.T) {
+	// Mock shared.RunCommand
+	shared.RunCommandMocks = []shared.RunCommandMock{
+		// Mock "which dpkg-query" to succeed
+		{Command: "which", Args: []string{"dpkg-query"}, Out: "/usr/bin/dpkg-query", Err: nil},
+		// Mock "dpkg-query -W -f='${Package}\n' docker.io" to return a deprecated package
+		{Command: "dpkg-query", Args: []string{"-W", "-f='${Package}\n'", "docker.io"}, Out: "docker.io", Err: nil},
+	}
+
+	dockerAccess := &DockerAccess{}
+	err := dockerAccess.Run()
+
+	// Assertions
+	assert.NoError(t, err)
+	assert.False(t, dockerAccess.Passed())
+	assert.Equal(t, "Deprecated docker.io package installed via apt", dockerAccess.Status())
+}
