@@ -68,20 +68,30 @@ in {
         enable = true;
         wrapperFeatures.gtk = true;
       };
-      services.swayidle = {
-        enable = true;
-        timeouts = [
-          {
-            timeout = 300;
-            command = "${pkgs.swaylock}/bin/swaylock";
-          }
-        ];
-        events = [
-          {
-            event = "before-sleep";
-            command = "${pkgs.swaylock}/bin/swaylock";
-          }
-        ];
+
+      # Home manager configuration for user jane.
+      home-manager.users.paretosecurity = {
+        programs.home-manager.enable = true;
+
+        services.swayidle = {
+          enable = true;
+          timeouts = [
+            {
+              timeout = 300;
+              command = "${pkgs.swaylock}/bin/swaylock";
+            }
+          ];
+          events = [
+            {
+              event = "before-sleep";
+              command = "${pkgs.swaylock}/bin/swaylock";
+            }
+            {
+              event = "lock";
+              command = "${pkgs.swaylock}/bin/swaylock";
+            }
+          ];
+        };
       };
     };
   };
