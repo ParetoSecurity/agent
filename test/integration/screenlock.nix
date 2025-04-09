@@ -38,7 +38,10 @@ in {
       lib,
       ...
     }: let
-      home-manager = builtins.fetchTarball https://github.com/nix-community/home-manager/archive/release-24.11.tar.gz;
+      home-manager = builtins.fetchTarball {
+        url = "https://github.com/nix-community/home-manager/archive/release-24.11.tar.gz";
+        sha256 = "0v1h9n5v5k7j6zq6k1y7z5x8k9m3v8n5j6zq6k1y7z5x8k9m3v8n5j6zq6k1y7z5";
+      };
     in {
       imports = [
         (pareto {inherit pkgs lib;})
@@ -56,7 +59,10 @@ in {
       lib,
       ...
     }: let
-      home-manager = builtins.fetchTarball https://github.com/nix-community/home-manager/archive/release-24.11.tar.gz;
+      home-manager = builtins.fetchTarball {
+        url = "https://github.com/nix-community/home-manager/archive/release-24.11.tar.gz";
+        sha256 = "0v1h9n5v5k7j6zq6k1y7z5x8k9m3v8n5j6zq6k1y7z5x8k9m3v8n5j6zq6k1y7z5";
+      };
     in {
       imports = [
         (pareto {inherit pkgs lib;})
