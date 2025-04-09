@@ -37,15 +37,9 @@ in {
       pkgs,
       lib,
       ...
-    }: let
-      home-manager = builtins.fetchTarball {
-        url = "https://github.com/nix-community/home-manager/archive/release-24.11.tar.gz";
-        sha256 = "1jppksrfvbk5ypiqdz4cddxdl8z6zyzdb2srq8fcffr327ld5jj2";
-      };
-    in {
+    }: {
       imports = [
         (pareto {inherit pkgs lib;})
-        (import "${home-manager}/nixos")
       ];
 
       # enable Sway window manager
@@ -61,7 +55,7 @@ in {
     }: let
       home-manager = builtins.fetchTarball {
         url = "https://github.com/nix-community/home-manager/archive/release-24.11.tar.gz";
-        sha256 = "1jppksrfvbk5ypiqdz4cddxdl8z6zyzdb2srq8fcffr327ld5jj2";
+        sha256 = "0qk1qn04willw5qrzfjs9b7815np8mr6ci68a2787g3q7444bdxp";
       };
     in {
       imports = [
