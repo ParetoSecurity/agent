@@ -26,11 +26,12 @@
             name: path:
               pkgs.testers.runNixOSTest path
           ) {
-            pwd-manager = ./test/integration/pwd-manager.nix;
             firewall = ./test/integration/firewall.nix;
-            secureboot = ./test/integration/secureboot.nix;
-            screenlock = ./test/integration/screenlock.nix;
+            help = ./test/integration/help.nix;
             luks = ./test/integration/luks.nix;
+            pwd-manager = ./test/integration/pwd-manager.nix;
+            screenlock = ./test/integration/screenlock.nix;
+            secureboot = ./test/integration/secureboot.nix;
           };
       };
     };
