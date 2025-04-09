@@ -37,10 +37,14 @@ in {
       pkgs,
       lib,
       ...
-    }: {
+    }: let
+      home-manager = builtins.fetchTarball https://github.com/nix-community/home-manager/archive/release-24.11.tar.gz;
+    in {
       imports = [
         (pareto {inherit pkgs lib;})
+        (import "${home-manager}/nixos")
       ];
+
       # enable Sway window manager
       programs.sway = {
         enable = true;
@@ -51,14 +55,33 @@ in {
       pkgs,
       lib,
       ...
-    }: {
+    }: let
+      home-manager = builtins.fetchTarball https://github.com/nix-community/home-manager/archive/release-24.11.tar.gz;
+    in {
       imports = [
         (pareto {inherit pkgs lib;})
+        (import "${home-manager}/nixos")
       ];
+
       # enable Sway window manager
       programs.sway = {
         enable = true;
         wrapperFeatures.gtk = true;
+      };
+      services.swayidle = {
+        enable = true;
+        timeouts = [
+          {
+            timeout = 300;
+            command = "${pkgs.swaylock}/bin/swaylock";
+          }
+        ];
+        events = [
+          {
+            event = "before-sleep";
+            command = "${pkgs.swaylock}/bin/swaylock";
+          }
+        ];
       };
     };
   };
