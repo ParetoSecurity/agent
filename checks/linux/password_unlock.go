@@ -67,7 +67,7 @@ func checkSway() bool {
 			log.WithError(err).Debugf("Failed to read file: %s", file)
 			continue
 		}
-
+		log.WithField("file", file).WithField("content", string(content)).Debug("File content read successfully")
 		lines := strings.Split(string(content), "\\") // Split lines by backslash since this is a config file with inline newlines
 		for _, line := range lines {
 			trimmed := strings.TrimSpace(line)
