@@ -71,6 +71,7 @@ in {
 
       # Home manager configuration for user jane.
       home-manager.users.paretosecurity = {
+        stateVersion = "24.11";
         programs.home-manager.enable = true;
 
         services.swayidle = {
