@@ -68,12 +68,13 @@ in {
         enable = true;
         wrapperFeatures.gtk = true;
       };
+
       users.users.paretosecurity = {
         isNormalUser = true;
         extraGroups = ["wheel"]; # Enable ‘sudo’ for the user.
       };
 
-      # Home manager configuration for user jane.
+      # Home manager configuration for user paretosecurity.
       home-manager.users.paretosecurity = {
         home.stateVersion = "24.11";
         programs.home-manager.enable = true;
@@ -163,7 +164,7 @@ in {
     status, out = swaylock.execute("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
     expected = (
         "  • Starting checks...\n"
-        "  • Access Security: Password is required to unlock the screen > [FAIL] Password after sleep or screensaver is off\n"
+        "  • Access Security: Password is required to unlock the screen > [OK] Password after sleep or screensaver is on\n"
         "  • Checks completed.\n"
     )
     assert out == expected, f"Expected did not match actual, got \n{out}"
