@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"os"
 	"strings"
 
 	"github.com/ParetoSecurity/agent/shared"
@@ -40,45 +39,20 @@ func (f *PasswordToUnlock) checkKDE() bool {
 	return result
 }
 
+// TAG: nixos
+// nixos only as no one else is using systemd to configure swaylock
+// checkSway checks if Sway is running and if the lock configuration is set
 func checkSway() bool {
-	paths := []string{"/etc/sway/config"}
-	homedir, err := os.UserHomeDir()
+	status, err := shared.RunCommand("systemctl", "--user", "show", "swayidle", "--no-pager")
 	if err != nil {
-		log.WithError(err).Debug("Failed to get home directory")
-		return false
+		log.WithError(err).Debug("Failed to check Sway lock configuration, swayidle service not configured")
 	}
 
-	for _, path := range []string{"/etc/sway/config.d", homedir + "/.config/sway/config.d", homedir + "/.config/sway/config"} {
-		files, err := filepathGlob(path)
-		if err != nil {
-			log.WithError(err).Debugf("Failed to read files from path: %s", path)
-			continue
-		}
-		if len(files) == 0 {
-			log.WithField("path", path).Debug("No files found in path")
-			continue
-		}
-		paths = append(paths, files...)
+	if strings.Contains(status, "swaylock") {
+		log.Debug("Sway lock configuration is set")
+		return true
 	}
-
-	for _, file := range paths {
-		content, err := osReadFile(file)
-		if err != nil {
-			log.WithError(err).Debugf("Failed to read file: %s", file)
-			continue
-		}
-		log.WithField("file", file).WithField("content", string(content)).Debug("File content read successfully")
-		lines := strings.Split(string(content), "\\") // Split lines by backslash since this is a config file with inline newlines
-		for _, line := range lines {
-			trimmed := strings.TrimSpace(line)
-			if strings.HasPrefix(trimmed, "exec swayidle") && !strings.HasPrefix(trimmed, "#") && strings.Contains(trimmed, "swaylock") {
-				log.WithField("file", file).Debug("Sway idle lock configuration found")
-				return true
-			}
-		}
-	}
-
-	log.Debug("Sway idle lock configuration not found")
+	log.Debug("Sway lock configuration is not set")
 	return false
 }
 
