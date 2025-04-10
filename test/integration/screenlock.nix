@@ -161,7 +161,7 @@ in {
     assert out == expected, f"Expected did not match actual, got \n{out}"
 
     # Test swaylock
-    status, out = swaylock.execute("sudo -u paretosecurity paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
+    status, out = swaylock.execute("sudo -u paretosecurity paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8 --verbose")
     expected = (
         "  • Starting checks...\n"
         "  • Access Security: Password is required to unlock the screen > [OK] Password after sleep or screensaver is on\n"
