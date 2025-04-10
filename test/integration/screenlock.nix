@@ -68,6 +68,10 @@ in {
         enable = true;
         wrapperFeatures.gtk = true;
       };
+      users.users.paretosecurity = {
+        isNormalUser = true;
+        extraGroups = ["wheel"]; # Enable ‘sudo’ for the user.
+      };
 
       # Home manager configuration for user jane.
       home-manager.users.paretosecurity = {
