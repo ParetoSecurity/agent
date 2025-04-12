@@ -4,9 +4,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/src/Welcome.css" />
   <script type="module">
-    import { Elm } from "/src/welcome.elm";
-    Elm.Application.init();
+    import { Elm } from "/src/Welcome.elm";
+    const app = Elm.Welcome.init({ node: document.querySelector("body") })
+    app.ports.sendGreetRequest.subscribe(function (name) {
+      window.go.main.App.Greet(name)
+      .then(result => app.ports.greetReceiver.send(result))
+    })
   </script>
 </head>
 
