@@ -11,6 +11,7 @@ before:
 
 builds:
 - main: ./cmd/paretosecurity
+  id: cli
   env:
   - CGO_ENABLED=0
   goos:
@@ -33,6 +34,30 @@ builds:
   - -X github.com/ParetoSecurity/agent/shared.Commit={{.Commit}}
   - -X github.com/ParetoSecurity/agent/shared.Date={{.Date}}
   binary: paretosecurity
+- main: ./cmd/welcome
+  id: ui
+  env:
+  - CGO_ENABLED=1
+  goos:
+  - linux
+  - windows
+  - darwin
+  goarch:
+  - amd64
+  - arm64
+  tags:
+  - menubar
+  flags:
+  - -v
+  - -trimpath
+  gcflags:
+  - all=-trimpath=${GOPATH}
+  ldflags:
+  - -s -w
+  - -X github.com/ParetoSecurity/agent/shared.Version={{.Version}}
+  - -X github.com/ParetoSecurity/agent/shared.Commit={{.Commit}}
+  - -X github.com/ParetoSecurity/agent/shared.Date={{.Date}}
+  binary: paretosecurity-ui
 
 archives:
 - formats:

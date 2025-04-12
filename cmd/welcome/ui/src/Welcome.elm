@@ -84,7 +84,7 @@ logo =
 step : { children : Html Msg, buttonText : String, onButtonClick : Msg } -> Html Msg
 step { children, buttonText, onButtonClick } =
     div [ class "bg-base-200 min-h-screen w-full flex items-center justify-center" ]
-        [ div [ class "p-6 flex min-h-screen flex-col items-center justify-between space-y-3" ]
+        [ div [ class "p-4 flex min-h-screen flex-col items-center justify-between space-y-2" ]
             [ div [ class "flex-none text-center flex flex-col items-center" ] [ children ]
             , button
                 [ class "btn btn-primary w-full flex-none", onClick onButtonClick ]
@@ -99,17 +99,17 @@ view model =
         0 ->
             step
                 { children =
-                    div [ class "flex flex-col items-center space-y-3" ]
+                    div [ class "flex flex-col items-center space-y-2" ]
                         [ logo
                         , div [ class "text-center" ]
                             [ h1 [ class "text-3xl" ] [ text "Welcome to" ]
                             , h2 [ class "text-primary font-extrabold text-4xl" ] [ text "Pareto Security" ]
                             ]
                         , p [ class "text-sm text-justify text-content" ]
-                            [ text "Pareto Security is an app that regularly checks your Mac's security configuration. It helps you take care of 20% of security tasks that prevent 80% of problems." ]
+                            [ text "Pareto Security is an app that regularly checks your security configuration. It helps you take care of 20% of security tasks that prevent 80% of problems." ]
                         , label [ class "fieldset-label" ]
                             [ input [ type_ "checkbox", class "checkbox checkbox-xs checkbox-primary" ] []
-                            , text " Automatically launch on system startup"
+                            , text "Launch on system startup"
                             ]
                         ]
                 , buttonText = "Get Started"
