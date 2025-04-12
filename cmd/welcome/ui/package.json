@@ -1,0 +1,21 @@
+{
+  "name": "paretoui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.3",
+    "daisyui": "^5.0.18",
+    "tailwindcss": "^4.1.3",
+    "elm": "0.19.1-6",
+    "elm-optimize-level-2": "0.3.5",
+    "tempy": "3.1.0",
+    "vite-plugin-elm": "v3.1.0-2",
+    "vite": "^6.0.3"
+  }
+}

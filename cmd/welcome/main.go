@@ -1,6 +1,6 @@
 package main
 
-//go:generate go tool wails3 generate bindings -clean -b -d dist/assets/bindings
+//go:generate go tool wails3 generate bindings -clean -b -d src/bindings
 
 import (
 	"embed"
@@ -9,7 +9,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-//go:embed dist/*
+//go:embed ui/dist/*
 var welcomeAssets embed.FS
 
 type WindowService struct{}

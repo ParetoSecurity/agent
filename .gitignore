@@ -11,14 +11,12 @@ devenv.local.nix
 # Added by cargo
 /target
 .DS_Store
-dist
-dist/
 coverage.txt
 
 # nix stuff
 result
 .nixos-test-history
-
+/dist
 # Devenv
 .devenv*
 devenv.local.nix
