@@ -46,17 +46,19 @@ builds:
   - amd64
   - arm64
   tags:
-  - menubar
+  - desktop
+  - production
   flags:
   - -v
   - -trimpath
   gcflags:
-  - all=-trimpath=${GOPATH}
+  - all=-trimpath=${GOPATH} -N -l
   ldflags:
   - -s -w
   - -X github.com/ParetoSecurity/agent/shared.Version={{.Version}}
   - -X github.com/ParetoSecurity/agent/shared.Commit={{.Commit}}
   - -X github.com/ParetoSecurity/agent/shared.Date={{.Date}}
+  - -H windowsgui
   binary: paretosecurity-ui
 
 archives:
