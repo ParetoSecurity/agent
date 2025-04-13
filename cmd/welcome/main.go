@@ -52,7 +52,7 @@ func main() {
 	app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
 		Title:                      "Welcome to Pareto Security",
 		Width:                      360,
-		Height:                     560,
+		Height:                     590,
 		URL:                        "/",
 		AlwaysOnTop:                true,
 		DisableResize:              true,
