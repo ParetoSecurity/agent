@@ -14,9 +14,11 @@ var All = []Claim{
 	}},
 	{"Application Updates", []check.Check{
 		&shared.ParetoUpdated{},
+		&checks.AutomaticUpdatesCheck{},
 	}},
 	{"Firewall & Sharing", []check.Check{
 		&shared.RemoteLogin{},
+		&checks.Firewall{},
 	}},
 	{"System Integrity", []check.Check{}},
 }
