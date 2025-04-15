@@ -27,7 +27,7 @@ func (f *WindowsFirewall) checkFirewallProfile(profile string) bool {
 }
 
 func (f *WindowsFirewall) Name() string {
-	return "Windows Firewal is enabled"
+	return "Windows Firewall is enabled"
 }
 
 func (f *WindowsFirewall) Run() error {
