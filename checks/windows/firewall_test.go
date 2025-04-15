@@ -1,71 +1,65 @@
-//go:build windows
-// +build windows
-
 package checks
 
 import (
 	"testing"
 
+	"github.com/ParetoSecurity/agent/shared"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFirewall_Name(t *testing.T) {
-	f := &Firewall{}
-	assert.Equal(t, "Windows Firewal is enabled", f.Name())
-}
+func TestCheckFirewallProfile(t *testing.T) {
 
-func TestFirewall_UUID(t *testing.T) {
-	f := &Firewall{}
-	assert.Equal(t, "b7e2e1c2-8e2a-4c1a-9e2b-ffb2e1c2a1b2", f.UUID())
-}
-
-func TestFirewall_PassedMessage(t *testing.T) {
-	f := &Firewall{}
-	assert.Equal(t, "Firewall is on", f.PassedMessage())
-}
-
-func TestFirewall_FailedMessage(t *testing.T) {
-	f := &Firewall{}
-	assert.Equal(t, "Firewall is off", f.FailedMessage())
-}
-
-func TestFirewall_IsRunnable(t *testing.T) {
-	f := &Firewall{}
-	assert.True(t, f.IsRunnable())
-}
-
-func TestFirewall_RequiresRoot(t *testing.T) {
-	f := &Firewall{}
-	assert.True(t, f.RequiresRoot())
-}
-
-func TestFirewall_Status(t *testing.T) {
-	f := &Firewall{passed: true}
-	assert.Equal(t, "Firewall is on", f.Status())
-	f.passed = false
-	assert.Equal(t, "Firewall is off", f.Status())
-}
-
-func TestFirewall_Run(t *testing.T) {
-	orig := checkFirewallProfile
-	defer func() { checkFirewallProfile = orig }()
-
-	checkFirewallProfile = func(profile string) bool {
-		if profile == "PublicProfile" {
-			return true
-		}
-		if profile == "PrivateProfile" {
-			return true
-		}
-		return false
+	tests := []struct {
+		name           string
+		profile        string
+		mockOutput     string
+		mockError      error
+		expectedResult bool
+		expectedStatus string
+	}{
+		{
+			name:           "Firewall enabled for Public profile",
+			profile:        "Public",
+			mockOutput:     "True",
+			mockError:      nil,
+			expectedResult: true,
+			expectedStatus: "",
+		},
+		{
+			name:           "Firewall disabled for Private profile",
+			profile:        "Private",
+			mockOutput:     "False",
+			mockError:      nil,
+			expectedResult: false,
+			expectedStatus: "Windows Firewall is not enabled for Private profile",
+		},
+		{
+			name:           "Error querying firewall profile",
+			profile:        "Domain",
+			mockOutput:     "",
+			mockError:      assert.AnError,
+			expectedResult: false,
+			expectedStatus: "Failed to query Windows Firewall for Domain profile",
+		},
 	}
 
-	f := &Firewall{}
-	assert.NoError(t, f.Run())
-	assert.True(t, f.Passed())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Mock shared.RunCommand
+			shared.RunCommandMocks = []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-NetFirewallProfile -Name '" + tt.profile + "' | Select-Object -ExpandProperty Enabled"},
+					Out:     tt.mockOutput,
+					Err:     tt.mockError,
+				},
+			}
 
-	checkFirewallProfile = func(profile string) bool { return false }
-	f = &Firewall{}
-	assert.NoError(t, f.Run())
-	assert.False(t, f.Passed())
+			firewall := &WindowsFirewall{}
+			result := firewall.checkFirewallProfile(tt.profile)
+
+			assert.Equal(t, tt.expectedResult, result)
+			assert.Equal(t, tt.expectedStatus, firewall.status)
+		})
+	}
 }

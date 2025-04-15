@@ -1,56 +1,59 @@
-//go:build windows
-// +build windows
-
 package checks
 
 import (
-	"golang.org/x/sys/windows/registry"
+	"strings"
+
+	"github.com/ParetoSecurity/agent/shared"
 )
 
-// Firewall checks if Windows Firewall is enabled for Public and Private profiles.
-type Firewall struct {
+type WindowsFirewall struct {
 	passed bool
 	status string
 }
 
-var checkFirewallProfile = func(profile string) bool {
-	key, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\`+profile, registry.QUERY_VALUE)
+func (f *WindowsFirewall) checkFirewallProfile(profile string) bool {
+	out, err := shared.RunCommand("powershell", "-Command", "Get-NetFirewallProfile -Name '"+profile+"' | Select-Object -ExpandProperty Enabled")
+
 	if err != nil {
+		f.status = "Failed to query Windows Firewall for " + profile + " profile"
 		return false
 	}
-	defer key.Close()
-	val, _, err := key.GetIntegerValue("EnableFirewall")
-	return err == nil && val == 1
+	enabled := strings.TrimSpace(string(out))
+	if enabled == "True" {
+		return true
+	}
+	f.status = "Windows Firewall is not enabled for " + profile + " profile"
+	return false
 }
 
-func (f *Firewall) Name() string {
+func (f *WindowsFirewall) Name() string {
 	return "Windows Firewal is enabled"
 }
 
-func (f *Firewall) Run() error {
-	f.passed = checkFirewallProfile("PublicProfile") && checkFirewallProfile("PrivateProfile")
+func (f *WindowsFirewall) Run() error {
+	f.passed = f.checkFirewallProfile("Public") && f.checkFirewallProfile("Private")
 	return nil
 }
 
-func (f *Firewall) Passed() bool {
+func (f *WindowsFirewall) Passed() bool {
 	return f.passed
 }
-func (f *Firewall) IsRunnable() bool {
+func (f *WindowsFirewall) IsRunnable() bool {
 	return true
 }
-func (f *Firewall) UUID() string {
+func (f *WindowsFirewall) UUID() string {
 	return "e632fdd2-b939-4aeb-9a3e-5df2d67d3110"
 }
-func (f *Firewall) PassedMessage() string {
+func (f *WindowsFirewall) PassedMessage() string {
 	return "Windows Firewall is on"
 }
-func (f *Firewall) FailedMessage() string {
+func (f *WindowsFirewall) FailedMessage() string {
 	return "Windows Firewall is off"
 }
-func (f *Firewall) RequiresRoot() bool {
+func (f *WindowsFirewall) RequiresRoot() bool {
 	return false
 }
-func (f *Firewall) Status() string {
+func (f *WindowsFirewall) Status() string {
 	if f.Passed() {
 		return f.PassedMessage()
 	}

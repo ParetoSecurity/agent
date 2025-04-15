@@ -8,8 +8,6 @@ import (
 
 var All = []Claim{
 	{"Access Security", []check.Check{
-		&shared.SSHKeys{},
-		&shared.SSHKeysAlgo{},
 		&checks.PasswordManagerCheck{},
 	}},
 	{"Application Updates", []check.Check{
@@ -18,7 +16,9 @@ var All = []Claim{
 	}},
 	{"Firewall & Sharing", []check.Check{
 		&shared.RemoteLogin{},
-		&checks.Firewall{},
+		&checks.WindowsFirewall{},
 	}},
-	{"System Integrity", []check.Check{}},
+	{"System Integrity", []check.Check{
+		&checks.WindowsDefender{},
+	}},
 }

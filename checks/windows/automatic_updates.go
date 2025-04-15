@@ -1,10 +1,9 @@
-//go:build windows
-// +build windows
-
 package checks
 
 import (
-	"golang.org/x/sys/windows/registry"
+	"encoding/json"
+
+	"github.com/ParetoSecurity/agent/shared"
 )
 
 type AutomaticUpdatesCheck struct {
@@ -12,25 +11,30 @@ type AutomaticUpdatesCheck struct {
 	status string
 }
 
+type autoUpdateSettings struct {
+	NotificationLevel int `json:"NotificationLevel"`
+}
+
 func (a *AutomaticUpdatesCheck) Name() string {
 	return "Automatic Updates are enabled"
 }
 
 func (a *AutomaticUpdatesCheck) Run() error {
-	key, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU`, registry.QUERY_VALUE)
+	out, err := shared.RunCommand("powershell", "-Command", "(New-Object -ComObject Microsoft.Update.AutoUpdate).Settings | ConvertTo-Json")
+
 	if err != nil {
-		// Key missing = policy not set, so fail
 		a.passed = false
+		a.status = "Failed to query update settings"
 		return nil
 	}
-	defer key.Close()
-	val, _, err := key.GetIntegerValue("NoAutoUpdate")
-	if err != nil {
-		// Value missing = updates enabled
-		a.passed = true
+	var settings autoUpdateSettings
+	if err := json.Unmarshal([]byte(out), &settings); err != nil {
+		a.passed = false
+		a.status = "Failed to parse update settings"
 		return nil
 	}
-	a.passed = (val == 0)
+	// NotificationLevel 1 = Never check for updates, 2 = Notify before download, 3 = Notify before install, 4 = Scheduled install
+	a.passed = settings.NotificationLevel != 1
 	return nil
 }
 

@@ -1,68 +1,83 @@
-//go:build windows
-// +build windows
-
 package checks
 
 import (
-	"golang.org/x/sys/windows/registry"
+	"encoding/json"
+	"strings"
+
+	"github.com/ParetoSecurity/agent/shared"
 )
 
-type DefenderEnabledCheck struct {
+type WindowsDefender struct {
 	passed bool
 	status string
 }
 
-func (d *DefenderEnabledCheck) Name() string {
+type mpStatus struct {
+	RealTimeProtectionEnabled bool
+	IoavProtectionEnabled     bool
+	AntispywareEnabled        bool
+}
+
+func (d *WindowsDefender) Name() string {
 	return "Windows Defender is enabled"
 }
 
-func (d *DefenderEnabledCheck) Run() error {
-	// Check DisableAntiSpyware
-	key, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\\Policies\\Microsoft\\Windows Defender`, registry.QUERY_VALUE)
-	if err == nil {
-		defer key.Close()
-		val, _, err := key.GetIntegerValue("DisableAntiSpyware")
-		if err == nil && val != 0 {
-			d.passed = false
-			d.status = "Windows Defender is disabled"
+func (d *WindowsDefender) Run() error {
+	out, err := shared.RunCommand("powershell", "-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json")
+	if err != nil {
+		d.passed = false
+		d.status = "Failed to query Defender status"
+		return nil
+	}
+	// Remove BOM if present
+	outStr := strings.TrimPrefix(string(out), "\xef\xbb\xbf")
+	var status mpStatus
+	if err := json.Unmarshal([]byte(outStr), &status); err != nil {
+		d.passed = false
+		d.status = "Failed to parse Defender status"
+		return nil
+	}
+	if status.RealTimeProtectionEnabled && status.IoavProtectionEnabled && status.AntispywareEnabled {
+		d.passed = true
+		d.status = ""
+	} else {
+		d.passed = false
+		// Compose a status message with details
+		if !status.RealTimeProtectionEnabled {
+			d.status = "Defender has disabled real-time protection"
+			return nil
+		}
+		if !status.IoavProtectionEnabled {
+			d.status = "Defender has disabled tamper protection"
+			return nil
+		}
+		if !status.AntispywareEnabled {
+			d.status = "Defender is disabled"
 			return nil
 		}
 	}
-	// Check DisableRealtimeMonitoring
-	key2, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Real-TimeProtection`, registry.QUERY_VALUE)
-	if err == nil {
-		defer key2.Close()
-		val, _, err := key2.GetIntegerValue("DisableRealtimeMonitoring")
-		if err == nil && val != 0 {
-			d.status = "Windows Defender real-time protection is disabled"
-			d.passed = false
-			return nil
-		}
-	}
-	// If neither disables are set to 1, Defender is enabled
-	d.passed = true
 	return nil
 }
 
-func (d *DefenderEnabledCheck) Passed() bool {
+func (d *WindowsDefender) Passed() bool {
 	return d.passed
 }
-func (d *DefenderEnabledCheck) IsRunnable() bool {
+func (d *WindowsDefender) IsRunnable() bool {
 	return true
 }
-func (d *DefenderEnabledCheck) UUID() string {
-	return "defender-ensure-enabled-1"
+func (d *WindowsDefender) UUID() string {
+	return "2be03cd7-5cb5-4778-a01a-7ba2fb22750a"
 }
-func (d *DefenderEnabledCheck) PassedMessage() string {
-	return "Microsoft Defender Antivirus is enabled and real-time protection is on."
+func (d *WindowsDefender) PassedMessage() string {
+	return "Microsoft Defender is on."
 }
-func (d *DefenderEnabledCheck) FailedMessage() string {
-	return "Microsoft Defender Antivirus is disabled or real-time protection is off."
+func (d *WindowsDefender) FailedMessage() string {
+	return "Microsoft Defender is off."
 }
-func (d *DefenderEnabledCheck) RequiresRoot() bool {
+func (d *WindowsDefender) RequiresRoot() bool {
 	return false
 }
-func (d *DefenderEnabledCheck) Status() string {
+func (d *WindowsDefender) Status() string {
 	if d.Passed() {
 		return d.PassedMessage()
 	}
