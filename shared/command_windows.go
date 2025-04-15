@@ -1,7 +1,11 @@
+//go:build windows
+// +build windows
+
 package shared
 
 import (
 	"errors"
+	"syscall"
 
 	"os/exec"
 	"strings"
@@ -39,6 +43,16 @@ func RunCommand(name string, arg ...string) (string, error) {
 	}
 
 	cmd := exec.Command(name, arg...)
+
+	// Hide the window and set the creation flags to prevent the command from
+	// creating a new console window
+	// This is important for running commands in the background without
+	// displaying a console window
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		HideWindow:    true,
+		CreationFlags: 0x08000000,
+	}
+
 	output, err := cmd.CombinedOutput()
 	log.WithField("cmd", string(name+" "+strings.TrimSpace(strings.Join(arg, " ")))).WithError(err).Debug(string(output))
 	return string(output), err

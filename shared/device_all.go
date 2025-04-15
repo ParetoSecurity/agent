@@ -10,6 +10,7 @@ import (
 	"github.com/caarlos0/log"
 	"github.com/elastic/go-sysinfo"
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 )
 
 func CurrentReportingDevice() ReportingDevice {
@@ -19,12 +20,21 @@ func CurrentReportingDevice() ReportingDevice {
 	}
 
 	osVersion := device.OS
-	if runtime.GOOS == "windows" {
-		osVersion = strings.ReplaceAll(osVersion, "Microsoft", "")
-		osVersion = fmt.Sprintf("%s %s", osVersion, device.OSVersion)
-	}
-
 	osVersion = Sanitize(fmt.Sprintf("%s %s", osVersion, device.OSVersion))
+
+	if runtime.GOOS == "windows" {
+		productName, err := RunCommand("powershell", "-Command", `(Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ProductName`)
+		if err != nil {
+			log.WithError(err).Warn("Failed to get Windows product name")
+		}
+		displayVersion, err := RunCommand("powershell", "-Command", `(Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").DisplayVersion`)
+		if err != nil {
+			log.WithError(err).Warn("Failed to get Windows version")
+		}
+		if lo.IsNotEmpty(productName) && lo.IsNotEmpty(displayVersion) {
+			osVersion = Sanitize(strings.TrimSpace(productName + " " + displayVersion))
+		}
+	}
 
 	return ReportingDevice{
 		MachineUUID: device.UUID,
