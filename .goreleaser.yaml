@@ -29,10 +29,26 @@ builds:
   - all=-trimpath=${GOPATH}
   ldflags:
   - -s -w
+  - -H windowsgui
   - -X github.com/ParetoSecurity/agent/shared.Version={{.Version}}
   - -X github.com/ParetoSecurity/agent/shared.Commit={{.Commit}}
   - -X github.com/ParetoSecurity/agent/shared.Date={{.Date}}
   binary: paretosecurity
+
+upx:
+- enabled: true
+
+chocolateys:
+- name: paretosecurity
+  owners: Niteo GmbH
+  title: Pareto Security
+  authors: Niteo GmbH
+  project_url: https://paretosecurity.com
+  package_source_url: https://github.com/ParetoSecurity/agent
+  description: |
+    {{ .ProjectName }} installer package.
+    Automatically audit your device for basic security hygiene.
+  skip_publish: false
 
 archives:
 - formats:
@@ -41,6 +57,7 @@ archives:
   - goos: windows
     formats:
     - zip
+
 nfpms:
 - vendor: paretosecurity.com
   homepage: https://github.com/ParetoSecurity/agent
@@ -74,6 +91,7 @@ nfpms:
     dst: /usr/lib/systemd/user/paretosecurity-user.service
   - src: apt/paretosecurity-user.timer
     dst: /usr/lib/systemd/user/paretosecurity-user.timer
+
 changelog:
   sort: asc
   filters:

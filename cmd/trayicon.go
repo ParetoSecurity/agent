@@ -4,7 +4,9 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
+	"image/png"
 	"net/url"
 	"os"
 	"runtime"
@@ -13,6 +15,7 @@ import (
 	"os/exec"
 
 	"fyne.io/systray"
+	ico "github.com/Kodeworks/golang-image-ico"
 	"github.com/ParetoSecurity/agent/check"
 	"github.com/ParetoSecurity/agent/claims"
 	"github.com/ParetoSecurity/agent/notify"
@@ -43,16 +46,21 @@ func checkStatusToIcon(status bool) string {
 
 func getIcon() []byte {
 
-	// isDark, err := exec.Command("gsettings", "get", "org.gnome.desktop.interface", "color-scheme").Output()
-	// if err == nil && strings.Contains(string(isDark), "prefer-dark") {
-	// 	return shared.IconWhite
-	// }
-	// isKDE, err := exec.Command("kreadconfig5", "--group", "General", "--key", "ColorScheme").Output()
-	// if err == nil && strings.Contains(string(isKDE), "Dark") {
-	// 	return shared.IconWhite
-	// }
+	if runtime.GOOS == "windows" {
 
-	return shared.IconWhite
+		var icoBuffer bytes.Buffer
+		pngImage, err := png.Decode(bytes.NewReader(shared.IconBlack))
+		if err != nil {
+			log.WithError(err).Error("failed to decode PNG image")
+			return shared.IconBlack
+		}
+		if err := ico.Encode(&icoBuffer, pngImage); err != nil {
+			log.WithError(err).Error("failed to encode ICO image")
+		}
+		return icoBuffer.Bytes()
+	}
+
+	return shared.IconBlack
 }
 
 func addOptions() {

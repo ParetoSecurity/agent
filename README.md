@@ -15,7 +15,7 @@
 
 
 
-Automatically audit your Linux machine for basic security hygiene.
+Automatically audit your device for basic security hygiene.
 
 ## Installation
 
