@@ -78,7 +78,7 @@ nfpms:
   - src: apt/ParetoSecurityLink.desktop
     dst: /usr/share/applications/ParetoSecurityLink.desktop
   # Icons
-  - src: assets/Mac_512pt@2x.png
+  - src: assets/icon.png
     dst: /usr/share/icons/hicolor/512x512/apps/ParetoSecurity.png
   # Services
   - src: apt/paretosecurity.service
