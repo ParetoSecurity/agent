@@ -38,17 +38,17 @@ builds:
 upx:
 - enabled: true
 
-chocolateys:
-- name: paretosecurity
-  owners: Niteo GmbH
-  title: Pareto Security
-  authors: Niteo GmbH
-  project_url: https://paretosecurity.com
-  package_source_url: https://github.com/ParetoSecurity/agent
-  description: |
-    {{ .ProjectName }} installer package.
-    Automatically audit your device for basic security hygiene.
-  skip_publish: false
+# chocolateys:
+# - name: paretosecurity
+#   owners: Niteo GmbH
+#   title: Pareto Security
+#   authors: Niteo GmbH
+#   project_url: https://paretosecurity.com
+#   package_source_url: https://github.com/ParetoSecurity/agent
+#   description: |
+#     {{ .ProjectName }} installer package.
+#     Automatically audit your device for basic security hygiene.
+#   skip_publish: false
 
 archives:
 - formats:
