@@ -56,6 +56,30 @@ builds:
   - -X github.com/ParetoSecurity/agent/shared.Commit={{.Commit}}
   - -X github.com/ParetoSecurity/agent/shared.Date={{.Date}}
   binary: paretosecurity-tray
+- main: ./cmd/paretosecurity-installer
+  id: installer
+  env:
+  - CGO_ENABLED=0
+  - GOPROXY=https://proxy.golang.org,direct
+  - GOSUMDB=sum.golang.org
+  goos:
+  - windows
+  goarch:
+  - amd64
+  - arm64
+  flags:
+  - -v
+  - -trimpath
+  - -buildvcs=false
+  gcflags:
+  - all=-trimpath=${GOPATH}
+  ldflags:
+  - -s -w
+  - -H windowsgui -buildid=
+  - -X github.com/ParetoSecurity/agent/shared.Version={{.Version}}
+  - -X github.com/ParetoSecurity/agent/shared.Commit={{.Commit}}
+  - -X github.com/ParetoSecurity/agent/shared.Date={{.Date}}
+  binary: paretosecurity-installer
 
 # chocolateys:
 # - name: paretosecurity
