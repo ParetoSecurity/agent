@@ -16,12 +16,11 @@ builds:
   - CGO_ENABLED=0
   goos:
   - linux
+  - windows
   - darwin
   goarch:
   - amd64
   - arm64
-  tags:
-  - menubar
   flags:
   - -v
   - -trimpath
@@ -33,7 +32,7 @@ builds:
   - -X github.com/ParetoSecurity/agent/shared.Commit={{.Commit}}
   - -X github.com/ParetoSecurity/agent/shared.Date={{.Date}}
   binary: paretosecurity
-- main: ./cmd/paretosecurity
+- main: ./cmd/paretosecurity-tray
   id: tray
   env:
   - CGO_ENABLED=0
@@ -44,8 +43,6 @@ builds:
   goarch:
   - amd64
   - arm64
-  tags:
-  - menubar
   flags:
   - -v
   - -trimpath

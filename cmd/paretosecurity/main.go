@@ -8,7 +8,6 @@ import (
 )
 
 func main() {
-	attachConsole()
 	if err := shared.LoadConfig(); err != nil {
 		if !shared.IsRoot() {
 			log.WithError(err).Warn("failed to load config")
