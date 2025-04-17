@@ -8,6 +8,7 @@ project_name: paretosecurity
 before:
   hooks:
   - go mod tidy
+  - go tool go-winres make --arch="amd64,386,arm64"
 
 builds:
 - main: ./cmd/paretosecurity
@@ -15,7 +16,6 @@ builds:
   - CGO_ENABLED=0
   goos:
   - linux
-  - windows
   - darwin
   goarch:
   - amd64
@@ -29,14 +29,32 @@ builds:
   - all=-trimpath=${GOPATH}
   ldflags:
   - -s -w
-  - -H windowsgui
   - -X github.com/ParetoSecurity/agent/shared.Version={{.Version}}
   - -X github.com/ParetoSecurity/agent/shared.Commit={{.Commit}}
   - -X github.com/ParetoSecurity/agent/shared.Date={{.Date}}
   binary: paretosecurity
-  hooks:
-    pre:
-    - go tool go-winres make --arch="amd64,386,arm64"
+- main: ./cmd/paretosecurity
+  id: cli
+  env:
+  - CGO_ENABLED=0
+  goos:
+  - windows
+  goarch:
+  - amd64
+  - arm64
+  tags:
+  - menubar
+  flags:
+  - -v
+  - -trimpath
+  gcflags:
+  - all=-trimpath=${GOPATH}
+  ldflags:
+  - -s -w
+  - -X github.com/ParetoSecurity/agent/shared.Version={{.Version}}
+  - -X github.com/ParetoSecurity/agent/shared.Commit={{.Commit}}
+  - -X github.com/ParetoSecurity/agent/shared.Date={{.Date}}
+  binary: paretosecurity-cli
 
 # chocolateys:
 # - name: paretosecurity
