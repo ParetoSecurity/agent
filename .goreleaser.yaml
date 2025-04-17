@@ -9,9 +9,13 @@ before:
   hooks:
   - go mod tidy
   - go tool go-winres make --product-version=git-tag --file-version=git-tag --arch="amd64,386,arm64"
+  - sh -c "cp *.syso cmd/paretosecurity/"
+  - sh -c "cp *.syso cmd/paretosecurity-tray/"
+  - sh -c "cp *.syso cmd/paretosecurity-installer/"
 
 builds:
 - main: ./cmd/paretosecurity
+  id: agent
   env:
   - CGO_ENABLED=0
   goos:
@@ -24,6 +28,7 @@ builds:
   flags:
   - -v
   - -trimpath
+  - -mod=readonly
   gcflags:
   - all=-trimpath=${GOPATH}
   ldflags:
@@ -47,6 +52,7 @@ builds:
   - -v
   - -trimpath
   - -buildvcs=false
+  - -mod=readonly
   gcflags:
   - all=-trimpath=${GOPATH}
   ldflags:
@@ -71,6 +77,7 @@ builds:
   - -v
   - -trimpath
   - -buildvcs=false
+  - -mod=readonly
   gcflags:
   - all=-trimpath=${GOPATH}
   ldflags:
@@ -97,17 +104,19 @@ upx:
 - enabled: true
 
 archives:
-
-- formats:
+- id: default
+  formats:
   - tar.gz
   allow_different_binary_count: true
   format_overrides:
   - goos: windows
     formats:
     - zip
-
+  name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+  builds: [ agent, tray ]
 nfpms:
 - vendor: paretosecurity.com
+  builds: [ agent ]
   homepage: https://github.com/ParetoSecurity/agent
   maintainer: Pareto Security
   description: Automatically audit your Linux machine for basic security hygiene.

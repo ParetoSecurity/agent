@@ -1,6 +1,6 @@
 package main
 
-//go:generate go tool wails3 generate bindings -clean -b -d src/bindings
+//go:generate go tool wails3 generate bindings -clean -b -d ui/src/bindings
 
 import (
 	"embed"
@@ -12,29 +12,14 @@ import (
 //go:embed ui/dist/*
 var welcomeAssets embed.FS
 
-type WindowService struct{}
-
-func (s *WindowService) GeneratePanic() {
-	s.call1()
-}
-
-func (s *WindowService) call1() {
-	s.call2()
-}
-
-func (s *WindowService) call2() {
-	panic("oh no! something went wrong deep in my service! :(")
-}
-
 func main() {
 	app := application.New(application.Options{
-		Name:        "Single Instance Example",
-		LogLevel:    slog.LevelDebug,
-		Description: "An example of single instance functionality in Wails v3",
+		Name:        "Pareto Security Installer",
+		LogLevel:    slog.LevelInfo,
+		Description: "Installer for Pareto Security Agent",
 		Services: []application.Service{
 			application.NewService(&WindowService{}),
 		},
-
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(welcomeAssets),
 		},
