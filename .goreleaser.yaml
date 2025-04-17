@@ -73,8 +73,10 @@ upx:
 - enabled: true
 
 archives:
+
 - formats:
   - tar.gz
+  allow_different_binary_count: true
   format_overrides:
   - goos: windows
     formats:
