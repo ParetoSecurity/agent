@@ -34,9 +34,11 @@ builds:
   - -X github.com/ParetoSecurity/agent/shared.Date={{.Date}}
   binary: paretosecurity
 - main: ./cmd/paretosecurity
-  id: cli
+  id: tray
   env:
   - CGO_ENABLED=0
+  - GOPROXY=https://proxy.golang.org,direct
+  - GOSUMDB=sum.golang.org
   goos:
   - windows
   goarch:
@@ -47,14 +49,16 @@ builds:
   flags:
   - -v
   - -trimpath
+  - -buildvcs=false
   gcflags:
   - all=-trimpath=${GOPATH}
   ldflags:
   - -s -w
+  - -H windowsgui -buildid=
   - -X github.com/ParetoSecurity/agent/shared.Version={{.Version}}
   - -X github.com/ParetoSecurity/agent/shared.Commit={{.Commit}}
   - -X github.com/ParetoSecurity/agent/shared.Date={{.Date}}
-  binary: paretosecurity-cli
+  binary: paretosecurity-tray
 
 # chocolateys:
 # - name: paretosecurity
