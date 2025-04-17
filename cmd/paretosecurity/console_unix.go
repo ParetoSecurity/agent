@@ -2,6 +2,6 @@
 
 package main
 
-func attachIfTerminal() {
+func attachConsole() {
 	// No-op on Unix systems
 }

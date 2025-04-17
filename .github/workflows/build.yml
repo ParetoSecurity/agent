@@ -44,6 +44,10 @@ jobs:
           args: release --skip=publish --clean --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Embed Windows resources
+        run: |
+          go tool go-winres patch --delete dist/paretosecurity_windows_arm64_v8.0/paretosecurity.exe 
+          go tool go-winres patch --delete dist/paretosecurity_windows_amd64_v1/paretosecurity.exe
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         name: Upload release
         with:
