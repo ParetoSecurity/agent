@@ -34,9 +34,9 @@ builds:
   - -X github.com/ParetoSecurity/agent/shared.Commit={{.Commit}}
   - -X github.com/ParetoSecurity/agent/shared.Date={{.Date}}
   binary: paretosecurity
-
-upx:
-- enabled: true
+  hooks:
+    pre:
+    - go tool go-winres make --arch="amd64,386,arm64"
 
 # chocolateys:
 # - name: paretosecurity
