@@ -8,7 +8,7 @@ project_name: paretosecurity
 before:
   hooks:
   - go mod tidy
-  - go tool go-winres make --arch="amd64,386,arm64"
+  - go tool go-winres make --product-version=git-tag --file-version=git-tag --arch="amd64,386,arm64"
 
 builds:
 - main: ./cmd/paretosecurity
