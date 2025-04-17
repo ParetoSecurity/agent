@@ -2,6 +2,8 @@ package checks
 
 import (
 	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/ParetoSecurity/agent/shared"
 )
@@ -34,7 +36,30 @@ func (a *AutomaticUpdatesCheck) Run() error {
 		return nil
 	}
 	// NotificationLevel 1 = Never check for updates, 2 = Notify before download, 3 = Notify before install, 4 = Scheduled install
-	a.passed = settings.NotificationLevel != 1
+	if settings.NotificationLevel == 1 {
+		a.status = "Automatic Updates are disabled"
+		a.passed = false
+		return nil
+	}
+
+	// Check if updates are paused
+	psCmd := `try { Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings" -Name "PauseUpdatesExpiryTime" } catch { 0 }`
+	pauseOut, pauseErr := shared.RunCommand("powershell", "-Command", psCmd)
+	if pauseErr == nil && len(pauseOut) > 0 {
+		// Parse output as int64 (epoch seconds)
+		var expiry int64
+		_, scanErr := fmt.Sscanf(pauseOut, "%d", &expiry)
+		if scanErr == nil && expiry > 0 {
+			now := time.Now().Unix()
+			if expiry > now {
+				a.passed = false
+				a.status = "Updates are paused"
+				return nil
+			}
+		}
+	}
+
+	a.passed = true
 	return nil
 }
 
