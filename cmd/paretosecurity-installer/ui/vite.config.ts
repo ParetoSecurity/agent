@@ -10,6 +10,7 @@ export default defineConfig(async () => ({
   }), tailwindcss()],
   build: {
     rollupOptions: {
+      external: ['@wailsio/runtime', '/wails/runtime.js'],
       input: {
         main: resolve(__dirname, 'index.html'),
       },

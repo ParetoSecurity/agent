@@ -1,7 +1,5 @@
 package main
 
-//go:generate go tool wails3 generate bindings -clean -b -d ui/src/bindings
-
 import (
 	"embed"
 	"log/slog"

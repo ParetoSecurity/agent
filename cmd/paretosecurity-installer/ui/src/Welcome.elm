@@ -25,10 +25,10 @@ main =
 -- PORTS
 
 
-port sendGreetRequest : String -> Cmd msg
+port installApp : Bool -> Cmd msg
 
 
-port greetReceiver : (String -> msg) -> Sub msg
+port installAppCallback : (String -> msg) -> Sub msg
 
 
 
@@ -37,13 +37,13 @@ port greetReceiver : (String -> msg) -> Sub msg
 
 type alias Model =
     { screen : Int
+    , withStartup : Bool
     }
 
 
 init : () -> ( Model, Cmd msg )
 init _ =
-    ( { screen = 0
-      }
+    ( { screen = 0, withStartup = False }
     , Cmd.none
     )
 
@@ -54,13 +54,29 @@ init _ =
 
 type Msg
     = Screen Int
+    | AppCallback String
+    | WithStartup Bool
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Screen i ->
-            ( { model | screen = i }, Cmd.none )
+            ( { model | screen = i }
+            , if i == 1 then
+                installApp True
+
+              else
+                Cmd.none
+            )
+
+        AppCallback _ ->
+            ( model, Cmd.none )
+
+        WithStartup b ->
+            ( { model | withStartup = b }
+            , Cmd.none
+            )
 
 
 
@@ -69,7 +85,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    installAppCallback AppCallback
 
 
 
@@ -85,10 +101,14 @@ step : { children : Html Msg, buttonText : String, onButtonClick : Msg } -> Html
 step { children, buttonText, onButtonClick } =
     div [ class "bg-base-200 min-h-screen w-full flex items-center justify-center" ]
         [ div [ class "p-4 pt-8 flex min-h-screen flex-col items-center justify-between space-y-3" ]
-            [ div [ class "flex-none text-center flex flex-col items-center" ] [ children ]
-            , button
-                [ class "btn btn-primary w-full flex-none", onClick onButtonClick ]
-                [ text buttonText ]
+            [ div [ class "flex-1 flex items-center justify-center" ] [ children ]
+            , if buttonText /= "" then
+                button
+                    [ class "btn btn-primary w-full flex-none", onClick onButtonClick ]
+                    [ text buttonText ]
+
+              else
+                text ""
             ]
         ]
 
@@ -108,7 +128,13 @@ view model =
                         , p [ class "text-sm text-justify text-content" ]
                             [ text "Pareto Security is an app that regularly checks your security configuration. It helps you take care of 20% of security tasks that prevent 80% of problems." ]
                         , label [ class "fieldset-label text-sm" ]
-                            [ input [ type_ "checkbox", class "checkbox checkbox-xs checkbox-primary" ] []
+                            [ input
+                                [ type_ "checkbox"
+                                , class "checkbox checkbox-xs checkbox-primary"
+                                , checked model.withStartup
+                                , onCheck WithStartup
+                                ]
+                                []
                             , text "Launch on system startup"
                             ]
                         ]
@@ -117,6 +143,23 @@ view model =
                 }
 
         1 ->
+            step
+                { children =
+                    div [ class "flex flex-col items-center space-y-6" ]
+                        [ logo
+                        , div [ class "w-full flex flex-col items-center space-y-3" ]
+                            [ node "progress"
+                                [ class "progress w-full" ]
+                                []
+                            , p [ class "text-sm text-center text-content mt-2" ]
+                                [ text "Installing Pareto Security app..." ]
+                            ]
+                        ]
+                , buttonText = ""
+                , onButtonClick = Screen 2
+                }
+
+        2 ->
             step
                 { children =
                     div [ class "flex flex-col items-center space-y-3" ]

@@ -7,11 +7,17 @@
   <link rel="stylesheet" href="/src/Welcome.css" />
   <script type="module">
     import { Elm } from "/src/Welcome.elm";
+    import { WindowService } from "/src/index.js";
+
     const app = Elm.Welcome.init({ node: document.querySelector("body") })
-    app.ports.sendGreetRequest.subscribe(function (name) {
-      window.go.main.App.Greet(name)
-      .then(result => app.ports.greetReceiver.send(result))
-    })
+    app.ports.installApp.subscribe(async (withStartup) => {
+      try {
+        const result = await WindowService.InstallApp(withStartup);
+        app.ports.installAppCallback.send(result);
+      } catch (err) {
+        app.ports.installAppCallback.send({ error: err?.message || "Unknown error" });
+      }
+    });
   </script>
 </head>
 
