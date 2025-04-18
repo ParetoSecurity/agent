@@ -18,6 +18,14 @@
         app.ports.installAppCallback.send({ error: err?.message || "Unknown error" });
       }
     });
+
+    app.ports.quitApp.subscribe(async (url) => {
+      try {
+        await WindowService.QuitApp();
+      } catch (err) {
+        console.error(err);
+      }
+    });
   </script>
 </head>
 

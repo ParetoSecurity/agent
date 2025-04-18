@@ -13,3 +13,10 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 export function InstallApp(withStartup) {
     return $Call.ByID(2881211655, withStartup);
 }
+
+/**
+ * @returns {$CancellablePromise<void>}
+ */
+export function QuitApp() {
+    return $Call.ByID(23891361);
+}

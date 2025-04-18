@@ -28,6 +28,9 @@ main =
 port installApp : Bool -> Cmd msg
 
 
+port quitApp : () -> Cmd msg
+
+
 port installAppCallback : (String -> msg) -> Sub msg
 
 
@@ -56,6 +59,7 @@ type Msg
     = Screen Int
     | AppCallback String
     | WithStartup Bool
+    | Quit
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -71,12 +75,15 @@ update msg model =
             )
 
         AppCallback _ ->
-            ( model, Cmd.none )
+            ( { model | screen = 2 }, Cmd.none )
 
         WithStartup b ->
             ( { model | withStartup = b }
             , Cmd.none
             )
+
+        Quit ->
+            ( model, quitApp () )
 
 
 
@@ -171,8 +178,8 @@ view model =
                             , text " in the tray."
                             ]
                         ]
-                , buttonText = "Continue"
-                , onButtonClick = Screen 1
+                , buttonText = "Finish"
+                , onButtonClick = Quit
                 }
 
         _ ->

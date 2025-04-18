@@ -137,6 +137,11 @@ func (w *WindowService) createStartupShortcut() error {
 	return w.createShortcut(installPath, startupPath, "Pareto Security")
 }
 
+func (w *WindowService) QuitApp() error {
+	os.Exit(0)
+	return nil
+}
+
 func (w *WindowService) InstallApp(withStartup bool) error {
 	err := w.getLatestRelease()
 	if err != nil {
@@ -170,7 +175,16 @@ func (w *WindowService) InstallApp(withStartup bool) error {
 			return err
 		}
 	}
+	// Start the app
+	roamingDir, err := os.UserConfigDir()
+	if err != nil {
+		log.WithError(err).Error("failed to get roaming directory")
+	}
 
+	trayPath := filepath.Join(roamingDir, "ParetoSecurity", "paretosecurity-tray.exe")
+	if _, err := os.StartProcess(trayPath, []string{trayPath}, &os.ProcAttr{}); err != nil {
+		log.WithError(err).Error("failed to start app")
+	}
 	return nil
 }
 
