@@ -223,3 +223,46 @@ func TestPasswordToUnlock_PassedMessage(t *testing.T) {
 		t.Errorf("Expected PassedMessage %s, got %s", expectedPassedMessage, f.PassedMessage())
 	}
 }
+func TestCheckSway(t *testing.T) {
+	tests := []struct {
+		name       string
+		commandOut string
+		commandErr error
+		expected   bool
+	}{
+		{
+			name:       "Swaylock configured",
+			commandOut: "ExecStart=/usr/bin/swaylock -f timeout=5\n",
+			commandErr: nil,
+			expected:   true,
+		},
+		{
+			name:       "Swaylock not configured",
+			commandOut: "ActiveState=inactive\n",
+			commandErr: nil,
+			expected:   false,
+		},
+		{
+			name:       "Command error",
+			commandOut: "",
+			commandErr: assert.AnError,
+			expected:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			shared.RunCommandMocks = []shared.RunCommandMock{
+				{
+					Command: "systemctl",
+					Args:    []string{"--user", "show", "swayidle", "--no-pager"},
+					Out:     tt.commandOut,
+					Err:     tt.commandErr,
+				},
+			}
+
+			result := checkSway()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

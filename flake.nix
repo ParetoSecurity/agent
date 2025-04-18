@@ -1,14 +1,11 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/master";
-    nix-vm-test.url = "github:numtide/nix-vm-test";
     systems.url = "github:nix-systems/default";
   };
-
   outputs = inputs @ {
     flake-parts,
     nixpkgs,
-    nix-vm-test,
     self,
     ...
   }:
@@ -22,75 +19,20 @@
         self,
         system,
         ...
-      }: let
-        flakePackage = import ./package.nix {inherit pkgs lib;};
-        testPackage = {
-          distro,
-          version,
-          script,
-        }:
-          (inputs.nix-vm-test.lib.x86_64-linux.${distro}.${version} {
-            sharedDirs.packageDir = {
-              source = "${toString ./.}/pkg";
-              target = "/mnt/package";
-            };
-            testScript = builtins.readFile "${toString ./.}/test/integration/${script}";
-          })
-          .driver;
-        testRelease = {
-          distro,
-          version,
-          script,
-        }:
-          (inputs.nix-vm-test.lib.x86_64-linux.${distro}.${version} {
-            sharedDirs = {};
-            testScript = builtins.readFile "${toString ./.}/test/integration/${script}";
-          })
-          .driver;
-      in {
-        packages.default = flakePackage;
-        checks.test-nixos = import ./test/integration/nixos.nix {
-          inherit pkgs system flakePackage;
-        };
-
-        checks.firewall = pkgs.testers.runNixOSTest ./test/integration/firewall.nix;
-        checks.help = pkgs.testers.runNixOSTest ./test/integration/help.nix;
-        checks.luks = pkgs.testers.runNixOSTest ./test/integration/luks.nix;
-        checks.pwd-manager = pkgs.testers.runNixOSTest ./test/integration/pwd-manager.nix;
-        checks.screenlock = pkgs.testers.runNixOSTest ./test/integration/screenlock.nix;
-        checks.secureboot = pkgs.testers.runNixOSTest ./test/integration/secureboot.nix;
-
-        packages.test-debian = testPackage {
-          distro = "debian";
-          version = "13";
-          script = "debian.py";
-        };
-        packages.test-fedora = testPackage {
-          distro = "fedora";
-          version = "40";
-          script = "fedora.py";
-        };
-        packages.test-ubuntu = testPackage {
-          distro = "ubuntu";
-          version = "23_10";
-          script = "ubuntu.py";
-        };
-
-        packages.test-release-debian = testRelease {
-          distro = "debian";
-          version = "13";
-          script = "debian-release.py";
-        };
-        packages.test-release-fedora = testRelease {
-          distro = "fedora";
-          version = "40";
-          script = "fedora-release.py";
-        };
-        packages.test-release-ubuntu = testRelease {
-          distro = "ubuntu";
-          version = "23_10";
-          script = "ubuntu-release.py";
-        };
+      }: {
+        packages.default = import ./package.nix {inherit pkgs lib;};
+        checks =
+          lib.mapAttrs (
+            name: path:
+              pkgs.testers.runNixOSTest path
+          ) {
+            firewall = ./test/integration/firewall.nix;
+            help = ./test/integration/help.nix;
+            luks = ./test/integration/luks.nix;
+            pwd-manager = ./test/integration/pwd-manager.nix;
+            screenlock = ./test/integration/screenlock.nix;
+            secureboot = ./test/integration/secureboot.nix;
+          };
       };
     };
 }

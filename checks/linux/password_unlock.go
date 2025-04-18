@@ -39,6 +39,23 @@ func (f *PasswordToUnlock) checkKDE() bool {
 	return result
 }
 
+// TAG: nixos
+// nixos only as no one else is using systemd to configure swaylock
+// checkSway checks if Sway is running and if the lock configuration is set
+func checkSway() bool {
+	status, err := shared.RunCommand("systemctl", "--user", "show", "swayidle", "--no-pager")
+	if err != nil {
+		log.WithError(err).Debug("Failed to check Sway lock configuration, swayidle service not configured")
+	}
+
+	if strings.Contains(status, "swaylock") {
+		log.Debug("Sway lock configuration is set")
+		return true
+	}
+	log.Debug("Sway lock configuration is not set")
+	return false
+}
+
 // Run executes the check
 func (f *PasswordToUnlock) Run() error {
 	anyCheckPerformed := false
@@ -58,6 +75,14 @@ func (f *PasswordToUnlock) Run() error {
 		allChecksPassed = allChecksPassed && f.checkKDE()
 	} else {
 		log.Debug("KDE environment not detected for screensaver lock check")
+	}
+
+	// Check if running Sway
+	if _, err := lookPath("sway"); err == nil {
+		anyCheckPerformed = true
+		allChecksPassed = allChecksPassed && checkSway()
+	} else {
+		log.Debug("Sway environment not detected for screensaver lock check")
 	}
 
 	// Performed at least one check and all performed checks passed
