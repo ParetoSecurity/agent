@@ -34,9 +34,23 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R
       - name: Run Windows schema
-        run: dist/agent_windows_amd64_v1/paretosecurity schema > windows.json
+        run: agent_windows_amd64_v1/paretosecurity schema > windows.json
       - name: Run Windows tests
-        run: dist/agent_windows_amd64_v1/paretosecurity check
+        run: agent_windows_amd64_v1/paretosecurity check
+      - name: Run Installer and Capture Screenshot
+        run: |
+          Start-Process -FilePath "installer_windows_amd64_v1/paretosecurity-installer.exe"
+          Add-Type -AssemblyName System.Windows.Forms
+          $bitmap = New-Object Drawing.Bitmap([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height)
+          $graphics = [Drawing.Graphics]::FromImage($bitmap)
+          $graphics.CopyFromScreen(0, 0, 0, 0, $bitmap.Size)
+          $bitmap.Save("installer_screenshot.png")
+        shell: pwsh
+      - name: Upload Screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-screenshot
+          path: installer_screenshot.png
   linux:
     name: Linux Test of a Build
     runs-on: ubuntu-latest
@@ -49,9 +63,9 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R
       - name: Run Linux schema
-        run: dist/agent_linux_amd64_v1/paretosecurity schema > linux.json
+        run: agent_linux_amd64_v1/paretosecurity schema > linux.json
       - name: Run Linux tests
-        run: dist/agent_linux_amd64_v1/paretosecurity check
+        run: agent_linux_amd64_v1/paretosecurity check
   build:
     name: Unstable build
     runs-on: ubuntu-latest
