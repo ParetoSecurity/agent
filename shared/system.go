@@ -74,5 +74,6 @@ func SelfExe() string {
 	if err != nil {
 		return "paretosecurity"
 	}
-	return exePath
+	// Remove the -tray suffix from the executable name (WIN, standalone)
+	return strings.Replace(exePath, "-tray", "", -1) // Remove -tray from the path)
 }
