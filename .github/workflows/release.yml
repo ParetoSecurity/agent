@@ -12,23 +12,17 @@ permissions:
   attestations: write
 
 jobs:
-  windows:
+  windows-release:
     runs-on: windows-latest
-    name: Windows Build
+    name: Windows Release
     needs: [ release ]
     steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Download release
         uses: actions/download-artifact@v4
         with:
           name: release
-      - name: Unzip release
-        run: |
-          mkdir -p dist
-          unzip -o release.zip -d dist
       - name: Run Windows schema
-        run: dist/agent_windows_amd64_v1/paretosecurity schema > windows.json
+        run: agent_windows_amd64_v1/paretosecurity schema > windows.json
       - name: Upload Windows schema
         uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
         with:
@@ -37,8 +31,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Rename Windows installer
         run: |
-          mv dist/installer_windows_amd64_v1/paretosecurity-installer.exe paretosecurity-installer-amd64.exe
-          mv dist/installer_windows_arm64_v8.0/paretosecurity-installer.exe paretosecurity-installer-arm64.exe
+          mv installer_windows_amd64_v1/paretosecurity-installer.exe paretosecurity-installer-amd64.exe
+          mv installer_windows_arm64_v8.0/paretosecurity-installer.exe paretosecurity-installer-arm64.exe
       - name: Upload Windows Installer (amd64)
         uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
         with:
