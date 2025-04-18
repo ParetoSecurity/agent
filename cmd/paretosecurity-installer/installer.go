@@ -182,7 +182,7 @@ func (w *WindowService) InstallApp(withStartup bool) error {
 	}
 
 	trayPath := filepath.Join(roamingDir, "ParetoSecurity", "paretosecurity-tray.exe")
-	if _, err := os.StartProcess(trayPath, []string{trayPath}, &os.ProcAttr{}); err != nil {
+	if _, err := os.StartProcess(trayPath, []string{}, &os.ProcAttr{}); err != nil {
 		log.WithError(err).Error("failed to start app")
 	}
 	return nil
