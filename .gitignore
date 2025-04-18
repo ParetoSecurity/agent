@@ -11,9 +11,8 @@ devenv.local.nix
 # Added by cargo
 /target
 .DS_Store
-dist
-dist/
 coverage.txt
+/dist
 
 # nix stuff
 result
