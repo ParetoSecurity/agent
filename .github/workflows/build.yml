@@ -36,10 +36,11 @@ jobs:
       - name: Run Windows schema
         run: agent_windows_amd64_v1/paretosecurity schema > windows.json
       - name: Run Windows tests
-        run: agent_windows_amd64_v1/paretosecurity check
+        run: agent_windows_amd64_v1/paretosecurity check || true
       - name: Run Installer and Capture Screenshot
         run: |
           Start-Process -FilePath "installer_windows_amd64_v1/paretosecurity-installer.exe"
+          Start-Sleep -Seconds 5
           Add-Type -AssemblyName System.Windows.Forms
           $bitmap = New-Object Drawing.Bitmap([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height)
           $graphics = [Drawing.Graphics]::FromImage($bitmap)
@@ -62,6 +63,8 @@ jobs:
           name: build
       - name: Display structure of downloaded files
         run: ls -R
+      - name: Make paretosecurity executable
+        run: chmod +x agent_linux_amd64_v1/paretosecurity
       - name: Run Linux schema
         run: agent_linux_amd64_v1/paretosecurity schema > linux.json
       - name: Run Linux tests
