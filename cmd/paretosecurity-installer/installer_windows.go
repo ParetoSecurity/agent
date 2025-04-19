@@ -1,3 +1,6 @@
+//go:build windows
+// +build windows
+
 package main
 
 import (
@@ -6,15 +9,25 @@ import (
 	"errors"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	_ "embed"
+
+	"github.com/ParetoSecurity/agent/shared"
 	"github.com/caarlos0/log"
 	"github.com/carlmjohnson/requests"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
+	"golang.org/x/sys/windows/registry"
 )
+
+// Embed the uninstall.ps1 script
+//
+//go:embed uninstall.ps1
+var uninstallScript string
 
 type WindowService struct{}
 
@@ -142,6 +155,49 @@ func (w *WindowService) QuitApp() error {
 	return nil
 }
 
+func (w *WindowService) addUninstallerEntry() error {
+	roamingDir, err := os.UserConfigDir()
+	if err != nil {
+		return err
+	}
+	installPath := filepath.Join(roamingDir, "ParetoSecurity", "paretosecurity-tray.exe")
+	uninstallCmd := filepath.Join(roamingDir, "ParetoSecurity", "uninstall.ps1")
+
+	key, _, err := registry.CreateKey(registry.LOCAL_MACHINE, `Software\Microsoft\Windows\CurrentVersion\Uninstall\ParetoSecurity`, registry.WRITE)
+	if err != nil {
+		return err
+	}
+	defer key.Close()
+
+	err = key.SetStringValue("DisplayName", "Pareto Security")
+	if err != nil {
+		return err
+	}
+	err = key.SetStringValue("DisplayVersion", shared.Version)
+	if err != nil {
+		return err
+	}
+	err = key.SetStringValue("Publisher", "Niteo GmbH")
+	if err != nil {
+		return err
+	}
+	err = key.SetStringValue("InstallLocation", installPath)
+	if err != nil {
+		return err
+	}
+	err = key.SetStringValue("UninstallString", "powershell.exe -ExecutionPolicy Bypass -File "+uninstallCmd)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (w *WindowService) writeUninstallScript(installDir string) error {
+	uninstallPath := filepath.Join(installDir, "uninstall.ps1")
+	return os.WriteFile(uninstallPath, []byte(uninstallScript), 0644)
+}
+
 func (w *WindowService) InstallApp(withStartup bool) error {
 	err := w.getLatestRelease()
 	if err != nil {
@@ -160,6 +216,19 @@ func (w *WindowService) InstallApp(withStartup bool) error {
 		return err
 	}
 
+	// Write the uninstall script
+	roamingDir, err := os.UserConfigDir()
+	if err != nil {
+		log.WithError(err).Error("failed to get roaming directory")
+		return err
+	}
+	installPath := filepath.Join(roamingDir, "ParetoSecurity")
+	err = w.writeUninstallScript(installPath)
+	if err != nil {
+		log.WithError(err).Error("failed to write uninstall script")
+		return err
+	}
+
 	// Create desktop shortcut
 	err = w.createDesktopShortcut()
 	if err != nil {
@@ -175,16 +244,22 @@ func (w *WindowService) InstallApp(withStartup bool) error {
 			return err
 		}
 	}
-	// Start the app
-	roamingDir, err := os.UserConfigDir()
+
+	// Add uninstaller registry entry
+	err = w.addUninstallerEntry()
 	if err != nil {
-		log.WithError(err).Error("failed to get roaming directory")
+		log.WithError(err).Error("failed to add uninstaller entry")
+		return err
 	}
 
-	trayPath := filepath.Join(roamingDir, "ParetoSecurity", "paretosecurity-tray.exe")
-	if _, err := os.StartProcess(trayPath, []string{}, &os.ProcAttr{}); err != nil {
+	// Start the app
+	trayPath := filepath.Join(installPath, "paretosecurity-tray.exe")
+	cmd := exec.Command(trayPath)
+	if err := cmd.Start(); err != nil {
 		log.WithError(err).Error("failed to start app")
 	}
+	// Detach so it keeps running after this process exits
+	cmd.Process.Release()
 	return nil
 }
 
