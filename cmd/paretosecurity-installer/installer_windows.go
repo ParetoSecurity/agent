@@ -189,6 +189,22 @@ func (w *WindowService) addUninstallerEntry() error {
 	if err != nil {
 		return err
 	}
+	err = key.SetDWordValue("EstimatedSize", 6000) // Size in KB
+	if err != nil {
+		return err
+	}
+	err = key.SetStringValue("DisplayIcon", installPath+",0")
+	if err != nil {
+		return err
+	}
+	err = key.SetStringValue("HelpLink", "https://paretosecurity.com/help")
+	if err != nil {
+		return err
+	}
+	err = key.SetStringValue("URLInfoAbout", "https://paretosecurity.com")
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
