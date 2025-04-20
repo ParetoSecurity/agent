@@ -65,7 +65,7 @@ func addOptions() {
 		for range mlink.ClickedCh {
 			if !shared.IsLinked() {
 				//open browser with help link
-				if err := browser.OpenURL("https://paretosecurity.com/docs/linux/link"); err != nil {
+				if err := browser.OpenURL("https://paretosecurity.com/docs/" + runtime.GOOS + "/link"); err != nil {
 					log.WithError(err).Error("failed to open help URL")
 				}
 			} else {
@@ -82,50 +82,52 @@ func addOptions() {
 			}
 		}
 	}()
-	mrun := mOptions.AddSubMenuItemCheckbox("Run checks in the background", "Run checks periodically in the background while the user is logged in.", systemd.IsTimerEnabled())
-	go func() {
-		for range mrun.ClickedCh {
-			if !systemd.IsTimerEnabled() {
-				if err := systemd.EnableTimer(); err != nil {
-					log.WithError(err).Error("failed to enable timer")
-					notify.Blocking("Failed to enable timer, please check the logs for more information.")
-				}
+	if runtime.GOOS != "windows" {
+		mrun := mOptions.AddSubMenuItemCheckbox("Run checks in the background", "Run checks periodically in the background while the user is logged in.", systemd.IsTimerEnabled())
+		go func() {
+			for range mrun.ClickedCh {
+				if !systemd.IsTimerEnabled() {
+					if err := systemd.EnableTimer(); err != nil {
+						log.WithError(err).Error("failed to enable timer")
+						notify.Blocking("Failed to enable timer, please check the logs for more information.")
+					}
 
-			} else {
-				if err := systemd.DisableTimer(); err != nil {
-					log.WithError(err).Error("failed to enable timer")
-					notify.Blocking("Failed to enable timer, please check the logs for more information.")
+				} else {
+					if err := systemd.DisableTimer(); err != nil {
+						log.WithError(err).Error("failed to enable timer")
+						notify.Blocking("Failed to enable timer, please check the logs for more information.")
+					}
+				}
+				if systemd.IsTimerEnabled() {
+					mrun.Check()
+				} else {
+					mrun.Uncheck()
 				}
 			}
-			if systemd.IsTimerEnabled() {
-				mrun.Check()
-			} else {
-				mrun.Uncheck()
-			}
-		}
-	}()
-	mshow := mOptions.AddSubMenuItemCheckbox("Run the tray icon at startup", "Show tray icon", systemd.IsTrayIconEnabled())
-	go func() {
-		for range mshow.ClickedCh {
-			if !systemd.IsTrayIconEnabled() {
-				if err := systemd.EnableTrayIcon(); err != nil {
-					log.WithError(err).Error("failed to enable tray icon")
-					notify.Blocking("Failed to enable tray icon, please check the logs for more information.")
-				}
+		}()
+		mshow := mOptions.AddSubMenuItemCheckbox("Run the tray icon at startup", "Show tray icon", systemd.IsTrayIconEnabled())
+		go func() {
+			for range mshow.ClickedCh {
+				if !systemd.IsTrayIconEnabled() {
+					if err := systemd.EnableTrayIcon(); err != nil {
+						log.WithError(err).Error("failed to enable tray icon")
+						notify.Blocking("Failed to enable tray icon, please check the logs for more information.")
+					}
 
-			} else {
-				if err := systemd.DisableTrayIcon(); err != nil {
-					log.WithError(err).Error("failed to disable tray icon")
-					notify.Blocking("Failed to disable tray icon, please check the logs for more information.")
+				} else {
+					if err := systemd.DisableTrayIcon(); err != nil {
+						log.WithError(err).Error("failed to disable tray icon")
+						notify.Blocking("Failed to disable tray icon, please check the logs for more information.")
+					}
+				}
+				if systemd.IsTrayIconEnabled() {
+					mshow.Check()
+				} else {
+					mshow.Uncheck()
 				}
 			}
-			if systemd.IsTrayIconEnabled() {
-				mshow.Check()
-			} else {
-				mshow.Uncheck()
-			}
-		}
-	}()
+		}()
+	}
 }
 
 func OnReady() {
