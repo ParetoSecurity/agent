@@ -270,12 +270,23 @@ func (w *WindowService) InstallApp(withStartup bool) error {
 
 	// Start the app
 	trayPath := filepath.Join(installPath, "paretosecurity-tray.exe")
+	if _, err := os.Stat(trayPath); err != nil {
+		log.WithError(err).Error("tray executable not found")
+		_ = exec.Command("eventcreate", "/T", "ERROR", "/ID", "1000", "/L", "APPLICATION", "/SO", "ParetoSecurity", "/D", "tray executable not found: "+err.Error()).Run()
+		return err
+	}
 	cmd := exec.Command(trayPath)
 	if err := cmd.Start(); err != nil {
 		log.WithError(err).Error("failed to start app")
+		_ = exec.Command("eventcreate", "/T", "ERROR", "/ID", "1001", "/L", "APPLICATION", "/SO", "ParetoSecurity", "/D", "failed to start app: "+err.Error()).Run()
+		return err
 	}
 	// Detach so it keeps running after this process exits
-	cmd.Process.Release()
+	if err := cmd.Process.Release(); err != nil {
+		log.WithError(err).Error("failed to release process")
+		_ = exec.Command("eventcreate", "/T", "ERROR", "/ID", "1002", "/L", "APPLICATION", "/SO", "ParetoSecurity", "/D", "failed to release process: "+err.Error()).Run()
+		return err
+	}
 	return nil
 }
 
