@@ -11,3 +11,13 @@ Remove-Item -Recurse -Force -Path $InstallPath -ErrorAction SilentlyContinue
 
 # Remove uninstaller registry entry
 Remove-Item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\ParetoSecurity" -Force -ErrorAction SilentlyContinue
+
+# Remove desktop shortcut
+$DesktopDir = [Environment]::GetFolderPath("Desktop")
+$DesktopShortcut = Join-Path $DesktopDir "Pareto Security.lnk"
+Remove-Item -Path $DesktopShortcut -Force -ErrorAction SilentlyContinue
+
+# Remove startup shortcut
+$StartupDir = [Environment]::GetFolderPath("Startup")
+$StartupShortcut = Join-Path $StartupDir "Pareto Security.lnk"
+Remove-Item -Path $StartupShortcut -Force -ErrorAction SilentlyContinue
