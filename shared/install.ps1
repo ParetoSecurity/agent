@@ -80,18 +80,16 @@ Set-ItemProperty -Path $CommandKey -Name "(Default)" -Value ('"' + $InstallPath 
 # Add scheduled task for hourly updates
 Write-Host "Creating scheduled task for hourly updates..."
 $Action = New-ScheduledTaskAction -Execute (Join-Path $InstallPath "paretosecurity.exe") -Argument "update"
-$Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5) # Start in 5 minute
-$Trigger = Set-ScheduledTaskTrigger -Trigger $Trigger -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ([timespan]::MaxValue)
-$Principal = New-ScheduledTaskPrincipal -UserId $env:UserName -LogonType InteractiveToken
+$Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5) -RepetitionInterval (New-TimeSpan -Hours 1)
+$Principal = New-ScheduledTaskPrincipal -UserId $env:UserName -LogonType ServiceAccount
 $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -Hidden
 Register-ScheduledTask -TaskName "ParetoSecurityUpdate" -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings -Description "Updates ParetoSecurity every hour"
 
 # Add scheduled task for hourly checks
 Write-Host "Creating scheduled task for hourly checks..."
 $CheckAction = New-ScheduledTaskAction -Execute (Join-Path $InstallPath "paretosecurity.exe") -Argument "check"
-$CheckTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) # Start in 1 minute
-$CheckTrigger = Set-ScheduledTaskTrigger -Trigger $CheckTrigger -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ([timespan]::MaxValue)
-$CheckPrincipal = New-ScheduledTaskPrincipal -UserId $env:UserName -LogonType InteractiveToken
+$CheckTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Hours 1)
+$CheckPrincipal = New-ScheduledTaskPrincipal -UserId $env:UserName -LogonType ServiceAccount
 $CheckSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -Hidden
 Register-ScheduledTask -TaskName "ParetoSecurityCheck" -Action $CheckAction -Trigger $CheckTrigger -Principal $CheckPrincipal -Settings $CheckSettings -Description "Runs ParetoSecurity check every hour"
 
