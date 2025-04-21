@@ -77,6 +77,15 @@ if (-Not (Test-Path -Path $CommandKey)) {
 }
 Set-ItemProperty -Path $CommandKey -Name "(Default)" -Value ('"' + $InstallPath + '\paretosecurity.exe" link "%1"')
 
+# Delete existing tasks if they exist
+Write-Host "Deleting existing scheduled tasks if they exist..."
+if (Get-ScheduledTask -TaskName "ParetoSecurityUpdate" -ErrorAction SilentlyContinue) {
+    Unregister-ScheduledTask -TaskName "ParetoSecurityUpdate" -Confirm:$false
+}
+if (Get-ScheduledTask -TaskName "ParetoSecurityCheck" -ErrorAction SilentlyContinue) {
+    Unregister-ScheduledTask -TaskName "ParetoSecurityCheck" -Confirm:$false
+}
+
 # Add scheduled task for hourly updates
 Write-Host "Creating scheduled task for hourly updates..."
 $Action = New-ScheduledTaskAction -Execute (Join-Path $InstallPath "paretosecurity.exe") -Argument "update"
