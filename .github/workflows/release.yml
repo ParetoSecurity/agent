@@ -24,7 +24,7 @@ jobs:
       - name: Run Windows schema
         run: agent_windows_amd64_v1/paretosecurity schema > windows.json
       - name: Upload Windows schema
-        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
         with:
           files: windows.json
         env:
@@ -34,13 +34,13 @@ jobs:
           mv installer_windows_amd64_v1/paretosecurity-installer.exe paretosecurity-installer-amd64.exe
           mv installer_windows_arm64_v8.0/paretosecurity-installer.exe paretosecurity-installer-arm64.exe
       - name: Upload Windows Installer (amd64)
-        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
         with:
           files: paretosecurity-installer-amd64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload Windows Installer (arm64)
-        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
         with:
           files: paretosecurity-installer-arm64.exe
         env:
@@ -78,7 +78,7 @@ jobs:
       - run:  dist/agent_linux_amd64_v1/paretosecurity schema > linux.json
         name: Generate Linux schema
       - name: Upload Linux schema
-        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
         with:
           files: linux.json
         env:
