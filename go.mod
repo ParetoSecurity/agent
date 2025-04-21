@@ -11,7 +11,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
-	github.com/wailsapp/wails/v3 v3.0.0-alpha.9
+	github.com/wailsapp/wails/v3 v3.0.0-alpha.8.3
 	golang.org/x/crypto v0.37.0
 	golang.org/x/sys v0.32.0
 )
@@ -72,7 +72,6 @@ require (
 	golang.org/x/image v0.21.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
-	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	howett.net/plist v1.0.1 // indirect
