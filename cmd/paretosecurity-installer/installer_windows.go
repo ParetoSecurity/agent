@@ -124,7 +124,8 @@ func (w *WindowService) InstallApp(withStartup bool) error {
 		return err
 	}
 
-	args := []string{"-ExecutionPolicy", "Bypass",
+	args := []string{
+		"-ExecutionPolicy", "Bypass",
 		"-File", installScriptPath,
 		"-ZipPath", zipPath,
 		"-DisplayVersion", shared.Version,
