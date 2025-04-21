@@ -57,4 +57,23 @@ Set-ItemProperty -Path $UninstallKey -Name "DisplayIcon" -Value (Join-Path $Inst
 Set-ItemProperty -Path $UninstallKey -Name "HelpLink" -Value "https://paretosecurity.com/help"
 Set-ItemProperty -Path $UninstallKey -Name "URLInfoAbout" -Value "https://paretosecurity.com"
 
+# Register paretosecurity:// URL handler
+Write-Host "Registering paretosecurity:// URL handler..."
+$URLHandlerKey = "HKCU:\Software\Classes\paretosecurity"
+if (-Not (Test-Path -Path $URLHandlerKey)) {
+    New-Item -Path $URLHandlerKey | Out-Null
+}
+Set-ItemProperty -Path $URLHandlerKey -Name "(Default)" -Value "URL:ParetoSecurity Protocol"
+Set-ItemProperty -Path $URLHandlerKey -Name "URL Protocol" -Value ""
+
+$CommandKey = Join-Path $URLHandlerKey "shell\open\command"
+if (-Not (Test-Path -Path $CommandKey)) {
+    New-Item -Path $CommandKey -Force | Out-Null
+}
+Set-ItemProperty -Path $CommandKey -Name "(Default)" -Value "`"$InstallPath\paretosecurity-tray.exe`" `%1"
+
 Write-Host "Installation completed successfully."
+
+# Launch ParetoSecurity tray application
+Write-Host "Launching ParetoSecurity tray application..."
+Start-Process -FilePath (Join-Path $InstallPath "paretosecurity-tray.exe")
