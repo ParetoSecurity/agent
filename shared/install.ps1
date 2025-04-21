@@ -80,7 +80,8 @@ Set-ItemProperty -Path $CommandKey -Name "(Default)" -Value ('"' + $InstallPath 
 # Add scheduled task for hourly updates
 Write-Host "Creating scheduled task for hourly updates..."
 $Action = New-ScheduledTaskAction -Execute (Join-Path $InstallPath "paretosecurity.exe") -Argument "update"
-$Trigger = New-ScheduledTaskTrigger -Hourly -At (Get-Date).AddHours(1).DateTime
+$Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) # Start in 1 minute
+$Trigger = Set-ScheduledTaskTrigger -Trigger $Trigger -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ([timespan]::MaxValue)
 $Principal = New-ScheduledTaskPrincipal -UserId $env:UserName -LogonType InteractiveToken
 $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -Hidden
 Register-ScheduledTask -TaskName "ParetoSecurityUpdate" -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings -Description "Updates ParetoSecurity every hour"
@@ -88,7 +89,8 @@ Register-ScheduledTask -TaskName "ParetoSecurityUpdate" -Action $Action -Trigger
 # Add scheduled task for hourly checks
 Write-Host "Creating scheduled task for hourly checks..."
 $CheckAction = New-ScheduledTaskAction -Execute (Join-Path $InstallPath "paretosecurity.exe") -Argument "check"
-$CheckTrigger = New-ScheduledTaskTrigger -Hourly -At (Get-Date).AddHours(1).DateTime
+$CheckTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) # Start in 1 minute
+$CheckTrigger = Set-ScheduledTaskTrigger -Trigger $CheckTrigger -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ([timespan]::MaxValue)
 $CheckPrincipal = New-ScheduledTaskPrincipal -UserId $env:UserName -LogonType InteractiveToken
 $CheckSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -Hidden
 Register-ScheduledTask -TaskName "ParetoSecurityCheck" -Action $CheckAction -Trigger $CheckTrigger -Principal $CheckPrincipal -Settings $CheckSettings -Description "Runs ParetoSecurity check every hour"
