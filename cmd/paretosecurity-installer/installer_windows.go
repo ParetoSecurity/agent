@@ -123,11 +123,11 @@ func (w *WindowService) InstallApp(withStartup bool) error {
 		log.WithError(err).Error("zip file does not exist")
 		return err
 	}
-	displayVersion := runtime.Version()
+
 	args := []string{"-ExecutionPolicy", "Bypass",
 		"-File", installScriptPath,
 		"-ZipPath", zipPath,
-		"-DisplayVersion", displayVersion,
+		"-DisplayVersion", shared.Version,
 	}
 	if withStartup {
 		args = append(args, "-WithStartup")
