@@ -80,7 +80,7 @@ Set-ItemProperty -Path $CommandKey -Name "(Default)" -Value ('"' + $InstallPath 
 # Add scheduled task for hourly updates
 Write-Host "Creating scheduled task for hourly updates..."
 $Action = New-ScheduledTaskAction -Execute (Join-Path $InstallPath "paretosecurity.exe") -Argument "update"
-$Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) # Start in 1 minute
+$Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5) # Start in 5 minute
 $Trigger = Set-ScheduledTaskTrigger -Trigger $Trigger -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ([timespan]::MaxValue)
 $Principal = New-ScheduledTaskPrincipal -UserId $env:UserName -LogonType InteractiveToken
 $Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -Hidden
