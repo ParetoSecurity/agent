@@ -6,7 +6,6 @@ import (
 	"image/png"
 	"net/url"
 	"os"
-	"os/exec"
 	"runtime"
 	"time"
 
@@ -70,7 +69,7 @@ func addOptions() {
 				}
 			} else {
 				// execute the command in the system terminal
-				err := exec.Command(shared.SelfExe(), "unlink").Run()
+				_, err := shared.RunCommand(shared.SelfExe(), "unlink")
 				if err != nil {
 					log.WithError(err).Error("failed to run unlink command")
 				}
@@ -153,7 +152,7 @@ func OnReady() {
 	go func(rcheck *systray.MenuItem) {
 		for range rcheck.ClickedCh {
 			log.Info("Running checks...")
-			err := exec.Command(shared.SelfExe(), "check").Run()
+			_, err := shared.RunCommand(shared.SelfExe(), "check")
 			if err != nil {
 				log.WithError(err).Error("failed to run check command")
 			}

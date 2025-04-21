@@ -30,7 +30,7 @@ builds:
   - -trimpath
   - -mod=readonly
   gcflags:
-  - all=-trimpath=${GOPATH}
+  - all=-trimpath=${GOPATH} -l -B
   ldflags:
   - -s -w
   - -X github.com/ParetoSecurity/agent/shared.Version={{.Version}}
@@ -54,7 +54,7 @@ builds:
   - -buildvcs=false
   - -mod=readonly
   gcflags:
-  - all=-trimpath=${GOPATH}
+  - all=-trimpath=${GOPATH} -l -B
   ldflags:
   - -s -w
   - -H windowsgui -buildid=
@@ -79,7 +79,7 @@ builds:
   - -buildvcs=false
   - -mod=readonly
   gcflags:
-  - all=-trimpath=${GOPATH}
+  - all=-trimpath=${GOPATH} -l -B
   ldflags:
   - -s -w
   - -H windowsgui -buildid=
@@ -102,7 +102,12 @@ builds:
 
 upx:
 - enabled: true
-
+  brute: true
+  compress: best
+  ids:
+  - installer
+  goos:
+  - windows
 archives:
 - id: default
   formats:
