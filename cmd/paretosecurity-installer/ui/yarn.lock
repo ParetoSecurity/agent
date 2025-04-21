@@ -442,9 +442,9 @@ crypto-random-string@^4.0.0:
     type-fest "^1.0.1"
 
 daisyui@^5.0.18:
-  version "5.0.18"
-  resolved "https://registry.yarnpkg.com/daisyui/-/daisyui-5.0.18.tgz#2513eba996d0f80a63bca1878a763ff02649fecf"
-  integrity sha512-UKbuXChAZYhhjEGs9iKU3dSOup+WDY8fZaGa9VF4GkFQsF0ZAkb3yPTqjFUiE+2r3zFxv8JX+yhc06JPQbzqmw==
+  version "5.0.27"
+  resolved "https://registry.yarnpkg.com/daisyui/-/daisyui-5.0.27.tgz#33240a60a0d01bdaddd2b50d7a8cb76fa0bdb835"
+  integrity sha512-XrpqgfpGaZJvTPg9pS9Rq6xbYpmMnR0a7AKqyVPZceJzjAs5HH3rfkRkiuGin0+KC2Adnu+WLHU7UDxAtCMyAw==
 
 detect-libc@^2.0.3:
   version "2.0.3"
