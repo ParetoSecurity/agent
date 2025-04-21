@@ -17,6 +17,11 @@ if (-Not (Test-Path -Path $InstallPath)) {
     New-Item -ItemType Directory -Path $InstallPath | Out-Null
 }
 
+# Close running instances of ParetoSecurity applications
+Write-Host "Closing running instances of ParetoSecurity..."
+Get-Process -Name "paretosecurity-tray" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-Process -Name "paretosecurity" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+
 # Download and unzip the latest release
 Write-Host "Extracting ParetoSecurity from provided zip..."
 Expand-Archive -Path $ZipPath -DestinationPath $InstallPath -Force
@@ -71,6 +76,22 @@ if (-Not (Test-Path -Path $CommandKey)) {
     New-Item -Path $CommandKey -Force | Out-Null
 }
 Set-ItemProperty -Path $CommandKey -Name "(Default)" -Value ('"' + $InstallPath + '\paretosecurity.exe" link "%1"')
+
+# Add scheduled task for hourly updates
+Write-Host "Creating scheduled task for hourly updates..."
+$Action = New-ScheduledTaskAction -Execute (Join-Path $InstallPath "paretosecurity.exe") -Argument "update"
+$Trigger = New-ScheduledTaskTrigger -Hourly -At (Get-Date).AddHours(1).DateTime
+$Principal = New-ScheduledTaskPrincipal -UserId $env:UserName -LogonType InteractiveToken
+$Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -Hidden
+Register-ScheduledTask -TaskName "ParetoSecurityUpdate" -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings -Description "Updates ParetoSecurity every hour"
+
+# Add scheduled task for hourly checks
+Write-Host "Creating scheduled task for hourly checks..."
+$CheckAction = New-ScheduledTaskAction -Execute (Join-Path $InstallPath "paretosecurity.exe") -Argument "check"
+$CheckTrigger = New-ScheduledTaskTrigger -Hourly -At (Get-Date).AddHours(1).DateTime
+$CheckPrincipal = New-ScheduledTaskPrincipal -UserId $env:UserName -LogonType InteractiveToken
+$CheckSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -Hidden
+Register-ScheduledTask -TaskName "ParetoSecurityCheck" -Action $CheckAction -Trigger $CheckTrigger -Principal $CheckPrincipal -Settings $CheckSettings -Description "Runs ParetoSecurity check every hour"
 
 Write-Host "Installation completed successfully."
 

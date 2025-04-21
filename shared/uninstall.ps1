@@ -25,3 +25,7 @@ Remove-Item -Path $DesktopShortcut -Force -ErrorAction SilentlyContinue
 $StartupDir = [Environment]::GetFolderPath("Startup")
 $StartupShortcut = Join-Path $StartupDir "Pareto Security.lnk"
 Remove-Item -Path $StartupShortcut -Force -ErrorAction SilentlyContinue
+
+# Remove scheduled task
+Unregister-ScheduledTask -TaskName "ParetoSecurityUpdate" -Confirm:$false -ErrorAction SilentlyContinue
+Unregister-ScheduledTask -TaskName "ParetoSecurityCheck" -Confirm:$false -ErrorAction SilentlyContinue
