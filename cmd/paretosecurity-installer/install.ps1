@@ -70,7 +70,7 @@ $CommandKey = Join-Path $URLHandlerKey "shell\open\command"
 if (-Not (Test-Path -Path $CommandKey)) {
     New-Item -Path $CommandKey -Force | Out-Null
 }
-Set-ItemProperty -Path $CommandKey -Name "(Default)" -Value "`"$InstallPath\paretosecurity.exe`" link `%1"
+Set-ItemProperty -Path $CommandKey -Name "(Default)" -Value ('"' + $InstallPath + '\paretosecurity.exe" link "%1"')
 
 Write-Host "Installation completed successfully."
 
