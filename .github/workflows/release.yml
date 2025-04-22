@@ -88,6 +88,7 @@ jobs:
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          
       - name: Install repo tools
         run: sudo apt install -y reprepro createrepo-c
 
@@ -96,28 +97,6 @@ jobs:
 
       - name: Create RPM repository
         run: mv dist/*.rpm apt/rpm && createrepo_c apt/rpm
-
-      - name: Create Arch repository
-        run: |
-          sudo add-apt-repository --yes ppa:michel-slm/kernel-utils
-          sudo apt-get -qq --yes install pacman-package-manager libarchive-tools
-          mkdir -p apt/arch/
-          for file in dist/*.pkg.tar.zst ; do \
-            arch=$(basename $file .archlinux.pkg.tar.zst | sed 's/.*_//') ; \
-            if [ "$arch" = "arm64" ]; then arch="aarch64"; fi ; \
-            if [ "$arch" = "aarch64" ]; then mv $file ${file/arm64/aarch64} ; fi ; \
-            echo "Processing arch $arch..." && \
-            mkdir -p apt/aur/stable/$arch && \
-            cp dist/*_$arch.archlinux.pkg.tar.zst apt/aur/stable/$arch && \
-            repo-add \
-              --verify \
-              --sign \
-              --new \
-              --remove \
-              --prevent-downgrade \
-              apt/aur/stable/$arch/paretosecurity.db.tar.gz apt/aur/stable/$arch/*_$arch.archlinux.pkg.tar.zst && \
-            gpg --detach-sign --no-armor --batch --yes apt/aur/stable/$arch/*_$arch.archlinux.pkg.tar.zst ; \
-          done
 
       - name: Host repository for testing
         uses: Eun/http-server-action@f71cec1321f665652a46c40b6852f8e5a68bfcd4 # v1
