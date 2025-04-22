@@ -129,6 +129,18 @@ func addOptions() {
 	}
 }
 
+func setIcon() {
+	systray.SetTemplateIcon(getIcon(), getIcon())
+	if runtime.GOOS == "windows" {
+		// Try to detect Windows theme (light/dark) and set icon accordingly
+		icon := shared.IconBlack // fallback
+		if IsDarkTheme() {
+			icon = shared.IconWhite
+		}
+		systray.SetTemplateIcon(icon, icon)
+	}
+}
+
 func OnReady() {
 	broadcaster := shared.NewBroadcaster()
 	go func() {
@@ -139,10 +151,21 @@ func OnReady() {
 			broadcaster.Send()
 		}
 	}()
+	setIcon()
 	if runtime.GOOS == "windows" {
-		systray.SetTemplateIcon(shared.IconBlack, shared.IconBlack)
+		themeCh := make(chan bool)
+		go SubscribeToThemeChanges(themeCh)
+		go func() {
+			for isDark := range themeCh {
+				icon := shared.IconBlack
+				if isDark {
+					icon = shared.IconWhite
+				}
+				systray.SetTemplateIcon(icon, icon)
+			}
+		}()
 	}
-	systray.SetTemplateIcon(getIcon(), getIcon())
+
 	systray.SetTooltip("Pareto Security")
 	systray.AddMenuItem(fmt.Sprintf("Pareto Security - %s", shared.Version), "").Disable()
 
@@ -169,7 +192,12 @@ func OnReady() {
 			lCheck.SetTitle(fmt.Sprintf("Last check %s ago", lastUpdated))
 		}
 	}()
-
+	go func() {
+		for range systray.TrayOpenedCh {
+			setIcon()
+			lCheck.SetTitle(fmt.Sprintf("Last check %s ago", lastUpdated))
+		}
+	}()
 	for _, claim := range claims.All {
 		mClaim := systray.AddMenuItem(claim.Title, "")
 		updateClaim(claim, mClaim)
