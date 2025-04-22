@@ -38,15 +38,23 @@ port installAppCallback : (String -> msg) -> Sub msg
 -- MODEL
 
 
+type Screen
+    = WelcomeScreen
+    | InstallingScreen
+    | ErrorScreen
+    | DoneScreen
+
+
 type alias Model =
-    { screen : Int
+    { screen : Screen
     , withStartup : Bool
+    , message : Maybe String
     }
 
 
 init : () -> ( Model, Cmd msg )
 init _ =
-    ( { screen = 0, withStartup = False }
+    ( { screen = WelcomeScreen, withStartup = False, message = Nothing }
     , Cmd.none
     )
 
@@ -56,8 +64,8 @@ init _ =
 
 
 type Msg
-    = Screen Int
-    | AppCallback String
+    = Screen Screen
+    | InstallCallback String
     | WithStartup Bool
     | Quit
 
@@ -65,17 +73,28 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Screen i ->
-            ( { model | screen = i }
-            , if i == 1 then
-                installApp True
+        Screen screen ->
+            ( { model | screen = screen }
+            , case screen of
+                InstallingScreen ->
+                    installApp model.withStartup
 
-              else
-                Cmd.none
+                _ ->
+                    Cmd.none
             )
 
-        AppCallback _ ->
-            ( { model | screen = 2 }, Cmd.none )
+        InstallCallback m ->
+            ( { model
+                | screen = DoneScreen
+                , message =
+                    if m /= "ok" then
+                        Just m
+
+                    else
+                        Nothing
+              }
+            , Cmd.none
+            )
 
         WithStartup b ->
             ( { model | withStartup = b }
@@ -92,7 +111,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    installAppCallback AppCallback
+    installAppCallback InstallCallback
 
 
 
@@ -123,7 +142,7 @@ step { children, buttonText, onButtonClick } =
 view : Model -> Html Msg
 view model =
     case model.screen of
-        0 ->
+        WelcomeScreen ->
             step
                 { children =
                     div [ class "flex flex-col items-center space-y-3" ]
@@ -146,10 +165,10 @@ view model =
                             ]
                         ]
                 , buttonText = "Get Started"
-                , onButtonClick = Screen 1
+                , onButtonClick = Screen InstallingScreen
                 }
 
-        1 ->
+        InstallingScreen ->
             step
                 { children =
                     div [ class "flex flex-col items-center space-y-6" ]
@@ -163,10 +182,10 @@ view model =
                             ]
                         ]
                 , buttonText = ""
-                , onButtonClick = Screen 2
+                , onButtonClick = Screen DoneScreen
                 }
 
-        2 ->
+        DoneScreen ->
             step
                 { children =
                     div [ class "flex flex-col items-center space-y-3" ]
@@ -182,5 +201,22 @@ view model =
                 , onButtonClick = Quit
                 }
 
-        _ ->
-            div [] []
+        ErrorScreen ->
+            step
+                { children =
+                    div [ class "flex flex-col items-center space-y-3" ]
+                        [ logo
+                        , h1 [ class "text-3xl" ] [ text "Error!" ]
+                        , p [ class "text-sm text-justify text-content grow" ]
+                            [ text "An error occurred while installing Pareto Security. Please try again."
+                            ]
+                        , textarea
+                            [ class "textarea textarea-bordered w-full max-w-xs"
+                            , placeholder "Error message"
+                            , readonly True
+                            ]
+                            [ text <| Maybe.withDefault "" model.message ]
+                        ]
+                , buttonText = "Retry"
+                , onButtonClick = Screen InstallingScreen
+                }

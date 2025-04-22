@@ -13,9 +13,10 @@
     app.ports.installApp.subscribe(async (withStartup) => {
       try {
         const result = await WindowService.InstallApp(withStartup);
-        app.ports.installAppCallback.send(JSON.stringify(result));
+        console.log("InstallApp result:", result);
+        app.ports.installAppCallback.send("ok");
       } catch (err) {
-        app.ports.installAppCallback.send({ error: err?.message || "Unknown error" });
+        app.ports.installAppCallback.send( err?.message || "Unknown error" );
       }
     });
 
