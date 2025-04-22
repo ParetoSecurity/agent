@@ -15,7 +15,7 @@ jobs:
   windows-release:
     runs-on: windows-latest
     name: Windows Release
-    needs: [ release ]
+    needs: [ build ]
     steps:
       - name: Download release
         uses: actions/download-artifact@v4
@@ -48,7 +48,7 @@ jobs:
   linux-release:
     runs-on: ubuntu-latest
     name: Linux Release
-    needs: [ release ]
+    needs: [ build ]
     steps:
       - name: Download release
         uses: actions/download-artifact@v4
