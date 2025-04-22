@@ -45,7 +45,82 @@ jobs:
           files: paretosecurity-installer-arm64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  linux-release:
+    runs-on: ubuntu-latest
+    name: Linux Release
+    needs: [ release ]
+    steps:
+      - name: Download release
+        uses: actions/download-artifact@v4
+        with:
+          name: release
 
+      - name: Run Linux schema
+        run: agent_linux_amd64_v1/paretosecurity schema > linux.json
+
+      - name: Upload Linux schema
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+        with:
+          files: linux.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - run:  dist/agent_linux_amd64_v1/paretosecurity schema > linux.json
+        name: Generate Linux schema
+
+      - name: Upload Linux schema
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
+        with:
+          files: linux.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec # v6.3.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+            
+      - name: Install repo tools
+        run: sudo apt install -y reprepro createrepo-c
+
+      - name: Create Debian repository
+        run: reprepro -b apt includedeb stable dist/*.deb
+
+      - name: Create RPM repository
+        run: mv dist/*.rpm apt/rpm && createrepo_c apt/rpm
+
+      - name: Create Arch repository
+        continue-on-error: true
+        run: |
+          sudo add-apt-repository --yes ppa:michel-slm/kernel-utils
+          sudo apt-get -qq --yes install pacman-package-manager libarchive-tools
+          mkdir -p apt/arch/
+          for file in dist/*.pkg.tar.zst ; do \
+            arch=$(basename $file .archlinux.pkg.tar.zst | sed 's/.*_//') ; \
+            if [ "$arch" = "arm64" ]; then arch="aarch64"; fi ; \
+            if [ "$arch" = "aarch64" ]; then mv $file ${file/arm64/aarch64} ; fi ; \
+            echo "Processing arch $arch..." && \
+            mkdir -p apt/aur/stable/$arch && \
+            cp dist/*_$arch.archlinux.pkg.tar.zst apt/aur/stable/$arch && \
+            repo-add \
+              --verify \
+              --sign \
+              --new \
+              --remove \
+              --prevent-downgrade \
+              apt/aur/stable/$arch/paretosecurity.db.tar.gz apt/aur/stable/$arch/*_$arch.archlinux.pkg.tar.zst && \
+            gpg --detach-sign --no-armor --batch --yes apt/aur/stable/$arch/*_$arch.archlinux.pkg.tar.zst ; \
+          done
+          
+      - uses: ryand56/r2-upload-action@b801a390acbdeb034c5e684ff5e1361c06639e7c # latest
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: pareto-apt
+          source-dir: apt
+          destination-dir: ./
   release:
     runs-on: ubuntu-latest
     name: Release
@@ -58,8 +133,6 @@ jobs:
         uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
         with:
           go-version: stable
-      # More assembly might be required: Docker logins, GPG, etc.
-      # It all depends on your needs.
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@9c156ee8a17a598857849441385a2041ef570552 # v6.3.0
         with:
@@ -75,57 +148,6 @@ jobs:
         with:
           name: release
           path: dist
-      - run:  dist/agent_linux_amd64_v1/paretosecurity schema > linux.json
-        name: Generate Linux schema
-      - name: Upload Linux schema
-        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
-        with:
-          files: linux.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec # v6.3.0
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-          
-      - name: Install repo tools
-        run: sudo apt install -y reprepro createrepo-c
-
-      - name: Create Debian repository
-        run: reprepro -b apt includedeb stable dist/*.deb
-
-      - name: Create RPM repository
-        run: mv dist/*.rpm apt/rpm && createrepo_c apt/rpm
-
-      - name: Host repository for testing
-        uses: Eun/http-server-action@f71cec1321f665652a46c40b6852f8e5a68bfcd4 # v1
-        with:
-            directory: apt
-            port: 8000
-
-      - name: Check repository works
-        run: |
-            set +x
-        
-            # Copy signing keyring
-            sudo cp paretosecurity.gpg /usr/share/keyrings/paretosecurity.gpg
-            # Point apt at local apt repo overwriting all default sources
-            echo "deb [signed-by=/usr/share/keyrings/paretosecurity.gpg] http://localhost:8000/debian/ stable main" | sudo tee /etc/apt/sources.list
-            # Later ubuntu versions use the `conf.d` approach so we need to remove the default sources
-            sudo rm -R /etc/apt/sources.list.d/*
-
-            sudo apt-get update --allow-insecure-repositories
-        working-directory: ./apt
-
-      - uses: ryand56/r2-upload-action@b801a390acbdeb034c5e684ff5e1361c06639e7c # latest
-        with:
-          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
-          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
-          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          r2-bucket: pareto-apt
-          source-dir: apt
-          destination-dir: ./
       - uses: actions/attest-build-provenance@c074443f1aee8d4aeeae555aebba3282517141b2 # v2.2.3
         with:
           subject-path: 'dist/*.deb'
