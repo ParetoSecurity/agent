@@ -54,6 +54,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: release
+      
+      - name: Set executable permissions for Linux binary
+        run: chmod +x agent_linux_amd64_v1/paretosecurity
 
       - name: Run Linux schema
         run: agent_linux_amd64_v1/paretosecurity schema > linux.json
