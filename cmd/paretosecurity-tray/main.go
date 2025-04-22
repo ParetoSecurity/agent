@@ -18,9 +18,13 @@ func main() {
 
 	go func() {
 		for {
-			_, err := shared.RunCommand(shared.SelfExe(), "update")
-			if err != nil {
-				log.WithError(err).Error("Failed to run update command")
+			// This is to avoid running the update command too frequently
+			// and to ensure that the update command is run at least once an hour
+			if time.Since(shared.GetModifiedTime()) > time.Hour {
+				_, err := shared.RunCommand(shared.SelfExe(), "update")
+				if err != nil {
+					log.WithError(err).Error("Failed to run update command")
+				}
 			}
 			time.Sleep(time.Duration(50+rand.Intn(15)) * time.Minute)
 		}
@@ -28,11 +32,12 @@ func main() {
 
 	go func() {
 		for {
+			// This is to avoid running the check command too frequently
+			time.Sleep(time.Duration(45+rand.Intn(15)) * time.Minute)
 			_, err := shared.RunCommand(shared.SelfExe(), "check")
 			if err != nil {
 				log.WithError(err).Error("Failed to run check command")
 			}
-			time.Sleep(time.Duration(45+rand.Intn(15)) * time.Minute)
 		}
 	}()
 

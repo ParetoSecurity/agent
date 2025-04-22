@@ -17,6 +17,7 @@ import (
 )
 
 var release struct {
+	Name   string `json:"name"`
 	Assets []struct {
 		Name               string `json:"name"`
 		BrowserDownloadURL string `json:"browser_download_url"`
@@ -52,7 +53,7 @@ func getApp() (string, string, error) {
 			strings.Contains(asset.Name, "windows") &&
 			strings.Contains(asset.Name, runtime.GOARCH) {
 			exeURL = asset.BrowserDownloadURL
-			version = asset.Name
+			version = release.Name
 			break
 		}
 	}
@@ -128,6 +129,14 @@ func InstallApp(withStartup bool) error {
 	err = os.WriteFile(installScriptPath, []byte(installScript), 0644)
 	if err != nil {
 		log.WithError(err).Error("failed to write install script")
+		return err
+	}
+
+	//exclude the folder from Defender
+	excludePath := filepath.Join(roamingDir, "ParetoSecurity")
+	_, err = RunCommand("powershell.exe", "-Command", "Add-MpPreference -ExclusionPath "+excludePath)
+	if err != nil {
+		log.WithError(err).Error("failed to exclude folder from Defender")
 		return err
 	}
 
