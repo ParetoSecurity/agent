@@ -1,9 +1,7 @@
 package trayapp
 
 import (
-	"bytes"
 	"fmt"
-	"image/png"
 	"net/url"
 	"os"
 	"runtime"
@@ -17,7 +15,6 @@ import (
 	"github.com/ParetoSecurity/agent/systemd"
 	"github.com/caarlos0/log"
 	"github.com/fsnotify/fsnotify"
-	"github.com/fyne-io/image/ico"
 	"github.com/pkg/browser"
 )
 
@@ -111,38 +108,6 @@ func addOptions() {
 			}
 		}()
 	}
-}
-
-// setIcon sets the system tray icon based on the OS and theme.
-func setIcon() {
-	if runtime.GOOS == "windows" {
-		// Try to detect Windows theme (light/dark) and set icon accordingly
-		icon := shared.IconBlack // fallback
-		if IsDarkTheme() {
-			icon = shared.IconWhite
-		}
-		SetTemplateIcon(icon)
-		return
-	}
-	SetTemplateIcon(shared.IconWhite)
-}
-
-// SetTemplateIcon sets the system tray icon based on the operating system.
-func SetTemplateIcon(icon []byte) {
-	if runtime.GOOS == "windows" {
-		var icoBuffer bytes.Buffer
-		pngImage, err := png.Decode(bytes.NewReader(icon))
-		if err != nil {
-			log.WithError(err).Error("failed to decode PNG image")
-		}
-		if err := ico.Encode(&icoBuffer, pngImage); err != nil {
-			log.WithError(err).Error("failed to encode ICO image")
-		}
-		systray.SetTemplateIcon(icoBuffer.Bytes(), icoBuffer.Bytes())
-		return
-	}
-	systray.SetTemplateIcon(shared.IconWhite, shared.IconWhite)
-
 }
 
 // OnReady initializes the system tray and its menu items.
