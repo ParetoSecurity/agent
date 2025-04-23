@@ -1,7 +1,9 @@
 package trayapp
 
 import (
+	"bytes"
 	"fmt"
+	"image/png"
 	"net/url"
 	"os"
 	"runtime"
@@ -15,6 +17,7 @@ import (
 	"github.com/ParetoSecurity/agent/systemd"
 	"github.com/caarlos0/log"
 	"github.com/fsnotify/fsnotify"
+	"github.com/fyne-io/image/ico"
 	"github.com/pkg/browser"
 )
 
@@ -118,10 +121,28 @@ func setIcon() {
 		if IsDarkTheme() {
 			icon = shared.IconWhite
 		}
-		systray.SetTemplateIcon(icon, icon)
+		SetTemplateIcon(icon)
+		return
+	}
+	SetTemplateIcon(shared.IconWhite)
+}
+
+// SetTemplateIcon sets the system tray icon based on the operating system.
+func SetTemplateIcon(icon []byte) {
+	if runtime.GOOS == "windows" {
+		var icoBuffer bytes.Buffer
+		pngImage, err := png.Decode(bytes.NewReader(icon))
+		if err != nil {
+			log.WithError(err).Error("failed to decode PNG image")
+		}
+		if err := ico.Encode(&icoBuffer, pngImage); err != nil {
+			log.WithError(err).Error("failed to encode ICO image")
+		}
+		systray.SetTemplateIcon(icoBuffer.Bytes(), icoBuffer.Bytes())
 		return
 	}
 	systray.SetTemplateIcon(shared.IconWhite, shared.IconWhite)
+
 }
 
 // OnReady initializes the system tray and its menu items.
@@ -182,6 +203,7 @@ func OnReady() {
 			lCheck.SetTitle(fmt.Sprintf("Last check %s ago", lastUpdated))
 		}
 	}()
+	systray.AddSeparator()
 	for _, claim := range claims.All {
 		mClaim := systray.AddMenuItem(claim.Title, "")
 		updateClaim(claim, mClaim)
