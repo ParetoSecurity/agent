@@ -1,16 +1,13 @@
 package trayapp
 
 import (
-	"bytes"
 	"fmt"
-	"image/png"
 	"net/url"
 	"os"
 	"runtime"
 	"time"
 
 	"fyne.io/systray"
-	ico "github.com/Kodeworks/golang-image-ico"
 	"github.com/ParetoSecurity/agent/check"
 	"github.com/ParetoSecurity/agent/claims"
 	"github.com/ParetoSecurity/agent/notify"
@@ -21,6 +18,7 @@ import (
 	"github.com/pkg/browser"
 )
 
+// addQuitItem adds a "Quit" menu item to the system tray.
 func addQuitItem() {
 	mQuit := systray.AddMenuItem("Quit", "Quit the Pareto Security")
 	mQuit.Enable()
@@ -31,6 +29,7 @@ func addQuitItem() {
 	}()
 }
 
+// checkStatusToIcon converts a boolean status to an icon string.
 func checkStatusToIcon(status bool) string {
 	if status {
 		return "✅"
@@ -38,25 +37,7 @@ func checkStatusToIcon(status bool) string {
 	return "❌"
 }
 
-func getIcon() []byte {
-
-	if runtime.GOOS == "windows" {
-
-		var icoBuffer bytes.Buffer
-		pngImage, err := png.Decode(bytes.NewReader(shared.IconBlack))
-		if err != nil {
-			log.WithError(err).Error("failed to decode PNG image")
-			return shared.IconBlack
-		}
-		if err := ico.Encode(&icoBuffer, pngImage); err != nil {
-			log.WithError(err).Error("failed to encode ICO image")
-		}
-		return icoBuffer.Bytes()
-	}
-
-	return shared.IconBlack
-}
-
+// addOptions adds various options to the system tray menu.
 func addOptions() {
 	mOptions := systray.AddMenuItem("Options", "Settings")
 	mlink := mOptions.AddSubMenuItemCheckbox("Send reports to the dashboard", "Configure sending device reports to the team", shared.IsLinked())
@@ -129,8 +110,8 @@ func addOptions() {
 	}
 }
 
+// setIcon sets the system tray icon based on the OS and theme.
 func setIcon() {
-	systray.SetTemplateIcon(getIcon(), getIcon())
 	if runtime.GOOS == "windows" {
 		// Try to detect Windows theme (light/dark) and set icon accordingly
 		icon := shared.IconBlack // fallback
@@ -138,9 +119,12 @@ func setIcon() {
 			icon = shared.IconWhite
 		}
 		systray.SetTemplateIcon(icon, icon)
+		return
 	}
+	systray.SetTemplateIcon(shared.IconWhite, shared.IconWhite)
 }
 
+// OnReady initializes the system tray and its menu items.
 func OnReady() {
 	broadcaster := shared.NewBroadcaster()
 	go func() {
@@ -273,6 +257,7 @@ func OnReady() {
 
 }
 
+// updateCheck updates the status of a specific check in the menu.
 func updateCheck(chk check.Check, mCheck *systray.MenuItem) {
 	if !chk.IsRunnable() {
 		mCheck.Disable()
@@ -288,6 +273,7 @@ func updateCheck(chk check.Check, mCheck *systray.MenuItem) {
 	mCheck.SetTitle(fmt.Sprintf("%s %s", checkStatusToIcon(state), chk.Name()))
 }
 
+// updateClaim updates the status of a claim in the menu.
 func updateClaim(claim claims.Claim, mClaim *systray.MenuItem) {
 	for _, chk := range claim.Checks {
 		checkStatus, found, _ := shared.GetLastState(chk.UUID())
