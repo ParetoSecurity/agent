@@ -223,3 +223,83 @@ func TestPasswordToUnlock_PassedMessage(t *testing.T) {
 		t.Errorf("Expected PassedMessage %s, got %s", expectedPassedMessage, f.PassedMessage())
 	}
 }
+
+func TestCheckSway(t *testing.T) {
+	tests := []struct {
+		name               string
+		initialCommandOut  string
+		initialCommandErr  error
+		fallbackCommandOut string
+		fallbackCommandErr error
+		configFileContent  string
+		configFileErr      error
+		expected           bool
+	}{
+		{
+			name:              "Swaylock configured",
+			initialCommandOut: "ExecStart=/usr/bin/swaylock -f timeout=5\n",
+			initialCommandErr: nil,
+			expected:          true,
+		},
+		{
+			name:              "Swaylock not configured",
+			initialCommandOut: "ActiveState=inactive\n",
+			initialCommandErr: nil,
+			expected:          false,
+		},
+		{
+			name:               "Fallback to config file succeeds",
+			initialCommandOut:  "",
+			initialCommandErr:  assert.AnError,
+			fallbackCommandOut: "FragmentPath=/usr/lib/systemd/user/swayidle.service\n",
+			fallbackCommandErr: nil,
+			configFileContent:  "ExecStart=/usr/bin/swaylock -f timeout=5\n",
+			configFileErr:      nil,
+			expected:           true,
+		},
+		{
+			name:               "Fallback to config file fails",
+			initialCommandOut:  "",
+			initialCommandErr:  assert.AnError,
+			fallbackCommandOut: "FragmentPath=/usr/lib/systemd/user/swayidle.service\n",
+			fallbackCommandErr: nil,
+			configFileContent:  "",
+			configFileErr:      assert.AnError,
+			expected:           false,
+		},
+		{
+			name:               "Fallback command fails",
+			initialCommandOut:  "",
+			initialCommandErr:  assert.AnError,
+			fallbackCommandOut: "",
+			fallbackCommandErr: assert.AnError,
+			expected:           false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			shared.RunCommandMocks = []shared.RunCommandMock{
+				{
+					Command: "systemctl",
+					Args:    []string{"--user", "show", "swayidle", "--no-pager"},
+					Out:     tt.initialCommandOut,
+					Err:     tt.initialCommandErr,
+				},
+				{
+					Command: "systemctl",
+					Args:    []string{"--user", "show", "-p", "FragmentPath", "swayidle"},
+					Out:     tt.fallbackCommandOut,
+					Err:     tt.fallbackCommandErr,
+				},
+			}
+
+			shared.ReadFileMocks = map[string]string{
+				"/usr/lib/systemd/user/swayidle.service": tt.configFileContent,
+			}
+
+			result := checkSway()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

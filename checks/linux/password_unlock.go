@@ -5,6 +5,7 @@ import (
 
 	"github.com/ParetoSecurity/agent/shared"
 	"github.com/caarlos0/log"
+	"github.com/samber/lo"
 )
 
 // PasswordToUnlock represents a check to ensure that a password is required to unlock the screen.
@@ -39,6 +40,37 @@ func (f *PasswordToUnlock) checkKDE() bool {
 	return result
 }
 
+// TAG: nixos
+// nixos only as no one else is using systemd to configure swaylock
+// checkSway checks if Sway is running and if the lock configuration is set
+func checkSway() bool {
+	status, err := shared.RunCommand("systemctl", "--user", "show", "swayidle", "--no-pager")
+	if err != nil {
+		log.WithError(err).Debug("Failed to check Sway lock configuration, swayidle service not configured")
+		// systemctl show -p FragmentPath --user swayidle
+		configPathConfig, err := shared.RunCommand("systemctl", "--user", "show", "-p", "FragmentPath", "swayidle")
+		if err != nil {
+			log.WithError(err).Debug("Failed to check Sway lock configuration, swayidle service not configured")
+			return false
+		}
+		configPath := strings.TrimSpace(lo.LastOr(strings.Split(configPathConfig, "="), "/usr/lib/systemd/user/swayidle.service"))
+		config, err := shared.ReadFile(configPath)
+		if err != nil {
+			log.WithError(err).Debug("Failed to check Sway lock configuration, swayidle service not configured")
+			return false
+		}
+		status = string(config)
+
+	}
+
+	if strings.Contains(status, "swaylock") {
+		log.Debug("Sway lock configuration is set")
+		return true
+	}
+	log.Debug("Sway lock configuration is not set")
+	return false
+}
+
 // Run executes the check
 func (f *PasswordToUnlock) Run() error {
 	anyCheckPerformed := false
@@ -58,6 +90,14 @@ func (f *PasswordToUnlock) Run() error {
 		allChecksPassed = allChecksPassed && f.checkKDE()
 	} else {
 		log.Debug("KDE environment not detected for screensaver lock check")
+	}
+
+	// Check if running Sway
+	if _, err := lookPath("sway"); err == nil {
+		anyCheckPerformed = true
+		allChecksPassed = allChecksPassed && checkSway()
+	} else {
+		log.Debug("Sway environment not detected for screensaver lock check")
 	}
 
 	// Performed at least one check and all performed checks passed

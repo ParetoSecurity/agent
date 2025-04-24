@@ -32,6 +32,74 @@ in {
       services.xserver.displayManager.sddm.enable = true;
       services.colord.enable = false;
     };
+
+    sway = {
+      pkgs,
+      lib,
+      ...
+    }: {
+      imports = [
+        (pareto {inherit pkgs lib;})
+      ];
+
+      # enable Sway window manager
+      programs.sway = {
+        enable = true;
+        wrapperFeatures.gtk = true;
+      };
+    };
+    swaylock = {
+      pkgs,
+      lib,
+      ...
+    }: let
+      home-manager = builtins.fetchTarball {
+        url = "https://github.com/nix-community/home-manager/archive/release-24.11.tar.gz";
+        sha256 = "024jcyjxsr0cj4ycz4r8i60bydrl13l6vc16innv6wq32rcgyacb";
+      };
+    in {
+      imports = [
+        (pareto {inherit pkgs lib;})
+        (import "${home-manager}/nixos")
+      ];
+
+      # enable Sway window manager
+      programs.sway = {
+        enable = true;
+        wrapperFeatures.gtk = true;
+      };
+
+      users.users.paretosecurity = {
+        isNormalUser = true;
+        extraGroups = ["wheel"]; # Enable ‘sudo’ for the user.
+      };
+
+      # Home manager configuration for user paretosecurity.
+      home-manager.users.paretosecurity = {
+        home.stateVersion = "24.11";
+        programs.home-manager.enable = true;
+
+        services.swayidle = {
+          enable = true;
+          timeouts = [
+            {
+              timeout = 300;
+              command = "${pkgs.swaylock}/bin/swaylock";
+            }
+          ];
+          events = [
+            {
+              event = "before-sleep";
+              command = "${pkgs.swaylock}/bin/swaylock";
+            }
+            {
+              event = "lock";
+              command = "${pkgs.swaylock}/bin/swaylock";
+            }
+          ];
+        };
+      };
+    };
   };
 
   interactive.nodes.gnome = {...}:
@@ -78,6 +146,25 @@ in {
     expected = (
         "  • Starting checks...\n"
         "  • Access Security: Password is required to unlock the screen > [FAIL] Password after sleep or screensaver is off\n"
+        "  • Checks completed.\n"
+    )
+    assert out == expected, f"Expected did not match actual, got \n{out}"
+
+
+    # Test sway, swaylock is disabled by default
+    status, out = sway.execute("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
+    expected = (
+        "  • Starting checks...\n"
+        "  • Access Security: Password is required to unlock the screen > [FAIL] Password after sleep or screensaver is off\n"
+        "  • Checks completed.\n"
+    )
+    assert out == expected, f"Expected did not match actual, got \n{out}"
+
+    # Test swaylock
+    status, out = swaylock.execute("sudo -u paretosecurity paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8 --verbose")
+    expected = (
+        "  • Starting checks...\n"
+        "  • Access Security: Password is required to unlock the screen > [OK] Password after sleep or screensaver is on\n"
         "  • Checks completed.\n"
     )
     assert out == expected, f"Expected did not match actual, got \n{out}"
