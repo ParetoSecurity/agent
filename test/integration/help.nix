@@ -11,6 +11,7 @@ in {
       ...
     }: {
       imports = [(pareto {inherit pkgs lib;})];
+      environment.systemPackages = with pkgs; [pkg-config];
     };
   };
 
