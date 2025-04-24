@@ -7,6 +7,12 @@ in
   nixpkgsPareto.overrideAttrs (oldAttrs: {
     src = ./.;
     version = "${builtins.hashFile "sha256" "${toString ./go.sum}"}";
+    subPackages = ["cmd/paretosecurity"];
+    nativeBuildInputs =
+      [
+        pkgs.pkg-config
+      ]
+      ++ oldAttrs.nativeBuildInputs;
 
     # Updated with pre-commit, don't change manually
     vendorHash = "sha256-YnyACP/hJYxi4AWMwr0We4YUTbWwahKAIYN6RnHmzls=";
