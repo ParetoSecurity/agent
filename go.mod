@@ -1,5 +1,7 @@
 module github.com/ParetoSecurity/agent
 
+// Do not upgrade until nixos is not released
+toolchain go1.23
 go 1.24.0
 
 require (

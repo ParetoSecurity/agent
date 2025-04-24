@@ -58,7 +58,7 @@ func renderBadge(icon []byte, badge IconBadge) []byte {
 	}
 	bounds := img.Bounds()
 	// Draw a small circle in the bottom right corner
-	dotSize := bounds.Dx() / 2
+	dotSize := bounds.Dx() / 3
 	centerX := bounds.Max.X - dotSize
 	centerY := bounds.Max.Y - dotSize
 
