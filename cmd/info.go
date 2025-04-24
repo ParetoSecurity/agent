@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"os"
 	"runtime"
 
 	"github.com/ParetoSecurity/agent/shared"
@@ -39,8 +38,6 @@ var infoCmd = &cobra.Command{
 			log.Warn("Failed to marshal host info")
 		}
 		log.Infof("Host Info: %s\n", string(jsonOutput))
-
-		os.Exit(0)
 	},
 }
 

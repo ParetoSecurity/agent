@@ -38,20 +38,20 @@ type InviteClaims struct {
 
 var linkCmd = &cobra.Command{
 	Use:   "link <url>",
-	Short: "Link team with this device",
-	Run: func(cc *cobra.Command, args []string) {
+	Short: "Link this device to a team",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if shared.IsRoot() {
-			log.Fatal("Please run this command as a normal user.")
-		}
-		if len(args) < 1 {
-			log.Fatal("Please provide a team URL")
+			return fmt.Errorf("please run this command as a normal user")
 		}
 		err := runLinkCommand(args[0])
 		if err != nil {
-			log.WithError(err).Fatal("Failed to link team")
+			log.WithError(err).Error("Failed to link team")
 			notify.Blocking("Failed to add device to the team!")
+			return err
 		}
 		notify.Blocking("Device successfully linked to the team!")
+		return nil
 	},
 }
 

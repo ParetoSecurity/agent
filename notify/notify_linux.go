@@ -1,13 +1,15 @@
 package notify
 
 import (
+	"github.com/caarlos0/log"
 	"github.com/godbus/dbus/v5"
 )
 
-func Blocking(message string) (string, error) {
+func Blocking(message string) {
 	conn, err := dbus.SessionBus()
 	if err != nil {
-		return "", err
+		log.WithError(err).Error("Failed to connect to session bus")
+		return
 	}
 	defer conn.Close()
 
@@ -19,7 +21,8 @@ func Blocking(message string) (string, error) {
 		dbus.WithMatchInterface("org.freedesktop.Notifications"),
 		dbus.WithMatchMember("ActionInvoked"),
 	); err != nil {
-		return "", err
+		log.WithError(err).Error("Failed to add signal match")
+		return
 	}
 
 	// Create a channel to receive the signal
@@ -40,7 +43,8 @@ func Blocking(message string) (string, error) {
 		int32(-1)) // Timeout (-1 means no timeout)
 
 	if call.Err != nil {
-		return "", call.Err
+		log.WithError(call.Err).Error("Failed to send notification")
+		return
 	}
 
 	var notificationId uint32
@@ -52,10 +56,11 @@ func Blocking(message string) (string, error) {
 			id := signal.Body[0].(uint32)
 			action := signal.Body[1].(string)
 			if id == notificationId {
-				return action, nil
+				log.Infof("Action invoked: %s", action)
+				return
 			}
 		}
 	}
 
-	return "", nil
+	return
 }
