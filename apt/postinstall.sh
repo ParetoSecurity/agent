@@ -40,12 +40,4 @@ if command -v systemctl >/dev/null 2>&1; then
     systemctl daemon-reload
     systemctl enable paretosecurity.socket
 
-    # Enable user services, and ignore errors in case:
-    # - the user is not logged in
-    # - the user is not allowed to run systemd services
-    # - xdg user session is not active
-    # TODO: move this to a separate script that runs on request login via dbus
-    systemctl --user enable paretosecurity-user.timer || true
-    systemctl --user enable paretosecurity-user.service || true
-    systemctl --user enable paretosecurity-trayicon.service || true
 fi
