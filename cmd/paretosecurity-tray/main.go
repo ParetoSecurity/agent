@@ -1,4 +1,6 @@
-// Package main provides the entry point for the application.
+//go:build windows
+// +build windows
+
 package main
 
 import (
