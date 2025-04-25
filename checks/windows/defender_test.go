@@ -24,7 +24,7 @@ func TestWindowsDefender_Run(t *testing.T) {
 				Err:     nil,
 			},
 			expectedPassed: true,
-			expectedStatus: "Microsoft Defender is on.",
+			expectedStatus: "Microsoft Defender is on",
 		},
 		{
 			name: "Real-time protection disabled",

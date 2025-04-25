@@ -69,10 +69,10 @@ func (d *WindowsDefender) UUID() string {
 	return "2be03cd7-5cb5-4778-a01a-7ba2fb22750a"
 }
 func (d *WindowsDefender) PassedMessage() string {
-	return "Microsoft Defender is on."
+	return "Microsoft Defender is on"
 }
 func (d *WindowsDefender) FailedMessage() string {
-	return "Microsoft Defender is off."
+	return "Microsoft Defender is off"
 }
 func (d *WindowsDefender) RequiresRoot() bool {
 	return false
