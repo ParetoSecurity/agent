@@ -60,10 +60,16 @@ func (f *ApplicationUpdates) checkUpdates() (bool, string) {
 
 	// Check snap
 	if _, err := lookPath("snap"); err == nil {
-		output, err := shared.RunCommand("snap", "refresh", "--list")
-		log.WithField("output", string(output)).Debug("Snap updates")
-		if err == nil && len(output) > 0 && !strings.Contains(string(output), "All snaps up to date.") {
-			updates = append(updates, "Snap")
+		// Check if snapd is running
+		snapdStatus, err := shared.RunCommand("systemctl", "is-active", "snapd")
+		if err == nil && strings.TrimSpace(string(snapdStatus)) == "active" {
+			output, err := shared.RunCommand("snap", "refresh", "--list")
+			log.WithField("output", string(output)).Debug("Snap updates")
+			if err == nil && len(output) > 0 && !strings.Contains(string(output), "All snaps up to date.") {
+				updates = append(updates, "Snap")
+			}
+		} else {
+			log.Debug("snapd is not running, skipping snap updates check")
 		}
 	}
 
