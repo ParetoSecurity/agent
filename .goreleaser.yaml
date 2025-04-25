@@ -101,7 +101,7 @@ builds:
 #   skip_publish: false
 
 upx:
-- enabled: false
+- enabled: true
   brute: true
   compress: best
   ids:
