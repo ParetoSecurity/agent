@@ -12,8 +12,7 @@ var rootCmd = &cobra.Command{
 	Use:     "paretosecurity --help --version [command]",
 	Short:   "Pareto Security CLI",
 	Version: shared.Version,
-	Long: `Pareto Security CLI is a tool for running and reporting audits 
-to paretosecurity.com.`,
+	Long:    `Pareto Security CLI is a tool for running and reporting audits to paretosecurity.com.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if verbose {
 			log.SetLevel(log.DebugLevel)
