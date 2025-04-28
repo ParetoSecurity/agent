@@ -50,8 +50,7 @@ func checkSway() bool {
 		// systemctl show -p FragmentPath --user swayidle
 		configPathConfig, err := shared.RunCommand("systemctl", "--user", "show", "-p", "FragmentPath", "swayidle")
 		if err != nil {
-			log.WithError(err).Debug("Failed to check Sway lock configuration, swayidle service not configured")
-			return false
+			log.WithError(err).Debug("Failed to find Sway lock configuration via systemctl")
 		}
 		configPath := strings.TrimSpace(lo.LastOr(strings.Split(configPathConfig, "="), "/usr/lib/systemd/user/swayidle.service"))
 		config, err := shared.ReadFile(configPath)
