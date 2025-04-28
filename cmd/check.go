@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/ParetoSecurity/agent/claims"
@@ -60,12 +59,11 @@ func checkCommand(skipUUIDs []string, onlyUUID string) {
 					log.Errorf("Failed check: %s (UUID: %s)", check.Name, check.UUID)
 				}
 			}
-			log.Info("You can use `paretosecurity check --verbose` to get a detailed report.")
-			os.Exit(1)
+			log.Fatal("You can use `paretosecurity check --verbose` to get a detailed report.")
 		}
 
 	case <-ctx.Done():
-		log.Warn("Check run timed out")
-		os.Exit(1)
+		log.Fatal("Check run timed out")
+
 	}
 }

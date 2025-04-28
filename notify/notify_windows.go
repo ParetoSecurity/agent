@@ -3,10 +3,11 @@ package notify
 import (
 	"unsafe"
 
+	"github.com/caarlos0/log"
 	"golang.org/x/sys/windows"
 )
 
-func Blocking(message string) (string, error) {
+func Blocking(message string) {
 	// Use MessageBoxW from user32.dll
 	user32 := windows.NewLazySystemDLL("user32.dll")
 	procMessageBoxW := user32.NewProc("MessageBoxW")
@@ -19,7 +20,8 @@ func Blocking(message string) (string, error) {
 		0, // MB_OK
 	)
 	if ret == 0 {
-		return "", err
+		log.WithError(err).Error("Failed to send notification")
+		return
 	}
-	return "OK", nil
+	return
 }

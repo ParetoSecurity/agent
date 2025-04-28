@@ -18,44 +18,48 @@ in {
     ssh {port = 2221;} {};
 
   testScript = ''
-    expected = (
-        "Pareto Security CLI is a tool for running and reporting audits \n"
-        "to paretosecurity.com.\n"
-        "\n"
-        "Usage:\n"
-        "  paretosecurity [command]\n"
-        "\n"
-        "Available Commands:\n"
-        "  check       Run checks on your system\n"
-        "  completion  Generate the autocompletion script for the specified shell\n"
-        "  config      Configure application settings\n"
-        "  help        Help about any command\n"
-        "  helper      A root helper\n"
-        "  info        Print the system information\n"
-        "  link        Link team with this device\n"
-        "  schema      Output schema for all checks\n"
-        "  status      Print the status of the checks\n"
-        "  trayicon    Display the status of the checks in the system tray\n"
-        "  unlink      Unlink this device from the team\n"
-        "\n"
-        "Flags:\n"
-        "  -h, --help      help for paretosecurity\n"
-        "      --verbose   output verbose logs\n"
-        "  -v, --version   version for paretosecurity\n"
-        "\n"
-        'Use "paretosecurity [command] --help" for more information about a command.\n'
-    )
+    from textwrap import dedent
+    expected = dedent("""\
+    Pareto Security CLI is a tool for running and reporting audits to paretosecurity.com.
+
+    Usage:
+      paretosecurity [command]
+
+    Available Commands:
+      check       Run checks on your system
+      completion  Generate the autocompletion script for the specified shell
+      config      Configure application settings
+      help        Help about any command
+      helper      A root helper
+      info        Print the system information
+      link        Link this device to a team
+      schema      Output schema for all checks
+      status      Print the status of the checks
+      trayicon    Display the status of the checks in the system tray
+      unlink      Unlink this device from the team
+
+    Flags:
+      -h, --help      help for paretosecurity
+          --verbose   output verbose logs
+      -v, --version   version for paretosecurity
+
+    Use "paretosecurity [command] --help" for more information about a command.
+    """)
 
     # Test 1: assert default output
-    assert vanilla.succeed("paretosecurity") == expected
+    out = vanilla.succeed("paretosecurity")
+    assert out == expected, f"Expected did not match actual, got \n{out}"
 
     # Test 2: assert `--help` output
-    assert vanilla.succeed("paretosecurity -h") == expected
+    out = vanilla.succeed("paretosecurity --help")
+    assert out == expected, f"Expected did not match actual, got \n{out}"
 
     # Test 3: assert `-h` output
-    assert vanilla.succeed("paretosecurity --help") == expected
+    out = vanilla.succeed("paretosecurity -h")
+    assert out == expected, f"Expected did not match actual, got \n{out}"
 
     # Test 4: assert `help` output
-    assert vanilla.succeed("paretosecurity help") == expected
+    out = vanilla.succeed("paretosecurity help")
+    assert out == expected, f"Expected did not match actual, got \n{out}"
   '';
 }

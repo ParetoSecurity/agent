@@ -31,7 +31,7 @@ var enableCmd = &cobra.Command{
 		check := args[0]
 		err := shared.EnableCheck(check)
 		if err != nil {
-			log.WithError(err).Errorf("Failed to enable check: %s", check)
+			log.WithError(err).Fatalf("Failed to enable check: %s", check)
 		} else {
 			log.WithField("check", check).Info("Check enabled successfully.")
 		}
@@ -47,7 +47,7 @@ var disableCmd = &cobra.Command{
 		check := args[0]
 		err := shared.DisableCheck(check)
 		if err != nil {
-			log.WithError(err).Errorf("Failed to disable check: %s", check)
+			log.WithError(err).Fatalf("Failed to disable check: %s", check)
 		} else {
 			log.WithField("check", check).Info("Check disabled successfully.")
 		}
