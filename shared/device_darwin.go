@@ -11,3 +11,25 @@ type ReportingDevice struct {
 	ModelName   string `json:"modelName"`    // e.g. MacBook Pro
 	ModelSerial string `json:"modelSerial"`  // e.g. C02C1234
 }
+
+// SystemSerial retrieves the system's serial number by executing a shell command
+// that queries hardware information on Darwin (macOS) systems. It returns the
+// serial number as a string, or an error if the command fails.
+func SystemSerial() (string, error) {
+	serial, err := RunCommand("system_profiler", "SPHardwareDataType", "|", "grep", "Serial", "|", "awk", "'{print $4}'")
+	if err != nil {
+		return "", err
+	}
+	return serial, nil
+}
+
+// SystemDevice retrieves the system's device model name by executing a shell command
+// that queries the hardware data using 'system_profiler' and processes the output.
+// It returns the device model name as a string, or an error if the command fails.
+func SystemDevice() (string, error) {
+	device, err := RunCommand("system_profiler", "SPHardwareDataType", "|", "grep", "Model Name", "|", "awk", "'{print $3}'")
+	if err != nil {
+		return "", err
+	}
+	return device, nil
+}

@@ -3,6 +3,7 @@ package shared
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/caarlos0/log"
 	"github.com/pelletier/go-toml"
@@ -25,6 +26,9 @@ func init() {
 		homeDir = "."
 	}
 	ConfigPath = filepath.Join(homeDir, ".config", "pareto.toml")
+	if runtime.GOOS == "windows" {
+		ConfigPath = filepath.Join(homeDir, "pareto.toml")
+	}
 	log.Debugf("configPath: %s", ConfigPath)
 }
 
