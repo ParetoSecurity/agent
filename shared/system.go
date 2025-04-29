@@ -35,33 +35,6 @@ func SystemUUID() (string, error) {
 	return "", fmt.Errorf("no network interface found")
 }
 
-func SystemDevice() (string, error) {
-	content, err := ReadFile("/sys/devices/virtual/dmi/id/product_name")
-	if err != nil {
-		return "", err
-	}
-
-	deviceName := strings.TrimSpace(string(content))
-	if deviceName == "" {
-		return "", fmt.Errorf("unable to retrieve device name")
-	}
-
-	return deviceName, nil
-}
-
-func SystemSerial() (string, error) {
-	content, err := ReadFile("/sys/devices/virtual/dmi/id/product_serial")
-	if err != nil {
-		return "", err
-	}
-	serialNumber := strings.TrimSpace(string(content))
-	if serialNumber == "" {
-		return "", fmt.Errorf("unable to retrieve serial number")
-	}
-
-	return serialNumber, nil
-}
-
 func IsRoot() bool {
 	if testing.Testing() {
 		return true

@@ -11,3 +11,24 @@ type ReportingDevice struct {
 	ModelName   string `json:"modelName"`        // e.g. MacBook Pro
 	ModelSerial string `json:"modelSerial"`      // e.g. C02C1234
 }
+
+// SystemSerial retrieves the system's BIOS serial number by executing a PowerShell command.
+// It returns the serial number as a string, or an error if the command fails.
+func SystemSerial() (string, error) {
+	serial, err := RunCommand("powershell", "-Command", `(Get-WmiObject -Class Win32_BIOS).SerialNumber`)
+	if err != nil {
+		return "", err
+	}
+	return serial, nil
+}
+
+// SystemDevice retrieves the model name of the current Windows computer system
+// by executing a PowerShell command that queries the Win32_ComputerSystem WMI class.
+// It returns the device model as a string, or an error if the command fails.
+func SystemDevice() (string, error) {
+	device, err := RunCommand("powershell", "-Command", `(Get-WmiObject -Class Win32_ComputerSystem).Model`)
+	if err != nil {
+		return "", err
+	}
+	return device, nil
+}

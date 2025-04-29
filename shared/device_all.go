@@ -43,7 +43,7 @@ func CurrentReportingDevice() ReportingDevice {
 		OSVersion:   osVersion,
 		ModelName: func() string {
 			modelName, err := SystemDevice()
-			if err != nil {
+			if err != nil || modelName == "" {
 				return "Unknown"
 			}
 
@@ -51,7 +51,7 @@ func CurrentReportingDevice() ReportingDevice {
 		}(),
 		ModelSerial: func() string {
 			serial, err := SystemSerial()
-			if err != nil {
+			if err != nil || serial == "" {
 				return "Unknown"
 			}
 
