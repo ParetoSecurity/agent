@@ -31,7 +31,7 @@ if [[ -f /etc/os-release ]]; then
         echo "Cleaning up..."
         rm -rf "$TEMP_DIR"
 
-    elif [[ "$ID_LIKE" == *"arch"* ]]; then
+    elif [[ "$ID" == *"rhel"* || "$ID" == *"fedora"* ]]; then
         TEMP_DIR=$(mktemp -d)
         echo "Downloading Pareto Security package for $ARCH..."
         if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
@@ -46,7 +46,7 @@ if [[ -f /etc/os-release ]]; then
             echo "Unsupported architecture: $ARCH"
             exit 1
         fi
-    elif [[ "$ID_LIKE" == *"rhel"* || "$ID_LIKE" == *"fedora"* ]]; then
+    elif [[ "$ID_LIKE" == *"arch"* ]]; then
         TEMP_DIR=$(mktemp -d)
         echo "Downloading Pareto Security package for $ARCH..."
         if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
