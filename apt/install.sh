@@ -37,11 +37,11 @@ if [[ -f /etc/os-release ]]; then
         if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
             wget -q --show-progress -O "$TEMP_DIR/paretosecurity_amd64.rpm" "${BASE_URL}amd64.rpm"
             echo "Installing package..."
-            pacman -U "$TEMP_DIR/paretosecurity_amd64.archlinux.pkg.tar.zst"
+            rpm -i "$TEMP_DIR/paretosecurity_amd64.rpm"
         elif [[ "$ARCH" == "aarch64" ]]; then
             wget -q --show-progress -O "$TEMP_DIR/paretosecurity_arm64.rpm" "${BASE_URL}arm64.rpm"
             echo "Installing package..."
-            pacman -U "$TEMP_DIR/paretosecurity_arm64.archlinux.pkg.tar.zst"
+            rpm -i "$TEMP_DIR/paretosecurity_arm64.rpm"
         else
             echo "Unsupported architecture: $ARCH"
             exit 1
@@ -52,11 +52,12 @@ if [[ -f /etc/os-release ]]; then
         if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
             wget -q --show-progress -O "$TEMP_DIR/paretosecurity_amd64.rpm" "${BASE_URL}amd64.archlinux.pkg.tar.zst"
             echo "Installing package..."
-            rpm -i "$TEMP_DIR/paretosecurity_amd64.rpm"
+            pacman -U "$TEMP_DIR/paretosecurity_amd64.archlinux.pkg.tar.zst"
         elif [[ "$ARCH" == "aarch64" ]]; then
             wget -q --show-progress -O "$TEMP_DIR/paretosecurity_arm64.rpm" "${BASE_URL}arm64.archlinux.pkg.tar.zst"
             echo "Installing package..."
-            rpm -i "$TEMP_DIR/paretosecurity_arm64.rpm"
+            pacman -U "$TEMP_DIR/paretosecurity_arm64.archlinux.pkg.tar.zst"
+
         else
             echo "Unsupported architecture: $ARCH"
             exit 1
