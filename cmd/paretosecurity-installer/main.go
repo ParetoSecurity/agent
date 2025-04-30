@@ -16,10 +16,10 @@ var welcomeAssets embed.FS
 
 func main() {
 
-	// check for /qs argument
+	// check for /qs or /qsp argument
 	// if found, install the app and exit
 	for _, arg := range os.Args[1:] {
-		if arg == "/qs" {
+		if arg == "/qs" || arg == "/qsp" {
 			(&WindowService{}).InstallApp(true)
 			os.Exit(0)
 			return

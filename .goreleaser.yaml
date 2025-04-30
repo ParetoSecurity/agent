@@ -160,3 +160,15 @@ changelog:
     exclude:
     - "^docs:"
     - "^test:"
+release:
+  header: |
+    ## Release {{ .Version }}
+
+    #### Installing on Linux (Debian, Fedora, ArchLinux, NixOS, etc.)
+    ```bash
+    curl -sL pkg.paretosecurity.com/install.sh | sudo bash
+    ```
+
+    #### Installing on Windows (Windows 10, Windows 11)
+
+    Download the {{ .Version }} release  from [here](https://github.com/ParetoSecurity/agent/releases/download/{{ .Version }}/paretosecurity-installer-amd64.exe)
