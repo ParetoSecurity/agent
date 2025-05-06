@@ -50,6 +50,9 @@ func (f *ParetoUpdated) Run() error {
 				}
 				return "app-live-opensource"
 			}()).
+			Header("Accept", "application/vnd.github+json").
+			Header("X-GitHub-Api-Version", "2022-11-28").
+			Header("User-Agent", "ParetoSecurity/agent"). // updated to org/repo name
 			ToJSON(&res).
 			Fetch(context.Background())
 		if err != nil {
@@ -65,10 +68,14 @@ func (f *ParetoUpdated) Run() error {
 		if res[0].TagName == shared.Version {
 			f.passed = true
 		}
+		f.details = fmt.Sprintf("Current version: %s, Latest version: %s", shared.Version, res[0].TagName)
 		return nil
 	}
 
 	err := requests.URL("https://api.github.com/repos/ParetoSecurity/agent/releases").
+		Header("Accept", "application/vnd.github+json").
+		Header("X-GitHub-Api-Version", "2022-11-28").
+		Header("User-Agent", "ParetoSecurity/agent"). // updated to org/repo name
 		ToJSON(&res).
 		Fetch(context.Background())
 	if err != nil {

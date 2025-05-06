@@ -14,6 +14,9 @@ import (
 )
 
 func main() {
+	if err := shared.LoadConfig(); err != nil {
+		log.WithError(err).Warn("failed to load config")
+	}
 	onExit := func() {
 		log.Info("Exiting...")
 	}
