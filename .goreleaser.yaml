@@ -101,24 +101,13 @@ builds:
 #   skip_publish: false
 
 upx:
-- enabled: true
+- enabled: false
   brute: true
   compress: best
   ids:
   - installer
   goos:
   - windows
-archives:
-- id: default
-  formats:
-  - tar.gz
-  allow_different_binary_count: true
-  format_overrides:
-  - goos: windows
-    formats:
-    - zip
-  name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
-  builds: [ agent, tray ]
 nfpms:
 - vendor: paretosecurity.com
   builds: [ agent ]

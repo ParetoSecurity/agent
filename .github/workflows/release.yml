@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   windows-release:
-    runs-on: windows-latest
+    runs-on: windows-pareto
     name: Windows Release
     needs: [ build ]
     steps:
@@ -29,22 +29,31 @@ jobs:
           files: windows.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Rename Windows installer
+      - name: Rename Windows installer (x64)
         run: |
           mv installer_windows_amd64_v1/paretosecurity-installer.exe paretosecurity-installer-amd64.exe
-          mv installer_windows_arm64_v8.0/paretosecurity-installer.exe paretosecurity-installer-arm64.exe
-      - name: Upload Windows Installer (amd64)
+          mv tray_windows_amd64_v1/paretosecurity-tray.exe paretosecurity-tray.exe
+          mv agent_windows_amd64_v1/paretosecurity.exe paretosecurity.exe
+      - name: Sign Windows installer (x64)
+        run: |
+          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign /sha1 "2198c6a91da7f1b54cef66da7754c78bf78031a6" /tr http://time.certum.pl /td sha256 /fd sha256 /v paretosecurity-installer-amd64.exe
+          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign /sha1 "2198c6a91da7f1b54cef66da7754c78bf78031a6" /tr http://time.certum.pl /td sha256 /fd sha256 /v paretosecurity-tray.exe
+          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign /sha1 "2198c6a91da7f1b54cef66da7754c78bf78031a6" /tr http://time.certum.pl /td sha256 /fd sha256 /v paretosecurity.exe
+      - name: Create ZIP package (x64)
+        run: Compress-Archive -Path paretosecurity-tray.exe, paretosecurity.exe -DestinationPath paretosecurity_windows_amd64.zip
+      - name: Upload Windows Installer (x64)
         uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
         with:
           files: paretosecurity-installer-amd64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload Windows Installer (arm64)
+      - name: Upload Windows ZIP Package (x64)
         uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
         with:
-          files: paretosecurity-installer-arm64.exe
+          files: paretosecurity_windows_amd64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   linux-release:
     runs-on: ubuntu-latest
     name: Linux Release
