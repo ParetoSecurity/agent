@@ -68,6 +68,7 @@ func (f *ParetoUpdated) Run() error {
 		if res[0].TagName == shared.Version {
 			f.passed = true
 		}
+		f.details = fmt.Sprintf("Current version: %s, Latest version: %s", shared.Version, res[0].TagName)
 		return nil
 	}
 
