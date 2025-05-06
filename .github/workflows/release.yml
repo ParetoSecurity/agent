@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   windows-release:
-    runs-on: windows-pareto
+    runs-on: windows-latest
     name: Windows Release
     needs: [ build ]
     steps:
