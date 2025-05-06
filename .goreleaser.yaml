@@ -108,6 +108,10 @@ upx:
   - installer
   goos:
   - windows
+
+archives:
+- format: binary
+
 nfpms:
 - vendor: paretosecurity.com
   builds: [ agent ]
