@@ -3,16 +3,16 @@
   lib,
 }: let
   nixpkgsPareto = pkgs.callPackage (pkgs.path + "/pkgs/by-name/pa/paretosecurity/package.nix") {};
+
+  # Create a fake src with rev attribute
+  srcWithRev = {
+    outPath = ./.;
+    rev = lib.substring 0 8 (builtins.hashFile "sha256" ./go.sum);
+  };
 in
   nixpkgsPareto.overrideAttrs (oldAttrs: {
-    src = ./.;
+    src = srcWithRev;
     version = "${builtins.hashFile "sha256" "${toString ./go.sum}"}";
-    subPackages = ["cmd/paretosecurity"];
-    nativeBuildInputs =
-      [
-        pkgs.pkg-config
-      ]
-      ++ oldAttrs.nativeBuildInputs;
 
     # Updated with pre-commit, don't change manually
     vendorHash = "sha256-YnyACP/hJYxi4AWMwr0We4YUTbWwahKAIYN6RnHmzls=";
