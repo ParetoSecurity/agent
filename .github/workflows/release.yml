@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   windows-release:
-    runs-on: windows-pareto
+    runs-on: windows-latest
     name: Windows Release
     needs: [ build ]
     steps:
@@ -29,6 +29,15 @@ jobs:
           files: windows.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  windows-sign-x64:
+    runs-on: windows-pareto
+    name: Windows Sign (x64)
+    needs: [ build ]
+    steps:
+      - name: Download release
+        uses: actions/download-artifact@v4
+        with:
+          name: release
       - name: Rename Windows installer (x64)
         run: |
           mv installer_windows_amd64_v1/paretosecurity-installer.exe paretosecurity-installer-amd64.exe
