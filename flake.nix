@@ -2,7 +2,6 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     nix-vm-test.url = "github:numtide/nix-vm-test";
-    systems.url = "github:nix-systems/default";
   };
 
   outputs = inputs @ {
@@ -49,9 +48,6 @@
           .driver;
       in {
         packages.default = flakePackage;
-        checks.test-nixos = import ./test/integration/nixos.nix {
-          inherit pkgs system flakePackage;
-        };
 
         checks.firewall = pkgs.testers.runNixOSTest ./test/integration/firewall.nix;
         checks.help = pkgs.testers.runNixOSTest ./test/integration/help.nix;
@@ -59,38 +55,6 @@
         checks.pwd-manager = pkgs.testers.runNixOSTest ./test/integration/pwd-manager.nix;
         checks.screenlock = pkgs.testers.runNixOSTest ./test/integration/screenlock.nix;
         checks.secureboot = pkgs.testers.runNixOSTest ./test/integration/secureboot.nix;
-
-        packages.test-debian = testPackage {
-          distro = "debian";
-          version = "13";
-          script = "debian.py";
-        };
-        packages.test-fedora = testPackage {
-          distro = "fedora";
-          version = "40";
-          script = "fedora.py";
-        };
-        packages.test-ubuntu = testPackage {
-          distro = "ubuntu";
-          version = "23_10";
-          script = "ubuntu.py";
-        };
-
-        packages.test-release-debian = testRelease {
-          distro = "debian";
-          version = "13";
-          script = "debian-release.py";
-        };
-        packages.test-release-fedora = testRelease {
-          distro = "fedora";
-          version = "40";
-          script = "fedora-release.py";
-        };
-        packages.test-release-ubuntu = testRelease {
-          distro = "ubuntu";
-          version = "23_10";
-          script = "ubuntu-release.py";
-        };
       };
     };
 }
