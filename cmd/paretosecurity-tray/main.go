@@ -21,11 +21,13 @@ func main() {
 		log.Info("Exiting...")
 	}
 
+	// Scheduled update command
 	go func() {
 		for {
 			// This is to avoid running the update command too frequently
 			// and to ensure that the update command is run at least once an hour
-			if time.Since(shared.GetModifiedTime()) > time.Hour {
+			// also prevent update on first run
+			if time.Since(shared.GetModifiedTime()) > time.Hour && !shared.GetModifiedTime().IsZero() {
 				_, err := shared.RunCommand(shared.SelfExe(), "update")
 				if err != nil {
 					log.WithError(err).Error("Failed to run update command")
@@ -35,6 +37,7 @@ func main() {
 		}
 	}()
 
+	// Scheduled check command
 	go func() {
 		for {
 			// This is to avoid running the check command too frequently
@@ -46,5 +49,16 @@ func main() {
 		}
 	}()
 
+	// Initialize the state file
+	if shared.GetModifiedTime().IsZero() {
+		go func() {
+			_, err := shared.RunCommand(shared.SelfExe(), "check")
+			if err != nil {
+				log.WithError(err).Error("Failed to run check command")
+			}
+		}()
+	}
+
 	systray.Run(trayapp.OnReady, onExit)
+
 }
