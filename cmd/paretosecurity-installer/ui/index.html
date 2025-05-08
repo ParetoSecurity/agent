@@ -16,6 +16,7 @@
         console.log("InstallApp result:", result);
         app.ports.installAppCallback.send("ok");
       } catch (err) {
+        console.error("InstallApp error:", err);
         app.ports.installAppCallback.send( err?.message || "Unknown error" );
       }
     });

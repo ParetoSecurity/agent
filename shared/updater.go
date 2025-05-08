@@ -113,6 +113,7 @@ func InstallApp(withStartup bool) error {
 		return err
 	}
 	exeURL, _, err := getApp()
+	log.WithField("exeURL", exeURL).Info("downloading latest release")
 	if err != nil {
 		log.WithError(err).Error("failed to download latest release")
 		return err
@@ -126,21 +127,15 @@ func InstallApp(withStartup bool) error {
 	installScriptPath := filepath.Join(roamingDir, "ParetoSecurity", "install.ps1")
 
 	// Write the install script
+	log.WithField("installScriptPath", installScriptPath).Info("writing install script")
 	err = os.WriteFile(installScriptPath, []byte(installScript), 0644)
 	if err != nil {
 		log.WithError(err).Error("failed to write install script")
 		return err
 	}
 
-	//exclude the folder from Defender
-	excludePath := filepath.Join(roamingDir, "ParetoSecurity")
-	_, err = RunCommand("powershell.exe", "-Command", "Add-MpPreference -ExclusionPath "+excludePath)
-	if err != nil {
-		log.WithError(err).Error("failed to exclude folder from Defender")
-		return err
-	}
-
 	// Execute the PowerShell script
+	log.WithField("zipPath", exeURL).Info("executing install script")
 	zipPath := filepath.Join(roamingDir, "ParetoSecurity", filepath.Base(exeURL))
 	if _, err := os.Stat(zipPath); os.IsNotExist(err) {
 		log.WithError(err).Error("zip file does not exist")
