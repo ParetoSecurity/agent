@@ -19,16 +19,20 @@ if (-Not (Test-Path -Path $InstallPath)) {
 
 # Close running instances of ParetoSecurity applications
 Write-Host "Closing running instances of ParetoSecurity..."
-Get-Process -Name "paretosecurity-tray" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-Get-Process -Name "paretosecurity" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+$procNames = @("paretosecurity-tray.exe", "paretosecurity.exe", "paretosecurity-tray", "paretosecurity")
+foreach ($name in $procNames) {
+    do {
+        $procs = Get-Process -Name $name -ErrorAction SilentlyContinue
+        if ($procs) {
+            $procs | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Milliseconds 300
+        }
+    } while ($procs)
+}
 
 # Download and unzip the latest release
 Write-Host "Extracting ParetoSecurity from provided zip..."
 Expand-Archive -Path $ZipPath -DestinationPath $InstallPath -Force
-
-# Remove the zip file after extraction
-Write-Host "Removing the zip file..."
-Remove-Item -Path $ZipPath -Force
 
 # Create desktop shortcut
 Write-Host "Creating desktop shortcut..."
@@ -49,7 +53,7 @@ if ($WithStartup) {
 
 # Add uninstaller registry entry
 Write-Host "Adding uninstaller registry entry..."
-$UninstallKey = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\ParetoSecurity"
+$UninstallKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\ParetoSecurity"
 if (-Not (Test-Path -Path $UninstallKey)) {
     New-Item -Path $UninstallKey | Out-Null
 }
@@ -76,15 +80,6 @@ if (-Not (Test-Path -Path $CommandKey)) {
     New-Item -Path $CommandKey -Force | Out-Null
 }
 Set-ItemProperty -Path $CommandKey -Name "(Default)" -Value ('"' + $InstallPath + '\paretosecurity.exe" link "%1"')
-
-# Delete existing tasks if they exist
-Write-Host "Deleting existing scheduled tasks if they exist..."
-if (Get-ScheduledTask -TaskName "ParetoSecurityUpdate" -ErrorAction SilentlyContinue) {
-    Unregister-ScheduledTask -TaskName "ParetoSecurityUpdate" -Confirm:$false
-}
-if (Get-ScheduledTask -TaskName "ParetoSecurityCheck" -ErrorAction SilentlyContinue) {
-    Unregister-ScheduledTask -TaskName "ParetoSecurityCheck" -Confirm:$false
-}
 
 # Launch ParetoSecurity tray application
 Write-Host "Launching ParetoSecurity tray application..."

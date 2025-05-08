@@ -7,7 +7,9 @@ import (
 	"embed"
 	"log/slog"
 	"os"
+	"strings"
 
+	"github.com/ParetoSecurity/agent/shared"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -16,11 +18,14 @@ var welcomeAssets embed.FS
 
 func main() {
 
-	// check for /qs or /qsp argument
-	// if found, install the app and exit
 	for _, arg := range os.Args[1:] {
-		if arg == "/qs" || arg == "/qsp" {
-			(&WindowService{}).InstallApp(true)
+		arg = strings.ToLower(arg)
+		if arg == "/qs" || arg == "/qsp" || arg == "/s" || arg == "/q" {
+			// install the app
+			err := shared.InstallApp(true)
+			if err != nil {
+				slog.Error(err.Error())
+			}
 			os.Exit(0)
 			return
 		}
