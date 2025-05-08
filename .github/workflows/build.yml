@@ -81,7 +81,38 @@ jobs:
         with:
           name: installer-screenshot
           path: installer_screenshot.png
-
+      - name: Install app
+        run: |
+          # Start the installer in a new process
+          Start-Process -FilePath "installer_windows_amd64_v1/paretosecurity-installer.exe" -ArgumentList "/qsp" -Wait
+          # Wait until the process is running
+          $timeout = 30
+          $found = $false
+          for ($i = 0; $i -lt $timeout; $i++) {
+            if (Get-Process -Name "paretosecurity-installer" -ErrorAction SilentlyContinue) {
+              $found = $true
+              break
+            }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $found) {
+            Write-Error "paretosecurity-installer.exe did not start within $timeout seconds"
+            exit 1
+          }
+        shell: pwsh
+      - name: Capture Screenshot
+        run: |
+          Add-Type -AssemblyName System.Windows.Forms
+          $bitmap = New-Object Drawing.Bitmap([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height)
+          $graphics = [Drawing.Graphics]::FromImage($bitmap)
+          $graphics.CopyFromScreen(0, 0, 0, 0, $bitmap.Size)
+          $bitmap.Save("tray_screenshot.png")
+        shell: pwsh
+      - name: Upload Screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: tray-screenshot
+          path: tray_screenshot.png
   linux:
     name: Linux Test of a Build
     runs-on: ubuntu-latest
