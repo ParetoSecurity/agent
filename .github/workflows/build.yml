@@ -107,55 +107,47 @@ jobs:
     # Only run on PRs
     if: github.event_name == 'pull_request'
     steps:
-      - name: Download installer screenshot
-        uses: actions/download-artifact@v4
-        with:
-          name: installer-screenshot
-      
-      - name: Download tray screenshot
-        uses: actions/download-artifact@v4
-        with:
-          name: tray-screenshot
-      
       - name: Comment on PR with screenshots
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require('fs');
-            
-            // Function to encode file to base64
-            function encodeImageToBase64(file) {
-              const content = fs.readFileSync(file);
-              return content.toString('base64');
+            // Helper to get artifact download URLs
+            async function getArtifactUrl(artifactName) {
+              const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.runId,
+              });
+              const artifact = artifacts.data.artifacts.find(a => a.name === artifactName);
+              if (!artifact) return null;
+              return artifact.archive_download_url;
             }
-            
-            // Encode screenshots to base64
-            const installerScreenshot = encodeImageToBase64('installer_screenshot.png');
-            const trayScreenshot = encodeImageToBase64('tray_screenshot.png');
-            
-            // Create comment body with images
+
+            const installerUrl = await getArtifactUrl('installer-screenshot');
+            const trayUrl = await getArtifactUrl('tray-screenshot');
+
             const body = `## Windows Installation Screenshots
-            
+
             ### Installer Window
-            ![Installer Screenshot](data:image/png;base64,${installerScreenshot})
-            
+            [Download Installer Screenshot](${installerUrl})
+
             ### System Tray
-            ![Tray Screenshot](data:image/png;base64,${trayScreenshot})
+            [Download Tray Screenshot](${trayUrl})
             `;
-            
+
             // Get all comments on the PR
             const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number
             });
-            
+
             // Look for an existing Windows screenshots comment
             const existingComment = comments.data.find(comment => 
               comment.body.includes('## Windows Installation Screenshots')
             );
-            
+
             if (existingComment) {
               // Update existing comment
               await github.rest.issues.updateComment({
