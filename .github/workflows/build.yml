@@ -81,24 +81,10 @@ jobs:
         with:
           name: installer-screenshot
           path: installer_screenshot.png
-      - name: Install app
+      - name: Run tray app
         run: |
-          # Start the installer in a new process
-          Start-Process -FilePath "installer_windows_amd64_v1/paretosecurity-installer.exe" -ArgumentList "/qsp" -Wait
-          # Wait until the process is running
-          $timeout = 30
-          $found = $false
-          for ($i = 0; $i -lt $timeout; $i++) {
-            if (Get-Process -Name "paretosecurity-installer" -ErrorAction SilentlyContinue) {
-              $found = $true
-              break
-            }
-            Start-Sleep -Seconds 1
-          }
-          if (-not $found) {
-            Write-Error "paretosecurity-installer.exe did not start within $timeout seconds"
-            exit 1
-          }
+          # Start the tray in a new process
+          Start-Process -FilePath "tray_windows_amd64_v1/paretosecurity-tray.exe"
         shell: pwsh
       - name: Capture Screenshot
         run: |
