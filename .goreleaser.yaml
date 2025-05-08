@@ -47,7 +47,6 @@ builds:
   - windows
   goarch:
   - amd64
-  - arm64
   flags:
   - -v
   - -trimpath
@@ -72,12 +71,14 @@ builds:
   - windows
   goarch:
   - amd64
-  - arm64
   flags:
   - -v
   - -trimpath
   - -buildvcs=false
   - -mod=readonly
+  tags:
+  - production
+  - desktop
   gcflags:
   - all=-trimpath=${GOPATH} -l -B
   ldflags:
