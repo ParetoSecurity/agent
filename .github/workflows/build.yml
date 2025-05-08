@@ -35,16 +35,39 @@ jobs:
         run: ls -R
       - name: Run Windows schema
         run: agent_windows_amd64_v1/paretosecurity schema > windows.json
+      - name: Upload Windows schema
+        uses: actions/upload-artifact@v4
+        with:
+          path: windows.json
+          name: windows.json
       - name: Run Windows tests
         run: agent_windows_amd64_v1/paretosecurity check || true
-      - name: Run Installer and Capture Screenshot
+      - name: Minimize all windows
         run: |
-          # Minimize all windows
           $shell = New-Object -ComObject "Shell.Application"
           $shell.MinimizeAll()
+        shell: pwsh
+      - name: Run Installer
+        run: |
           # Start the installer in a new process
-          Start-Process -FilePath "installer_windows_amd64_v1/paretosecurity-installer.exe" -ArgumentList "/QS" -NoNewWindow
-          Start-Sleep -Seconds 5
+          Start-Process -FilePath "installer_windows_amd64_v1/paretosecurity-installer.exe"
+          # Wait until the process is running
+          $timeout = 30
+          $found = $false
+          for ($i = 0; $i -lt $timeout; $i++) {
+            if (Get-Process -Name "paretosecurity-installer" -ErrorAction SilentlyContinue) {
+              $found = $true
+              break
+            }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $found) {
+            Write-Error "paretosecurity-installer.exe did not start within $timeout seconds"
+            exit 1
+          }
+        shell: pwsh
+      - name: Capture Screenshot
+        run: |
           Add-Type -AssemblyName System.Windows.Forms
           $bitmap = New-Object Drawing.Bitmap([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height)
           $graphics = [Drawing.Graphics]::FromImage($bitmap)
@@ -56,11 +79,7 @@ jobs:
         with:
           name: installer-screenshot
           path: installer_screenshot.png
-      - name: Upload Windows schema
-        uses: actions/upload-artifact@v4
-        with:
-          path: windows.json
-          name: windows.json
+
   linux:
     name: Linux Test of a Build
     runs-on: ubuntu-latest
