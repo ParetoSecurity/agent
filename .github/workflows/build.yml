@@ -49,6 +49,7 @@ jobs:
         shell: pwsh
       - name: Run Installer
         run: |
+          winget install -e --id Microsoft.EdgeWebView2Runtime
           # Start the installer in a new process
           Start-Process -FilePath "installer_windows_amd64_v1/paretosecurity-installer.exe"
           # Wait until the process is running
