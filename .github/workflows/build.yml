@@ -24,7 +24,7 @@ on:
 jobs:
   windows:
     name: Windows Test of a Build
-    runs-on: windows-latest
+    runs-on: windows-11-arm
     needs: [ build ]
     steps:
       - name: Download build
