@@ -7,6 +7,7 @@ import (
 	"embed"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -19,6 +20,7 @@ func main() {
 	// check for /qs or /qsp argument
 	// if found, install the app and exit
 	for _, arg := range os.Args[1:] {
+		arg = strings.ToLower(arg)
 		if arg == "/qs" || arg == "/qsp" {
 			(&WindowService{}).InstallApp(true)
 			os.Exit(0)

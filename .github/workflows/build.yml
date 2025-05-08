@@ -39,7 +39,11 @@ jobs:
         run: agent_windows_amd64_v1/paretosecurity check || true
       - name: Run Installer and Capture Screenshot
         run: |
-          Start-Process -FilePath "installer_windows_amd64_v1/paretosecurity-installer.exe"
+          # Minimize all windows
+          $shell = New-Object -ComObject "Shell.Application"
+          $shell.MinimizeAll()
+          # Start the installer in a new process
+          Start-Process -FilePath "installer_windows_amd64_v1/paretosecurity-installer.exe" -ArgumentList "/QS" -NoNewWindow
           Start-Sleep -Seconds 5
           Add-Type -AssemblyName System.Windows.Forms
           $bitmap = New-Object Drawing.Bitmap([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width, [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height)
