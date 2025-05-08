@@ -106,34 +106,55 @@ jobs:
     needs: [windows]
     # Only run on PRs
     if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write # Explicitly set permissions for creating/updating PR comments
     steps:
+      - name: Download installer screenshot artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: installer-screenshot
+          # Defaults to downloading to the workspace root, e.g., installer_screenshot.png
+
+      - name: Download tray screenshot artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tray-screenshot
+          # Defaults to downloading to the workspace root, e.g., tray_screenshot.png
+
+      - name: Upload installer screenshot to R2
+        id: upload_installer_r2
+        uses: ryand56/r2-upload-action@b801a390acbdeb034c5e684ff5e1361c06639e7c # latest
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: pareto-screenshots
+          source-dir: .
+          destination-dir: pr-${{ github.event.pull_request.number }}-run-${{ github.run_number }}
+
       - name: Comment on PR with screenshots
         uses: actions/github-script@v7
+        env: # Pass Imgur URLs to the script
+          INSTALLER_IMG_URL: https://pub-c7fcfbff2e2e4eb0b9148db4024b12bc.r2.dev/pr-${{ github.event.pull_request.number }}-run-${{ github.run_number }}/installer_screenshot.png
+          TRAY_IMG_URL: https://pub-c7fcfbff2e2e4eb0b9148db4024b12bc.r2.dev/pr-${{ github.event.pull_request.number }}-run-${{ github.run_number }}/tray_screenshot.png
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            // Helper to get artifact download URLs
-            async function getArtifactUrl(artifactName) {
-              const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                run_id: context.runId,
-              });
-              const artifact = artifacts.data.artifacts.find(a => a.name === artifactName);
-              if (!artifact) return null;
-              return artifact.archive_download_url;
-            }
+            const installerImgUrl = process.env.INSTALLER_IMG_URL;
+            const trayImgUrl = process.env.TRAY_IMG_URL;
 
-            const installerUrl = await getArtifactUrl('installer-screenshot');
-            const trayUrl = await getArtifactUrl('tray-screenshot');
+            if (!installerImgUrl || installerImgUrl === "null" || !trayImgUrl || trayImgUrl === "null") {
+              core.setFailed('Failed to get Imgur URLs for one or both images. Installer URL: ' + installerImgUrl + ', Tray URL: ' + trayImgUrl);
+              return;
+            }
 
             const body = `## Windows Installation Screenshots
 
             ### Installer Window
-            [Download Installer Screenshot](${installerUrl})
+            ![Installer Screenshot](${installerImgUrl})
 
             ### System Tray
-            [Download Tray Screenshot](${trayUrl})
+            ![Tray Screenshot](${trayImgUrl})
             `;
 
             // Get all comments on the PR
@@ -156,7 +177,7 @@ jobs:
                 comment_id: existingComment.id,
                 body: body
               });
-              console.log('Updated existing Windows screenshots comment');
+              console.log('Updated existing Windows screenshots comment with embedded images.');
             } else {
               // Post new comment
               await github.rest.issues.createComment({
@@ -165,7 +186,7 @@ jobs:
                 issue_number: context.issue.number,
                 body: body
               });
-              console.log('Created new Windows screenshots comment');
+              console.log('Created new Windows screenshots comment with embedded images.');
             }
   linux:
     name: Linux Test of a Build
