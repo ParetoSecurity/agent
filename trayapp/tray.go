@@ -3,9 +3,7 @@ package trayapp
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"runtime"
-	"time"
 
 	"fyne.io/systray"
 	"github.com/ParetoSecurity/agent/check"
@@ -14,7 +12,6 @@ import (
 	"github.com/ParetoSecurity/agent/shared"
 	"github.com/ParetoSecurity/agent/systemd"
 	"github.com/caarlos0/log"
-	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/browser"
 )
 
@@ -25,7 +22,6 @@ func addQuitItem() {
 	go func() {
 		<-mQuit.ClickedCh
 		systray.Quit()
-		os.Exit(0)
 	}()
 }
 
@@ -35,6 +31,34 @@ func checkStatusToIcon(status bool) string {
 		return "✅"
 	}
 	return "❌"
+}
+
+// updateCheck updates the status of a specific check in the menu.
+func updateCheck(chk check.Check, mCheck *systray.MenuItem) {
+	if !chk.IsRunnable() {
+		mCheck.Disable()
+		mCheck.SetTitle(fmt.Sprintf("🚫 %s", chk.Name()))
+		return
+	}
+	mCheck.Enable()
+	checkStatus, found, _ := shared.GetLastState(chk.UUID())
+	state := chk.Passed()
+	if found {
+		state = checkStatus.State
+	}
+	mCheck.SetTitle(fmt.Sprintf("%s %s", checkStatusToIcon(state), chk.Name()))
+}
+
+// updateClaim updates the status of a claim in the menu.
+func updateClaim(claim claims.Claim, mClaim *systray.MenuItem) {
+	mClaim.SetTitle(fmt.Sprintf("❌ %s", claim.Title))
+	for _, chk := range claim.Checks {
+		checkStatus, found, _ := shared.GetLastState(chk.UUID())
+		if found && !checkStatus.State && chk.IsRunnable() {
+			return
+		}
+	}
+	mClaim.SetTitle(fmt.Sprintf("✅ %s", claim.Title))
 }
 
 // addOptions adds various options to the system tray menu.
@@ -112,15 +136,10 @@ func addOptions() {
 
 // OnReady initializes the system tray and its menu items.
 func OnReady() {
+	systray.SetTitle("Pareto Security")
+	log.Info("Starting Pareto Security tray application")
 	broadcaster := shared.NewBroadcaster()
-	go func() {
-		ticker := time.NewTicker(1 * time.Minute)
-		defer ticker.Stop()
-		for range ticker.C {
-			log.Info("Periodic update")
-			broadcaster.Send()
-		}
-	}()
+	log.Info("Setting up system tray icon")
 	setIcon()
 	if runtime.GOOS == "windows" {
 		themeCh := make(chan bool)
@@ -135,8 +154,7 @@ func OnReady() {
 			}
 		}()
 	}
-
-	systray.SetTooltip("Pareto Security")
+	log.Info("Setting up system tray")
 	systray.AddMenuItem(fmt.Sprintf("Pareto Security - %s", shared.Version), "").Disable()
 
 	addOptions()
@@ -153,19 +171,18 @@ func OnReady() {
 			broadcaster.Send()
 		}
 	}(rcheck)
-	lastUpdated := time.Since(shared.GetModifiedTime()).Round(time.Minute)
-	lCheck := systray.AddMenuItem(fmt.Sprintf("Last check %s ago", lastUpdated), "")
+
+	lCheck := systray.AddMenuItem(fmt.Sprintf("Last check: %s", lastUpdated()), "")
 	lCheck.Disable()
 	go func() {
 		for range broadcaster.Register() {
-			lastUpdated := time.Since(shared.GetModifiedTime()).Round(time.Minute)
-			lCheck.SetTitle(fmt.Sprintf("Last check %s ago", lastUpdated))
+
+			lCheck.SetTitle(fmt.Sprintf("Last check: %s", lastUpdated()))
 		}
 	}()
 	go func() {
 		for range systray.TrayOpenedCh {
 			setIcon()
-			lCheck.SetTitle(fmt.Sprintf("Last check %s ago", lastUpdated))
 		}
 	}()
 	systray.AddSeparator()
@@ -208,67 +225,7 @@ func OnReady() {
 	}
 	systray.AddSeparator()
 	addQuitItem()
-
-	go func() {
-		watcher, err := fsnotify.NewWatcher()
-		if err != nil {
-			log.WithError(err).Error("Failed to create file watcher")
-			return
-		}
-		defer watcher.Close()
-
-		err = watcher.Add(shared.StatePath)
-		if err != nil {
-			log.WithError(err).WithField("path", shared.StatePath).Error("Failed to add state file to watcher")
-			return
-		}
-
-		for {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				if event.Op&fsnotify.Write == fsnotify.Write {
-					log.Info("State file modified, updating...")
-					broadcaster.Send()
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				log.WithError(err).Error("File watcher error")
-			}
-		}
-	}()
-
-}
-
-// updateCheck updates the status of a specific check in the menu.
-func updateCheck(chk check.Check, mCheck *systray.MenuItem) {
-	if !chk.IsRunnable() {
-		mCheck.Disable()
-		mCheck.SetTitle(fmt.Sprintf("🚫 %s", chk.Name()))
-		return
-	}
-	mCheck.Enable()
-	checkStatus, found, _ := shared.GetLastState(chk.UUID())
-	state := chk.Passed()
-	if found {
-		state = checkStatus.State
-	}
-	mCheck.SetTitle(fmt.Sprintf("%s %s", checkStatusToIcon(state), chk.Name()))
-}
-
-// updateClaim updates the status of a claim in the menu.
-func updateClaim(claim claims.Claim, mClaim *systray.MenuItem) {
-	for _, chk := range claim.Checks {
-		checkStatus, found, _ := shared.GetLastState(chk.UUID())
-		if found && !checkStatus.State && chk.IsRunnable() {
-			mClaim.SetTitle(fmt.Sprintf("❌ %s", claim.Title))
-			return
-		}
-	}
-
-	mClaim.SetTitle(fmt.Sprintf("✅ %s", claim.Title))
+	log.Info("System tray setup complete")
+	// watch for changes in the state file
+	go watch(broadcaster)
 }

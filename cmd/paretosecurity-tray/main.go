@@ -5,6 +5,7 @@ package main
 
 import (
 	"math/rand"
+	"os"
 	"time"
 
 	"fyne.io/systray"
@@ -17,12 +18,10 @@ func main() {
 	if err := shared.LoadConfig(); err != nil {
 		log.WithError(err).Warn("failed to load config")
 	}
-	onExit := func() {
-		log.Info("Exiting...")
-	}
 
 	// Scheduled update command
 	go func() {
+		log.Info("Starting update command scheduler...")
 		for {
 			// This is to avoid running the update command too frequently
 			// and to ensure that the update command is run at least once an hour
@@ -39,6 +38,7 @@ func main() {
 
 	// Scheduled check command
 	go func() {
+		log.Info("Starting check command scheduler...")
 		for {
 			// This is to avoid running the check command too frequently
 			time.Sleep(time.Duration(45+rand.Intn(15)) * time.Minute)
@@ -51,6 +51,7 @@ func main() {
 
 	// Initialize the state file
 	if shared.GetModifiedTime().IsZero() {
+		log.Info("Initializing state file...") // by running the check command
 		go func() {
 			_, err := shared.RunCommand(shared.SelfExe(), "check")
 			if err != nil {
@@ -59,6 +60,10 @@ func main() {
 		}()
 	}
 
+	onExit := func() {
+		log.Info("Exiting...")
+		os.Exit(0)
+	}
+	log.Info("Starting system tray application...")
 	systray.Run(trayapp.OnReady, onExit)
-
 }

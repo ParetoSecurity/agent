@@ -39,7 +39,6 @@ func SaveConfig() error {
 		return err
 	}
 	defer file.Close()
-
 	encoder := toml.NewEncoder(file)
 	return encoder.Encode(Config)
 }

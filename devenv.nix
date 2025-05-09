@@ -19,7 +19,7 @@ in {
   env.GOPATH = config.env.DEVENV_STATE + "/go";
   env.GOTOOLCHAIN = "local";
 
-  apple.sdk = null; # use installed apple sdk, fixes broken nix packages
+  # apple.sdk = null; # use installed apple sdk, fixes broken nix ui skd packages on darwin, but breaks debugger
 
   scripts.help-scripts.description = "List all available scripts";
   scripts.help-scripts.exec = ''

@@ -115,7 +115,7 @@ func PrintStates() {
 func UpdateLastState(newState LastState) {
 	mutex.Lock()
 	defer mutex.Unlock()
-
+	lastModTime = time.Now()
 	states[newState.UUID] = newState
 }
 
@@ -138,6 +138,7 @@ func GetLastStates() map[string]LastState {
 	return states
 }
 
+// GetModifiedTime returns the last modified time of the state file.
 func GetModifiedTime() time.Time {
 	mutex.RLock()
 	defer mutex.RUnlock()
@@ -146,6 +147,7 @@ func GetModifiedTime() time.Time {
 	return lastModTime
 }
 
+// loadStates loads the states from the TOML file if it has been modified since the last load.
 func loadStates() {
 	fileInfo, err := os.Stat(StatePath)
 	if err != nil {
@@ -165,4 +167,12 @@ func loadStates() {
 		}
 		lastModTime = fileInfo.ModTime()
 	}
+}
+
+// SetModifiedTime sets the last modified time of the state file.
+func SetModifiedTime(t time.Time) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	lastModTime = t
 }
