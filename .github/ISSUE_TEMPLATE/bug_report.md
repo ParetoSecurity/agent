@@ -21,7 +21,7 @@ Steps to reproduce the behavior:
 A clear and concise description of what you expected to happen.
 
 **Version**
-Run `paretosecurity --version` and copy report here.
+Run `paretosecurity -v` and copy report here.
 
 
 **Additional context**
