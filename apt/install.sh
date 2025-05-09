@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright (c) Tailscale Inc
 # Copyright (c) 2024 The Brave Authors
 # Copyright (c) 2025 The ParetoSecurity Authors
