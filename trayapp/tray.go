@@ -14,7 +14,6 @@ import (
 	"github.com/ParetoSecurity/agent/shared"
 	"github.com/ParetoSecurity/agent/systemd"
 	"github.com/caarlos0/log"
-	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/browser"
 )
 
@@ -121,6 +120,9 @@ func OnReady() {
 			broadcaster.Send()
 		}
 	}()
+	// watch for changes in the state file
+	go watch(broadcaster)
+
 	setIcon()
 	if runtime.GOOS == "windows" {
 		themeCh := make(chan bool)
@@ -135,8 +137,6 @@ func OnReady() {
 			}
 		}()
 	}
-
-	systray.SetTooltip("Pareto Security")
 	systray.AddMenuItem(fmt.Sprintf("Pareto Security - %s", shared.Version), "").Disable()
 
 	addOptions()
@@ -153,19 +153,18 @@ func OnReady() {
 			broadcaster.Send()
 		}
 	}(rcheck)
-	lastUpdated := time.Since(shared.GetModifiedTime()).Round(time.Minute)
-	lCheck := systray.AddMenuItem(fmt.Sprintf("Last check %s ago", lastUpdated), "")
+
+	lCheck := systray.AddMenuItem(fmt.Sprintf("Last check: %s", lastUpdated()), "")
 	lCheck.Disable()
 	go func() {
 		for range broadcaster.Register() {
-			lastUpdated := time.Since(shared.GetModifiedTime()).Round(time.Minute)
-			lCheck.SetTitle(fmt.Sprintf("Last check %s ago", lastUpdated))
+
+			lCheck.SetTitle(fmt.Sprintf("Last check: %s", lastUpdated()))
 		}
 	}()
 	go func() {
 		for range systray.TrayOpenedCh {
 			setIcon()
-			lCheck.SetTitle(fmt.Sprintf("Last check %s ago", lastUpdated))
 		}
 	}()
 	systray.AddSeparator()
@@ -208,40 +207,6 @@ func OnReady() {
 	}
 	systray.AddSeparator()
 	addQuitItem()
-
-	go func() {
-		watcher, err := fsnotify.NewWatcher()
-		if err != nil {
-			log.WithError(err).Error("Failed to create file watcher")
-			return
-		}
-		defer watcher.Close()
-
-		err = watcher.Add(shared.StatePath)
-		if err != nil {
-			log.WithError(err).WithField("path", shared.StatePath).Error("Failed to add state file to watcher")
-			return
-		}
-
-		for {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				if event.Op&fsnotify.Write == fsnotify.Write {
-					log.Info("State file modified, updating...")
-					broadcaster.Send()
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				log.WithError(err).Error("File watcher error")
-			}
-		}
-	}()
-
 }
 
 // updateCheck updates the status of a specific check in the menu.
@@ -262,13 +227,12 @@ func updateCheck(chk check.Check, mCheck *systray.MenuItem) {
 
 // updateClaim updates the status of a claim in the menu.
 func updateClaim(claim claims.Claim, mClaim *systray.MenuItem) {
+	mClaim.SetTitle(fmt.Sprintf("❌ %s", claim.Title))
 	for _, chk := range claim.Checks {
 		checkStatus, found, _ := shared.GetLastState(chk.UUID())
 		if found && !checkStatus.State && chk.IsRunnable() {
-			mClaim.SetTitle(fmt.Sprintf("❌ %s", claim.Title))
 			return
 		}
 	}
-
 	mClaim.SetTitle(fmt.Sprintf("✅ %s", claim.Title))
 }
