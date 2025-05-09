@@ -36,7 +36,7 @@ func init() {
 	StatePath = filepath.Join(homeDir, ".paretosecurity.state")
 }
 
-// CommitLastState writes the current state map to the TOML file.
+// Commit writes the current state map to the TOML file.
 func CommitLastState() error {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -46,7 +46,7 @@ func CommitLastState() error {
 		return err
 	}
 	defer file.Close()
-	SetModifiedTime(time.Now())
+	lastModTime = time.Now()
 	encoder := toml.NewEncoder(file)
 	return encoder.Encode(states)
 }
@@ -111,17 +111,15 @@ func PrintStates() {
 	table.Render()
 }
 
-// UpdateLastState updates the LastState struct in the in-memory map and commits to the TOML file.
+// UpdateState updates the LastState struct in the in-memory map and commits to the TOML file.
 func UpdateLastState(newState LastState) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	states[newState.UUID] = newState
-	SetModifiedTime(time.Now())
 }
 
-// GetLastState retrieves the state for a specific check by UUID.
-// Returns the state object, a boolean indicating if it exists, and any error encountered.
+// GetState retrieves the LastState struct by UUID.
 func GetLastState(uuid string) (LastState, bool, error) {
 	mutex.RLock()
 	defer mutex.RUnlock()
@@ -132,8 +130,6 @@ func GetLastState(uuid string) (LastState, bool, error) {
 	return state, exists, nil
 }
 
-// GetLastStates returns a map of all check states keyed by UUID.
-// The states are loaded from disk if the state file has been modified.
 func GetLastStates() map[string]LastState {
 	mutex.RLock()
 	defer mutex.RUnlock()
@@ -142,8 +138,6 @@ func GetLastStates() map[string]LastState {
 	return states
 }
 
-// GetModifiedTime returns the last modification time of the state file.
-// The states are loaded from disk if the state file has been modified.
 func GetModifiedTime() time.Time {
 	mutex.RLock()
 	defer mutex.RUnlock()
@@ -152,9 +146,6 @@ func GetModifiedTime() time.Time {
 	return lastModTime
 }
 
-// loadStates checks if the state file has been modified since last load
-// and reloads it if necessary. This function is not thread-safe and should
-// be called with the lock held.
 func loadStates() {
 	fileInfo, err := os.Stat(StatePath)
 	if err != nil {
@@ -172,14 +163,6 @@ func loadStates() {
 		if err := decoder.Decode(&states); err != nil {
 			return
 		}
-		SetModifiedTime(fileInfo.ModTime())
+		lastModTime = fileInfo.ModTime()
 	}
-}
-
-// SetModTime sets the last modification time of the state file.
-func SetModifiedTime(t time.Time) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	lastModTime = t
 }
