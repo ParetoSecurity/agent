@@ -42,6 +42,7 @@ func setIcon() {
 		SetTemplateIcon(icon, state)
 		return
 	}
+	log.Debug("Setting icon for non-Windows OS")
 	SetTemplateIcon(shared.IconWhite, state)
 }
 
@@ -109,5 +110,6 @@ func SetTemplateIcon(icon []byte, badge IconBadge) {
 		systray.SetTemplateIcon(icoBuffer.Bytes(), icoBuffer.Bytes())
 		return
 	}
+	log.Info("Setting icon for non-Windows OS")
 	systray.SetTemplateIcon(iconWithBadge, iconWithBadge)
 }
