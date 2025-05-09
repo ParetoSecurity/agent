@@ -49,12 +49,22 @@
       in {
         packages.default = flakePackage;
 
-        checks.firewall = pkgs.testers.runNixOSTest ./test/integration/firewall.nix;
-        checks.help = pkgs.testers.runNixOSTest ./test/integration/help.nix;
-        checks.luks = pkgs.testers.runNixOSTest ./test/integration/luks.nix;
-        checks.pwd-manager = pkgs.testers.runNixOSTest ./test/integration/pwd-manager.nix;
-        checks.screenlock = pkgs.testers.runNixOSTest ./test/integration/screenlock.nix;
-        checks.secureboot = pkgs.testers.runNixOSTest ./test/integration/secureboot.nix;
+        checks = let
+          # Create a custom version of pkgs with allowUnsupportedSystem = true, so
+          # that we can run tests on Macs too:
+          # $ nix build .#checks.aarch64-darwin.firewall
+          pkgsAllowUnsupported = import nixpkgs {
+            inherit system;
+            config = {allowUnsupportedSystem = true;};
+          };
+        in {
+          firewall = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/firewall.nix;
+          help = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/help.nix;
+          luks = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/luks.nix;
+          pwd-manager = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/pwd-manager.nix;
+          screenlock = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/screenlock.nix;
+          secureboot = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/secureboot.nix;
+        };
       };
     };
 }
