@@ -1,13 +1,19 @@
 package trayapp
 
 import (
+	"os"
 	"testing"
 	"time"
+
+	"github.com/ParetoSecurity/agent/shared"
 )
 
 func TestLastUpdated(t *testing.T) {
 	now := time.Now()
-
+	shared.StatePath = t.TempDir() + "/test_state.json"
+	defer func() {
+		os.Remove(shared.StatePath)
+	}()
 	testCases := []struct {
 		name             string
 		modifiedTime     time.Time
@@ -101,7 +107,7 @@ func TestLastUpdated(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
+			shared.SetModifiedTime(tc.modifiedTime)
 			actual := lastUpdated()
 			if actual != tc.expected {
 				t.Fatalf("expected %q, got %q", tc.expected, actual)
