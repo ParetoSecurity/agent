@@ -32,7 +32,6 @@ func init() {
 	log.Debugf("configPath: %s", ConfigPath)
 }
 
-// SaveConfig writes the current configuration to the config file.
 func SaveConfig() error {
 
 	file, err := os.Create(ConfigPath)
@@ -45,15 +44,12 @@ func SaveConfig() error {
 	return encoder.Encode(Config)
 }
 
-// LoadConfig reads the configuration file and populates the global Config.
-// If the config file doesn't exist, it creates one with default values.
 func LoadConfig() error {
 	if _, err := os.Stat(ConfigPath); os.IsNotExist(err) {
-		// Create the config file with default values if it doesn't exist
-		err := ResetConfig()
-		if err != nil {
+		if err := SaveConfig(); err != nil {
 			return err
 		}
+		return nil
 	}
 	file, err := os.Open(ConfigPath)
 	if err != nil {
@@ -70,20 +66,15 @@ func LoadConfig() error {
 	return nil
 }
 
-// ResetConfig resets the configuration to default values and saves it to disk.
-func ResetConfig() error {
+func ResetConfig() {
 	Config = ParetoConfig{
 		TeamID:        "",
 		AuthToken:     "",
 		DisableChecks: []string{},
 	}
-	if err := SaveConfig(); err != nil {
-		return err
-	}
-	return nil
+	SaveConfig()
 }
 
-// EnableCheck removes a check from the disabled checks list and saves the configuration.
 func EnableCheck(checkUUID string) error {
 	for i, check := range Config.DisableChecks {
 		if check == checkUUID {
@@ -94,7 +85,6 @@ func EnableCheck(checkUUID string) error {
 	return nil
 }
 
-// DisableCheck adds a check to the disabled checks list and saves the configuration.
 func DisableCheck(checkUUID string) error {
 	for _, check := range Config.DisableChecks {
 		if check == checkUUID {
