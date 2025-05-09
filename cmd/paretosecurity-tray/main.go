@@ -49,6 +49,17 @@ func main() {
 		}
 	}()
 
+	// Initialize the state file
+	if shared.GetModifiedTime().IsZero() {
+		log.Info("Initializing state file...") // by running the check command
+		go func() {
+			_, err := shared.RunCommand(shared.SelfExe(), "check")
+			if err != nil {
+				log.WithError(err).Error("Failed to run check command")
+			}
+		}()
+	}
+
 	onExit := func() {
 		log.Info("Exiting...")
 		os.Exit(0)
