@@ -23,7 +23,7 @@ main() {
 
     # Locate necessary tools
     sudo=""
-    if [[ "$(whoami)" != "root" ]]; then
+    if [ "$(whoami)" != "root" ]; then
         sudo="$(first_of sudo doas run0 pkexec sudo-rs)" || error "Please install sudo/doas/run0/pkexec/sudo-rs to proceed."
     fi
 
