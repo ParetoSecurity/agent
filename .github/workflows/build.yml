@@ -104,8 +104,8 @@ jobs:
     name: Add Screenshots to PR
     runs-on: ubuntu-latest
     needs: [windows]
-    # Only run on PRs
-    if: github.event_name == 'pull_request'
+    # Only run on PRs and if installer files or shared,cmd files have changed
+    if: github.event_name == 'pull_request' && (contains(join(github.event.pull_request.files.*.filename, ' '), 'shared/') || contains(join(github.event.pull_request.files.*.filename, ' '), 'cmd/'))
     permissions:
       pull-requests: write # Explicitly set permissions for creating/updating PR comments
     steps:
