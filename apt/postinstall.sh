@@ -13,7 +13,7 @@ if [[ -f /etc/os-release ]]; then
         echo 'deb [signed-by=/usr/share/keyrings/paretosecurity.gpg] https://pkg.paretosecurity.com/debian stable main' | tee /etc/apt/sources.list.d/pareto.list >/dev/null
     elif [[ "$ID" == *"rhel"* || "$ID" == *"fedora"* ]]; then
         # Download and install GPG key
-        rpm --import https://pkg.paretosecurity.com/paretosecurity.asc
+        rpm --import https://pkg.paretosecurity.com/paretosecurity.asc || true
         curl -fsSl https://pkg.paretosecurity.com/rpm/paretosecurity.repo | tee /etc/yum.repos.d/paretosecurity.repo >/dev/null
     elif [[ "$ID_LIKE" == "arch" ]]; then
         # Download and install GPG key
