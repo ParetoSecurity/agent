@@ -19,42 +19,138 @@ type LastState struct {
 	Details string `json:"details"`
 }
 
+// TomlFileContent represents the structure of the TOML state file.
+type TomlFileContent struct {
+	RunningStateTime time.Time            `toml:"running_state_time"`
+	States           map[string]LastState `toml:"states"`
+}
+
 var (
-	mutex       sync.RWMutex
-	states      = make(map[string]LastState)
-	lastModTime time.Time
-	StatePath   string
+	mutex            sync.RWMutex
+	states           = make(map[string]LastState)
+	runningStateTime time.Time // Stores the time of the last run
+	lastModTime      time.Time
+	StatePath        string
 )
 
 func init() {
-	states = make(map[string]LastState)
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		log.WithError(err).Warn("failed to get user home directory, using current directory instead")
 		homeDir = "."
 	}
 	StatePath = filepath.Join(homeDir, ".paretosecurity.state")
+
+	// Initial load from state file
+	file, openErr := os.Open(StatePath)
+	if openErr == nil {
+		defer file.Close()
+		var content TomlFileContent
+		decoder := toml.NewDecoder(file)
+		if decodeErr := decoder.Decode(&content); decodeErr == nil {
+			if content.States != nil {
+				states = content.States
+			}
+			runningStateTime = content.RunningStateTime
+
+			fileInfo, statErr := file.Stat()
+			if statErr == nil {
+				lastModTime = fileInfo.ModTime()
+			} else {
+				log.WithError(statErr).Warnf("Failed to stat state file %s during init", StatePath)
+			}
+		} else {
+			log.WithError(decodeErr).Warnf("Failed to decode state file %s during init, using defaults", StatePath)
+		}
+	} else if !os.IsNotExist(openErr) {
+		log.WithError(openErr).Warnf("Failed to open state file %s during init, using defaults", StatePath)
+	}
 }
 
-// Commit writes the current state map to the TOML file.
-func CommitLastState() error {
+// CommitSharedState writes the current state (checks and running state) to the TOML file.
+func CommitSharedState() error {
 	mutex.Lock()
 	defer mutex.Unlock()
+
+	content := TomlFileContent{
+		States:           states,
+		RunningStateTime: runningStateTime,
+	}
 
 	file, err := os.Create(StatePath)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-	lastModTime = time.Now()
+
 	encoder := toml.NewEncoder(file)
-	return encoder.Encode(states)
+	encodeErr := encoder.Encode(content)
+
+	closeErr := file.Close()
+
+	if encodeErr != nil {
+		return encodeErr
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+
+	fileInfo, statErr := os.Stat(StatePath)
+	if statErr == nil {
+		lastModTime = fileInfo.ModTime()
+	} else {
+		log.WithError(statErr).Warnf("Failed to stat state file %s after commit", StatePath)
+	}
+	return nil
+}
+
+// refreshStateFromDiskIfNeeded loads states from the TOML file if it has been modified
+// since the last load. It must be called with mutex RLock or Lock held.
+func refreshStateFromDiskIfNeeded() {
+	fileInfo, err := os.Stat(StatePath)
+	if err != nil {
+		if os.IsNotExist(err) && !lastModTime.IsZero() {
+			log.Infof("State file %s appears to have been deleted. Resetting in-memory state.", StatePath)
+			states = make(map[string]LastState)
+			runningStateTime = time.Time{}
+			lastModTime = time.Time{}
+		} else if !os.IsNotExist(err) {
+			log.WithError(err).Warnf("Failed to stat state file %s. Using current in-memory state.", StatePath)
+		}
+		return
+	}
+
+	if fileInfo.ModTime().After(lastModTime) {
+		log.Debugf("State file %s modified on disk. Reloading.", StatePath)
+		rFile, openErr := os.Open(StatePath)
+		if openErr != nil {
+			log.WithError(openErr).Warnf("Failed to open modified state file %s. Using stale in-memory state.", StatePath)
+			return
+		}
+		defer rFile.Close()
+
+		var content TomlFileContent
+		decoder := toml.NewDecoder(rFile)
+		if decodeErr := decoder.Decode(&content); decodeErr != nil {
+			log.WithError(decodeErr).Warnf("Failed to decode modified state file %s. Using stale in-memory state.", StatePath)
+			return
+		}
+
+		if content.States == nil {
+			states = make(map[string]LastState)
+		} else {
+			states = content.States
+		}
+		runningStateTime = content.RunningStateTime
+		lastModTime = fileInfo.ModTime()
+		log.Debugf("Successfully reloaded state from %s", StatePath)
+	}
 }
 
 // AllChecksPassed returns true if all checks have passed.
 func AllChecksPassed() bool {
 	mutex.RLock()
 	defer mutex.RUnlock()
+	refreshStateFromDiskIfNeeded()
 
 	for _, state := range states {
 		if !state.State {
@@ -68,6 +164,7 @@ func AllChecksPassed() bool {
 func GetFailedChecks() []LastState {
 	mutex.RLock()
 	defer mutex.RUnlock()
+	refreshStateFromDiskIfNeeded()
 
 	var failedChecks []LastState
 	for _, state := range states {
@@ -80,7 +177,9 @@ func GetFailedChecks() []LastState {
 
 // PrintStates loads and prints all stored states with their UUIDs, state values, and details.
 func PrintStates() {
-	loadStates()
+	mutex.RLock()
+	defer mutex.RUnlock()
+	refreshStateFromDiskIfNeeded()
 
 	fmt.Printf("Loaded %d states from %s\n", len(states), StatePath)
 	fmt.Printf("Last modified time: %s\n\n", lastModTime.Format(time.RFC3339))
@@ -111,20 +210,20 @@ func PrintStates() {
 	table.Render()
 }
 
-// UpdateState updates the LastState struct in the in-memory map and commits to the TOML file.
+// UpdateLastState updates the LastState struct in the in-memory map.
+// Caller should call CommitSharedState() to persist changes.
 func UpdateLastState(newState LastState) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	lastModTime = time.Now()
+	refreshStateFromDiskIfNeeded()
 	states[newState.UUID] = newState
 }
 
-// GetState retrieves the LastState struct by UUID.
+// GetLastState retrieves the LastState struct by UUID.
 func GetLastState(uuid string) (LastState, bool, error) {
 	mutex.RLock()
 	defer mutex.RUnlock()
-
-	loadStates()
+	refreshStateFromDiskIfNeeded()
 
 	state, exists := states[uuid]
 	return state, exists, nil
@@ -133,46 +232,50 @@ func GetLastState(uuid string) (LastState, bool, error) {
 func GetLastStates() map[string]LastState {
 	mutex.RLock()
 	defer mutex.RUnlock()
-	loadStates()
+	refreshStateFromDiskIfNeeded()
 
-	return states
+	copiedStates := make(map[string]LastState, len(states))
+	for k, v := range states {
+		copiedStates[k] = v
+	}
+	return copiedStates
 }
 
 // GetModifiedTime returns the last modified time of the state file.
 func GetModifiedTime() time.Time {
 	mutex.RLock()
 	defer mutex.RUnlock()
-	loadStates()
-
+	refreshStateFromDiskIfNeeded()
 	return lastModTime
-}
-
-// loadStates loads the states from the TOML file if it has been modified since the last load.
-func loadStates() {
-	fileInfo, err := os.Stat(StatePath)
-	if err != nil {
-		return
-	}
-
-	if fileInfo.ModTime().After(lastModTime) {
-		file, err := os.Open(StatePath)
-		if err != nil {
-			return
-		}
-		defer file.Close()
-
-		decoder := toml.NewDecoder(file)
-		if err := decoder.Decode(&states); err != nil {
-			return
-		}
-		lastModTime = fileInfo.ModTime()
-	}
 }
 
 // SetModifiedTime sets the last modified time of the state file.
 func SetModifiedTime(t time.Time) {
 	mutex.Lock()
 	defer mutex.Unlock()
-
 	lastModTime = t
+}
+
+// GetRunningState returns the last time the application was run.
+func GetRunningState() time.Time {
+	mutex.RLock()
+	defer mutex.RUnlock()
+	refreshStateFromDiskIfNeeded()
+	return runningStateTime
+}
+
+// SetRunningState sets the application's running state time in memory.
+func SetRunningState(t time.Time) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	refreshStateFromDiskIfNeeded()
+	runningStateTime = t
+}
+
+// IsRunning returns true if the application's running state time is non-zero.
+func IsRunning() bool {
+	mutex.RLock()
+	defer mutex.RUnlock()
+	refreshStateFromDiskIfNeeded()
+	return !runningStateTime.IsZero()
 }

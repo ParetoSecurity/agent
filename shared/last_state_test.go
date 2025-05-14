@@ -8,9 +8,9 @@ import (
 	"github.com/pelletier/go-toml"
 )
 
-func TestCommitLastState_Success(t *testing.T) {
+func TestCommitSharedState_Success(t *testing.T) {
 	// Create a temporary directory for our test file.
-	tmpDir, err := os.MkdirTemp("", "commitlaststate_success")
+	tmpDir, err := os.MkdirTemp("", "commitsharedstate_success")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
@@ -34,8 +34,8 @@ func TestCommitLastState_Success(t *testing.T) {
 	mutex.Unlock()
 
 	// Commit the state to the file.
-	if err := CommitLastState(); err != nil {
-		t.Fatalf("CommitLastState failed: %v", err)
+	if err := CommitSharedState(); err != nil {
+		t.Fatalf("CommitSharedState failed: %v", err)
 	}
 
 	// Open the file and decode its contents.
@@ -45,25 +45,25 @@ func TestCommitLastState_Success(t *testing.T) {
 	}
 	defer file.Close()
 
-	var decoded map[string]LastState
+	var decoded TomlFileContent
 	decoder := toml.NewDecoder(file)
 	if err := decoder.Decode(&decoded); err != nil {
 		t.Fatalf("failed to decode TOML file: %v", err)
 	}
 
 	// Validate that the decoded state matches the test state.
-	got, exists := decoded[testState.UUID]
+	got, exists := decoded.States[testState.UUID]
 	if !exists {
-		t.Fatalf("expected state with UUID %s not found", testState.UUID)
+		t.Fatalf("expected state with UUID %s not found in decoded.States", testState.UUID)
 	}
 	if got != testState {
 		t.Fatalf("expected state %+v, got %+v", testState, got)
 	}
 }
 
-func TestCommitLastState_Error(t *testing.T) {
+func TestCommitSharedState_Error(t *testing.T) {
 	// Simulate an error by setting statePath to a directory path.
-	tmpDir, err := os.MkdirTemp("", "commitlaststate_error")
+	tmpDir, err := os.MkdirTemp("", "commitsharedstate_error")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestCommitLastState_Error(t *testing.T) {
 	mutex.Unlock()
 
 	// Attempt to commit; it should return an error.
-	if err := CommitLastState(); err == nil {
+	if err := CommitSharedState(); err == nil {
 		t.Fatalf("expected error when committing to a directory, got none")
 	}
 }
