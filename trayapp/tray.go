@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"runtime"
+	"time"
 
 	"fyne.io/systray"
 	"github.com/ParetoSecurity/agent/check"
@@ -138,6 +139,13 @@ func addOptions() {
 func OnReady() {
 	systray.SetTitle("Pareto Security")
 	log.Info("Starting Pareto Security tray application")
+
+	// Clear any running state that might be left from a previous crash
+	shared.StopAllRunningChecks()
+	if err := shared.CommitLastState(); err != nil {
+		log.WithError(err).Warn("failed to commit running state")
+	}
+
 	broadcaster := shared.NewBroadcaster()
 	log.Info("Setting up system tray icon")
 	setIcon()
@@ -162,15 +170,39 @@ func OnReady() {
 	rcheck := systray.AddMenuItem("Run Checks", "")
 	go func(rcheck *systray.MenuItem) {
 		for range rcheck.ClickedCh {
+			if shared.AreChecksRunning() {
+				log.Info("Checks are already running...")
+				continue
+			}
+			rcheck.Disable()
+			rcheck.SetTitle("Checking...")
 			log.Info("Running checks...")
 			_, err := shared.RunCommand(shared.SelfExe(), "check")
 			if err != nil {
 				log.WithError(err).Error("failed to run check command")
 			}
 			log.Info("Checks completed")
+			rcheck.SetTitle("Run Checks")
+			rcheck.Enable()
 			broadcaster.Send()
 		}
 	}(rcheck)
+
+	// Update run checks menu item if checks are running
+	go func() {
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			if shared.AreChecksRunning() {
+				rcheck.Disable()
+				rcheck.SetTitle("Checking...")
+			} else {
+				rcheck.SetTitle("Run Checks")
+				rcheck.Enable()
+			}
+		}
+	}()
 
 	lCheck := systray.AddMenuItem(fmt.Sprintf("Last check: %s", lastUpdated()), "")
 	lCheck.Disable()

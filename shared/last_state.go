@@ -13,10 +13,11 @@ import (
 )
 
 type LastState struct {
-	Name    string `json:"name"`
-	UUID    string `json:"uuid"`
-	State   bool   `json:"state"`
-	Details string `json:"details"`
+	Name         string    `json:"name"`
+	UUID         string    `json:"uuid"`
+	State        bool      `json:"state"`
+	Details      string    `json:"details"`
+	RunningState time.Time `json:"running_state"` // Zero time means not running, otherwise start time
 }
 
 var (
@@ -175,4 +176,72 @@ func SetModifiedTime(t time.Time) {
 	defer mutex.Unlock()
 
 	lastModTime = t
+}
+
+// SetRunningState sets the running state for a specific check UUID.
+func SetRunningState(uuid string, isRunning bool) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	state, exists := states[uuid]
+	if !exists {
+		state = LastState{
+			UUID: uuid,
+		}
+	}
+
+	if isRunning {
+		state.RunningState = time.Now()
+	} else {
+		state.RunningState = time.Time{} // Zero time
+	}
+
+	states[uuid] = state
+	lastModTime = time.Now()
+}
+
+// IsRunning checks if a specific check is currently running.
+func IsRunning(uuid string) bool {
+	mutex.RLock()
+	defer mutex.RUnlock()
+
+	loadStates()
+
+	state, exists := states[uuid]
+	if !exists {
+		return false
+	}
+
+	return !state.RunningState.IsZero()
+}
+
+// AreChecksRunning checks if any checks are currently running.
+func AreChecksRunning() bool {
+	mutex.RLock()
+	defer mutex.RUnlock()
+
+	loadStates()
+
+	for _, state := range states {
+		if !state.RunningState.IsZero() {
+			return true
+		}
+	}
+
+	return false
+}
+
+// StopAllRunningChecks marks all checks as not running.
+func StopAllRunningChecks() {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	for uuid, state := range states {
+		if !state.RunningState.IsZero() {
+			state.RunningState = time.Time{} // Zero time
+			states[uuid] = state
+		}
+	}
+
+	lastModTime = time.Now()
 }

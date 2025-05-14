@@ -33,6 +33,16 @@ func checkCommand(skipUUIDs []string, onlyUUID string) {
 		log.Warn("Please run this command as a normal user, as it won't report all checks correctly.")
 	}
 
+	// Set running state for all checks
+	for _, claim := range claims.All {
+		for _, chk := range claim.Checks {
+			shared.SetRunningState(chk.UUID(), true)
+		}
+	}
+	if err := shared.CommitLastState(); err != nil {
+		log.WithError(err).Warn("failed to commit running state")
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
@@ -44,6 +54,12 @@ func checkCommand(skipUUIDs []string, onlyUUID string) {
 
 	select {
 	case <-done:
+		// Clear running state for all checks
+		shared.StopAllRunningChecks()
+		if err := shared.CommitLastState(); err != nil {
+			log.WithError(err).Warn("failed to commit running state")
+		}
+
 		if shared.IsLinked() {
 			err := team.ReportToTeam(false)
 			if err != nil {
@@ -63,6 +79,11 @@ func checkCommand(skipUUIDs []string, onlyUUID string) {
 		}
 
 	case <-ctx.Done():
+		// Clear running state for all checks if timed out
+		shared.StopAllRunningChecks()
+		if err := shared.CommitLastState(); err != nil {
+			log.WithError(err).Warn("failed to commit running state")
+		}
 		log.Fatal("Check run timed out")
 
 	}
