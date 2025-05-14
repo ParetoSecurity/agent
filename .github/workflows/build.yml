@@ -49,6 +49,7 @@ jobs:
         shell: pwsh
       - name: Install Edge WebView2 Runtime
         run: winget install -e --id Microsoft.EdgeWebView2Runtime --silent --accept-package-agreements --accept-source-agreements --disable-interactivity
+        continue-on-error: true
       - name: Run Installer
         run: |
           # Start the installer in a new process
