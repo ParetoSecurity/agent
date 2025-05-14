@@ -59,7 +59,7 @@ func (f *Firewall) checkNFTables() bool {
 
 		}
 		// Exit the INPUT chain section if we encounter a new chain
-		if inInputChain && strings.HasPrefix(line, "chain") || strings.HasPrefix(line, "}") {
+if inInputChain && (strings.HasPrefix(line, "chain") || strings.HasPrefix(line, "}")) {
 			break
 		}
 	}
