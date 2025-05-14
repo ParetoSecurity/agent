@@ -153,7 +153,7 @@ func renderBadge(icon []byte, badge IconBadge) []byte {
 	case BadgeGreen:
 		dotColor = color.RGBA{R: 0, G: 200, B: 0, A: 255} // green
 	case BadgeRunning:
-		dotColor = color.RGBA{R: 0, G: 120, B: 255, A: 255} // blue for running
+		dotColor = color.RGBA{R: 255, G: 165, B: 0, A: 255} // bright orange
 	default:
 		return icon
 	}
