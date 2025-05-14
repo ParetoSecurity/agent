@@ -52,7 +52,6 @@ in {
       ];
       networking.nftables.enable = true;
     };
-
   };
 
   interactive.nodes.wideopen = {...}:

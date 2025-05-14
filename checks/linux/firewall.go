@@ -19,6 +19,23 @@ func (f *Firewall) Name() string {
 	return "Firewall is configured"
 }
 
+// checkNFTables verifies if NFTables is properly configured on the system.
+func checkNFTables() bool {
+	output, err := shared.RunCommand("nft", "list", "ruleset")
+	if err != nil {
+		log.WithError(err).Warn("Failed to check nftables status")
+		return false
+	}
+	log.WithField("output", output).Debug("Nftables status")
+
+	// Check if the output contains input CHAIN
+	if strings.Contains(output, "chain INPUT") {
+		return true
+	}
+
+	return false
+}
+
 // checkIptables checks if iptables is active
 func (f *Firewall) checkIptables() bool {
 	output, err := shared.RunCommand("iptables", "-L", "INPUT", "--line-numbers")
@@ -106,7 +123,7 @@ func (f *Firewall) checkIptables() bool {
 
 // Run executes the check
 func (f *Firewall) Run() error {
-	f.passed = f.checkIptables()
+	f.passed = f.checkIptables() || checkNFTables()
 	return nil
 }
 

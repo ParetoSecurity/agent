@@ -240,3 +240,54 @@ num  target     prot opt source               destination
 		})
 	}
 }
+
+func TestCheckNFTables(t *testing.T) {
+	tests := []struct {
+		name           string
+		mockOutput     string
+		mockError      error
+		expectedResult bool
+	}{
+		{
+			name:           "NFTables configured with chain INPUT",
+			mockOutput:     "table inet filter {\n\tchain INPUT {\n\t\ttype filter hook input priority 0;\n\t\tpolicy drop;\n\t}\n}",
+			mockError:      nil,
+			expectedResult: true,
+		},
+		{
+			name:           "NFTables configured without chain INPUT",
+			mockOutput:     "table inet filter {\n\tchain OUTPUT {\n\t\ttype filter hook output priority 0;\n\t\tpolicy accept;\n\t}\n}",
+			mockError:      nil,
+			expectedResult: false,
+		},
+		{
+			name:           "NFTables command error",
+			mockOutput:     "",
+			mockError:      assert.AnError,
+			expectedResult: false,
+		},
+		{
+			name:           "Empty NFTables output",
+			mockOutput:     "",
+			mockError:      nil,
+			expectedResult: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Mock shared.RunCommand
+			shared.RunCommandMocks = []shared.RunCommandMock{
+				{
+					Command: "nft",
+					Args:    []string{"list", "ruleset"},
+					Out:     tt.mockOutput,
+					Err:     tt.mockError,
+				},
+			}
+
+			result := checkNFTables()
+			assert.Equal(t, tt.expectedResult, result)
+		})
+	}
+}
