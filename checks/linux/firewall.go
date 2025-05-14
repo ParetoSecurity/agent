@@ -11,7 +11,8 @@ import (
 
 // Firewall checks the system firewall.
 type Firewall struct {
-	passed bool
+	passed  bool
+	details string
 }
 
 // Name returns the name of the check
@@ -20,19 +21,19 @@ func (f *Firewall) Name() string {
 }
 
 // checkNFTables verifies if NFTables is properly configured on the system.
-func checkNFTables() bool {
+func (f *Firewall) checkNFTables() bool {
 	output, err := shared.RunCommand("nft", "list", "ruleset")
 	if err != nil {
 		log.WithError(err).Warn("Failed to check nftables status")
 		return false
 	}
-	log.WithField("output", output).Info("Nftables status")
+	log.WithField("output", output).Debug("Nftables status")
 
 	// Check if the output contains input CHAIN
-	if strings.Contains(output, "chain INPUT") {
+	if strings.Contains(output, "chain INPUT") || strings.Contains(output, "chain input") {
 		return true
 	}
-
+	f.details = "No input chain found in nftables, ouput: " + output
 	return false
 }
 
@@ -43,7 +44,7 @@ func (f *Firewall) checkIptables() bool {
 		log.WithError(err).WithField("output", output).Warn("Failed to check iptables status")
 		return false
 	}
-	log.WithField("output", output).Info("Iptables status")
+	log.WithField("output", output).Debug("Iptables status")
 
 	// Define a struct to hold iptables rule information
 	type IptablesRule struct {
@@ -125,7 +126,7 @@ func (f *Firewall) checkIptables() bool {
 func (f *Firewall) Run() error {
 	f.passed = f.checkIptables()
 	if !f.passed {
-		f.passed = checkNFTables()
+		f.passed = f.checkNFTables()
 	}
 	return nil
 }

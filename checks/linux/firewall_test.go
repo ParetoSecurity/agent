@@ -234,9 +234,8 @@ num  target     prot opt source               destination
 				"iptables -L INPUT --line-numbers": tt.mockOutput,
 			})
 			f := &Firewall{}
-			err := f.Run()
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expectedPassed, f.Passed())
+			result := f.checkIptables()
+			assert.Equal(t, tt.expectedPassed, result)
 		})
 	}
 }
@@ -259,6 +258,12 @@ func TestCheckNFTables(t *testing.T) {
 			mockOutput:     "table inet filter {\n\tchain OUTPUT {\n\t\ttype filter hook output priority 0;\n\t\tpolicy accept;\n\t}\n}",
 			mockError:      nil,
 			expectedResult: false,
+		},
+		{
+			name:           "nixos NFTables configured without chain input",
+			mockOutput:     "table inet filter {\n\tchain input {\n\t\ttype filter hook output priority 0;\n\t\tpolicy accept;\n\t}\n}",
+			mockError:      nil,
+			expectedResult: true,
 		},
 		{
 			name:           "NFTables command error",
@@ -285,8 +290,8 @@ func TestCheckNFTables(t *testing.T) {
 					Err:     tt.mockError,
 				},
 			}
-
-			result := checkNFTables()
+			f := &Firewall{}
+			result := f.checkNFTables()
 			assert.Equal(t, tt.expectedResult, result)
 		})
 	}
