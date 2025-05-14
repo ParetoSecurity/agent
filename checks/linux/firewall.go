@@ -26,7 +26,7 @@ func checkNFTables() bool {
 		log.WithError(err).Warn("Failed to check nftables status")
 		return false
 	}
-	log.WithField("output", output).Debug("Nftables status")
+	log.WithField("output", output).Info("Nftables status")
 
 	// Check if the output contains input CHAIN
 	if strings.Contains(output, "chain INPUT") {
@@ -43,7 +43,7 @@ func (f *Firewall) checkIptables() bool {
 		log.WithError(err).WithField("output", output).Warn("Failed to check iptables status")
 		return false
 	}
-	log.WithField("output", output).Debug("Iptables status")
+	log.WithField("output", output).Info("Iptables status")
 
 	// Define a struct to hold iptables rule information
 	type IptablesRule struct {
@@ -123,7 +123,10 @@ func (f *Firewall) checkIptables() bool {
 
 // Run executes the check
 func (f *Firewall) Run() error {
-	f.passed = f.checkIptables() || checkNFTables()
+	f.passed = f.checkIptables()
+	if !f.passed {
+		f.passed = checkNFTables()
+	}
 	return nil
 }
 
