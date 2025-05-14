@@ -177,13 +177,16 @@ func OnReady() {
 			rcheck.Disable()
 			rcheck.SetTitle("Checking...")
 			log.Info("Running checks...")
+			startBlinkingIcon() // Start icon blinking immediately
 			_, err := shared.RunCommand(shared.SelfExe(), "check")
 			if err != nil {
 				log.WithError(err).Error("failed to run check command")
+				stopBlinkingIcon() // Stop blinking if command failed
 			}
 			log.Info("Checks completed")
 			rcheck.SetTitle("Run Checks")
 			rcheck.Enable()
+			stopBlinkingIcon() // Stop icon blinking when done
 			broadcaster.Send()
 		}
 	}(rcheck)
@@ -197,9 +200,11 @@ func OnReady() {
 			if shared.AreChecksRunning() {
 				rcheck.Disable()
 				rcheck.SetTitle("Checking...")
+				startBlinkingIcon() // Start icon blinking
 			} else {
 				rcheck.SetTitle("Run Checks")
 				rcheck.Enable()
+				stopBlinkingIcon() // Stop icon blinking
 			}
 		}
 	}()

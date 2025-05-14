@@ -7,6 +7,8 @@ import (
 	"image/draw"
 	"image/png"
 	"runtime"
+	"sync/atomic"
+	"time"
 
 	"fyne.io/systray"
 	"github.com/ParetoSecurity/agent/shared"
@@ -18,10 +20,17 @@ import (
 type IconBadge string
 
 const (
-	BadgeNone   IconBadge = "none"
-	BadgeOrange IconBadge = "orange"
-	BadgeGreen  IconBadge = "green"
+	BadgeNone    IconBadge = "none"
+	BadgeOrange  IconBadge = "orange"
+	BadgeGreen   IconBadge = "green"
+	BadgeRunning IconBadge = "running" // New badge type for running state
 )
+
+// blinkCancelChan is used to signal when to stop blinking
+var blinkCancelChan = make(chan struct{})
+
+// isBlinking tracks if the icon is currently blinking
+var isBlinking atomic.Bool
 
 // setIcon sets the system tray icon based on the OS and theme.
 func setIcon() {
@@ -44,6 +53,76 @@ func setIcon() {
 	}
 	log.Debug("Setting icon for non-Windows OS")
 	SetTemplateIcon(shared.IconWhite, state)
+}
+
+// startBlinkingIcon starts blinking the icon to indicate checks are running
+// It will continue blinking until stopBlinkingIcon is called
+func startBlinkingIcon() {
+	// If already blinking, don't start another goroutine
+	if isBlinking.Load() {
+		return
+	}
+	isBlinking.Store(true)
+
+	// Close existing channel if any
+	if blinkCancelChan != nil {
+		close(blinkCancelChan)
+	}
+	blinkCancelChan = make(chan struct{})
+
+	go func(cancelCh chan struct{}) {
+		blinkTicker := time.NewTicker(300 * time.Millisecond)
+		defer blinkTicker.Stop()
+
+		showBadge := true
+
+		for {
+			select {
+			case <-cancelCh:
+				// When canceled, make sure we update the icon to the current state
+				setIcon()
+				return
+			case <-blinkTicker.C:
+				// Toggle between showing the running badge and no badge
+				if runtime.GOOS == "windows" {
+					icon := shared.IconBlack
+					if IsDarkTheme() {
+						icon = shared.IconWhite
+					}
+
+					if showBadge {
+						SetTemplateIcon(icon, BadgeRunning)
+					} else {
+						SetTemplateIcon(icon, BadgeNone)
+					}
+				} else {
+					if showBadge {
+						SetTemplateIcon(shared.IconWhite, BadgeRunning)
+					} else {
+						SetTemplateIcon(shared.IconWhite, BadgeNone)
+					}
+				}
+				showBadge = !showBadge
+			}
+		}
+	}(blinkCancelChan)
+}
+
+// stopBlinkingIcon stops the blinking effect and reverts to the normal icon
+func stopBlinkingIcon() {
+	if !isBlinking.Load() {
+		return
+	}
+	isBlinking.Store(false)
+
+	// Signal blinking to stop
+	if blinkCancelChan != nil {
+		close(blinkCancelChan)
+		blinkCancelChan = nil
+	}
+
+	// Restore the normal icon
+	setIcon()
 }
 
 // renderBadge overlays a colored dot (badge) onto the icon PNG bytes.
@@ -73,6 +152,8 @@ func renderBadge(icon []byte, badge IconBadge) []byte {
 		dotColor = color.RGBA{R: 255, G: 140, B: 0, A: 255} // orange
 	case BadgeGreen:
 		dotColor = color.RGBA{R: 0, G: 200, B: 0, A: 255} // green
+	case BadgeRunning:
+		dotColor = color.RGBA{R: 0, G: 120, B: 255, A: 255} // blue for running
 	default:
 		return icon
 	}

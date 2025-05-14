@@ -43,7 +43,7 @@ func checkCommand(skipUUIDs []string, onlyUUID string) {
 		log.WithError(err).Warn("failed to commit running state")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
 	done := make(chan struct{})
@@ -54,11 +54,6 @@ func checkCommand(skipUUIDs []string, onlyUUID string) {
 
 	select {
 	case <-done:
-		// Clear running state for all checks
-		shared.StopAllRunningChecks()
-		if err := shared.CommitLastState(); err != nil {
-			log.WithError(err).Warn("failed to commit running state")
-		}
 
 		if shared.IsLinked() {
 			err := team.ReportToTeam(false)
@@ -76,6 +71,11 @@ func checkCommand(skipUUIDs []string, onlyUUID string) {
 				}
 			}
 			log.Fatal("You can use `paretosecurity check --verbose` to get a detailed report.")
+		}
+		// Clear running state for all checks
+		shared.StopAllRunningChecks()
+		if err := shared.CommitLastState(); err != nil {
+			log.WithError(err).Warn("failed to commit running state")
 		}
 
 	case <-ctx.Done():
