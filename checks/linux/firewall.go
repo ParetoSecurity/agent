@@ -34,10 +34,10 @@ func (f *Firewall) checkNFTables() bool {
 	hasDropPolicy := false
 
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+		line := strings.ToLower(strings.TrimSpace(scanner.Text()))
 
 		// Check if we're entering the INPUT chain definition
-		if strings.HasPrefix(line, "chain INPUT") || strings.HasPrefix(line, "chain input") {
+		if strings.HasPrefix(line, "chain input") || strings.HasPrefix(line, "chain filter_input") {
 			inInputChain = true
 			continue
 		}
@@ -46,12 +46,20 @@ func (f *Firewall) checkNFTables() bool {
 		if inInputChain && strings.Contains(line, "policy") {
 			if strings.Contains(line, "policy drop") {
 				hasDropPolicy = true
+				break // We've found the policy, no need to continue
 			}
-			break // We've found the policy, no need to continue
-		}
 
+		}
+		// If we're in the INPUT chain and find policy information
+		if inInputChain && strings.Contains(line, "reject") {
+			if strings.Contains(line, "reject with") {
+				hasDropPolicy = true
+				break // We've found the policy, no need to continue
+			}
+
+		}
 		// Exit the INPUT chain section if we encounter a new chain
-		if inInputChain && strings.HasPrefix(line, "chain") && !strings.HasPrefix(line, "chain INPUT") && !strings.HasPrefix(line, "chain input") {
+		if inInputChain && strings.HasPrefix(line, "chain") || strings.HasPrefix(line, "}") {
 			break
 		}
 	}
