@@ -64,11 +64,19 @@ func startBlinkingIcon() {
 	}
 	isBlinking.Store(true)
 
-	// Close existing channel if any
-	if blinkCancelChan != nil {
-		close(blinkCancelChan)
+	// Create a new channel first
+	newCancelChan := make(chan struct{})
+
+	// Store the old channel for closing
+	oldCancelChan := blinkCancelChan
+
+	// Update the global variable
+	blinkCancelChan = newCancelChan
+
+	// Close the old channel if it exists
+	if oldCancelChan != nil {
+		close(oldCancelChan)
 	}
-	blinkCancelChan = make(chan struct{})
 
 	go func(cancelCh chan struct{}) {
 		blinkTicker := time.NewTicker(300 * time.Millisecond)
