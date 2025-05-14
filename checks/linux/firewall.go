@@ -29,11 +29,35 @@ func (f *Firewall) checkNFTables() bool {
 	log.WithField("output", output).Debug("Nftables status")
 
 	// Check if the output contains input CHAIN
-	if strings.Contains(output, "chain INPUT") || strings.Contains(output, "chain input") {
-		return true
+	scanner := bufio.NewScanner(strings.NewReader(output))
+	inInputChain := false
+	hasDropPolicy := false
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Check if we're entering the INPUT chain definition
+		if strings.HasPrefix(line, "chain INPUT") || strings.HasPrefix(line, "chain input") {
+			inInputChain = true
+			continue
+		}
+
+		// If we're in the INPUT chain and find policy information
+		if inInputChain && strings.Contains(line, "policy") {
+			if strings.Contains(line, "policy drop") {
+				hasDropPolicy = true
+			}
+			break // We've found the policy, no need to continue
+		}
+
+		// Exit the INPUT chain section if we encounter a new chain
+		if inInputChain && strings.HasPrefix(line, "chain") && !strings.HasPrefix(line, "chain INPUT") && !strings.HasPrefix(line, "chain input") {
+			break
+		}
 	}
 
-	return false
+	return inInputChain && hasDropPolicy
+
 }
 
 // checkIptables checks if iptables is active

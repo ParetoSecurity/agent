@@ -261,7 +261,7 @@ func TestCheckNFTables(t *testing.T) {
 		},
 		{
 			name:           "nixos NFTables configured without chain input",
-			mockOutput:     "table inet filter {\n\tchain input {\n\t\ttype filter hook output priority 0;\n\t\tpolicy accept;\n\t}\n}",
+			mockOutput:     "table inet filter {\n\tchain input {\n\t\ttype filter hook output priority 0;\n\t\tpolicy drop;\n\t}\n}",
 			mockError:      nil,
 			expectedResult: true,
 		},
