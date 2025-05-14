@@ -266,6 +266,12 @@ func TestCheckNFTables(t *testing.T) {
 			expectedResult: true,
 		},
 		{
+			name:           "firewalld-style NFTables with filter_INPUT chain",
+			mockOutput:     "table inet filter {\n\tchain filter_INPUT {\n\t\ttype filter hook input priority filter + 10; policy accept;\n\t\tct state { established, related } accept\n\t\tct status dnat accept\n\t\tiifname \"lo\" accept\n\t\tjump filter_INPUT_POLICIES_pre\n\t\tjump filter_INPUT_ZONES\n\t\tjump filter_INPUT_POLICIES_post\n\t\tct state { invalid } drop\n\t\treject with icmpx type admin-prohibited\n\t}\n}",
+			mockError:      nil,
+			expectedResult: true,
+		},
+		{
 			name:           "NFTables command error",
 			mockOutput:     "",
 			mockError:      assert.AnError,
