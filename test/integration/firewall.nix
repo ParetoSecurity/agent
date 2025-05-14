@@ -29,7 +29,7 @@ in {
       networking.firewall.enable = false;
     };
 
-    walled = {
+    iptables = {
       pkgs,
       lib,
       ...
@@ -40,26 +40,42 @@ in {
       ];
       networking.firewall.enable = true;
     };
+
+    nftables = {
+      pkgs,
+      lib,
+      ...
+    }: {
+      imports = [
+        (pareto {inherit pkgs lib;})
+        (nginx {inherit pkgs;})
+      ];
+      networking.nftables.enable = true;
+    };
   };
 
   interactive.nodes.wideopen = {...}:
     ssh {port = 2221;} {};
 
-  interactive.nodes.walled = {...}:
+  interactive.nodes.iptables = {...}:
+    ssh {port = 2222;} {};
+
+  interactive.nodes.nftables = {...}:
     ssh {port = 2222;} {};
 
   testScript = ''
     # Test Setup
-    for m in [wideopen, walled]:
+    for m in [wideopen, iptables, nftables]:
       m.systemctl("start network-online.target")
       m.wait_for_unit("network-online.target")
       m.wait_for_unit("nginx")
 
     # Test 0: assert firewall is actually configured
-    wideopen.fail("curl --fail --connect-timeout 2 http://walled")
-    walled.succeed("curl --fail --connect-timeout 2 http://wideopen")
+    wideopen.fail("curl --fail --connect-timeout 2 http://iptables")
+    wideopen.fail("curl --fail --connect-timeout 2 http://nftables")
+    iptables.succeed("curl --fail --connect-timeout 2 http://wideopen")
 
-    # Test 1: check fails with iptables disabled
+    # Test 1: check fails with no firewall enabled
     out = wideopen.fail("paretosecurity check --only 2e46c89a-5461-4865-a92e-3b799c12034a")
     expected = (
         "  • Starting checks...\n"
@@ -69,7 +85,16 @@ in {
     assert out == expected, f"{expected} did not match actual, got \n{out}"
 
     # Test 2: check succeeds with iptables enabled
-    out = walled.succeed("paretosecurity check --only 2e46c89a-5461-4865-a92e-3b799c12034a")
+    out = iptables.succeed("paretosecurity check --only 2e46c89a-5461-4865-a92e-3b799c12034a")
+    expected = (
+        "  • Starting checks...\n"
+        "  • [root] Firewall & Sharing: Firewall is configured > [OK] Firewall is on\n"
+        "  • Checks completed.\n"
+    )
+    assert out == expected, f"{expected} did not match actual, got \n{out}"
+
+    # Test 3: check succeeds with nftables enabled
+    out = nftables.succeed("paretosecurity check --only 2e46c89a-5461-4865-a92e-3b799c12034a")
     expected = (
         "  • Starting checks...\n"
         "  • [root] Firewall & Sharing: Firewall is configured > [OK] Firewall is on\n"

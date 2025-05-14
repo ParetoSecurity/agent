@@ -19,6 +19,47 @@ func (f *Firewall) Name() string {
 	return "Firewall is configured"
 }
 
+// checkNFTables verifies if NFTables is properly configured on the system.
+func (f *Firewall) checkNFTables() bool {
+	output, err := shared.RunCommand("nft", "list", "ruleset")
+	if err != nil {
+		log.WithError(err).Warn("Failed to check nftables status")
+		return false
+	}
+	log.WithField("output", output).Debug("Nftables status")
+
+	// Check if the output contains input CHAIN
+	scanner := bufio.NewScanner(strings.NewReader(output))
+	inInputChain := false
+	hasDropPolicy := false
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Check if we're entering the INPUT chain definition
+		if strings.HasPrefix(line, "chain INPUT") || strings.HasPrefix(line, "chain input") {
+			inInputChain = true
+			continue
+		}
+
+		// If we're in the INPUT chain and find policy information
+		if inInputChain && strings.Contains(line, "policy") {
+			if strings.Contains(line, "policy drop") {
+				hasDropPolicy = true
+			}
+			break // We've found the policy, no need to continue
+		}
+
+		// Exit the INPUT chain section if we encounter a new chain
+		if inInputChain && strings.HasPrefix(line, "chain") && !strings.HasPrefix(line, "chain INPUT") && !strings.HasPrefix(line, "chain input") {
+			break
+		}
+	}
+
+	return inInputChain && hasDropPolicy
+
+}
+
 // checkIptables checks if iptables is active
 func (f *Firewall) checkIptables() bool {
 	output, err := shared.RunCommand("iptables", "-L", "INPUT", "--line-numbers")
@@ -107,6 +148,9 @@ func (f *Firewall) checkIptables() bool {
 // Run executes the check
 func (f *Firewall) Run() error {
 	f.passed = f.checkIptables()
+	if !f.passed {
+		f.passed = f.checkNFTables()
+	}
 	return nil
 }
 
