@@ -11,8 +11,7 @@ import (
 
 // Firewall checks the system firewall.
 type Firewall struct {
-	passed  bool
-	details string
+	passed bool
 }
 
 // Name returns the name of the check
@@ -33,7 +32,7 @@ func (f *Firewall) checkNFTables() bool {
 	if strings.Contains(output, "chain INPUT") || strings.Contains(output, "chain input") {
 		return true
 	}
-	f.details = "No input chain found in nftables, ouput: " + output
+
 	return false
 }
 
