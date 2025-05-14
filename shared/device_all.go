@@ -55,7 +55,7 @@ func CurrentReportingDevice() ReportingDevice {
 				return "Unknown"
 			}
 
-			return serial
+			return Sanitize(serial)
 		}(),
 	}
 }
