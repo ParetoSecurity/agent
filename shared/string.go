@@ -24,6 +24,7 @@ func Sanitize(s string) string {
 			r == ',' || r == ' '
 	}
 
+	// Remove special characters like newline, carriage return but keep spaces
 	result := make([]byte, 0, len(ascii))
 	for _, c := range ascii {
 		if allowed(c) {

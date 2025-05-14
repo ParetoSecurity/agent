@@ -13,6 +13,7 @@ func TestSanitize(t *testing.T) {
 		{"123 ABC abc", "123 ABC abc"},
 		{"Special chars: @#$%^&*()", "Special chars "},
 		{"Mixed: 你好, 世界! 123", "Mixed __, __! 123"},
+		{"borxed\r\n", "borxed"},
 	}
 
 	for _, test := range tests {
