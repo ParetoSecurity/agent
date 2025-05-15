@@ -34,7 +34,7 @@ func checkCommand(skipUUIDs []string, onlyUUID string) {
 	}
 
 	if !runner.IsRootHelperRunning(claims.All) {
-		log.Fatal("Root helper is not running. Please restart device or run `systemctl daemon-reload && systemctl enable paretosecurity.service && systemctl enable paretosecurity.socket` as root.")
+		log.Fatal("Root helper is not enabled. Please restart device or run `systemctl daemon-reload && systemctl enable paretosecurity.service && systemctl enable paretosecurity.socket` as root.")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
