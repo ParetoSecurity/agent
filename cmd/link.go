@@ -88,7 +88,7 @@ func runLinkCommand(teamURL string) error {
 
 		err = team.ReportToTeam(true)
 		if err != nil {
-			log.WithError(err).Warn("failed to report to team")
+			log.WithError(err).Warn("failed to link to team")
 			return err
 		}
 
@@ -97,6 +97,15 @@ func runLinkCommand(teamURL string) error {
 			log.Errorf("Error saving config: %v", err)
 			return err
 		}
+
+		// Report to team
+		if shared.IsLinked() {
+			err := team.ReportToTeam(false)
+			if err != nil {
+				log.WithError(err).Warn("failed to report to team")
+			}
+		}
+
 		log.Infof("Device successfully linked to team: %s", parsedToken.TeamUUID)
 
 	}
