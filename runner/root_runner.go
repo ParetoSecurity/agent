@@ -71,6 +71,25 @@ func HandleConnection(conn net.Conn) {
 	}
 }
 
+// IsRootHelperRunning checks if the root helper service is running when needed.
+func IsRootHelperRunning(claimsTorun []claims.Claim) bool {
+	for _, claim := range claimsTorun {
+		for _, chk := range claim.Checks {
+			if chk.RequiresRoot() {
+				conn, err := net.Dial("unix", SocketPath)
+				if err != nil {
+					log.WithError(err).Warn("Failed to connect to root helper")
+					return false
+				}
+				defer conn.Close()
+				return true
+			}
+		}
+	}
+	log.Debug("No checks require root")
+	return true
+}
+
 // RunCheckViaRoot connects to a Unix socket, sends a UUID, and receives a boolean status.
 // It is used to execute a check with root privileges via a helper process.
 // The function establishes a connection to the socket specified by SocketPath,
