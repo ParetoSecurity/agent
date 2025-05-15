@@ -188,34 +188,19 @@ func SetModifiedTime(t time.Time) {
 }
 
 // AreChecksRunning checks if any checks are currently running.
-// AreChecksRunning determines if system checks are currently in progress.
-// It does this by checking if the lastState.RunningState timestamp is non-zero
-// or if the timestamp is more than 5 minutes in the past.
-// This function is concurrency-safe as it acquires a read lock on the mutex.
-// Returns true if checks are running, false otherwise.
 func AreChecksRunning() bool {
-	mutex.RLock()
-	defer mutex.RUnlock()
-
 	loadStates()
-
-	return !lastState.RunningState.IsZero() || lastState.RunningState.After(time.Now().Add(-time.Minute*5))
+	return !lastState.RunningState.IsZero()
 }
 
 // StartRunningChecks marks all checks as running.
 func StartRunningChecks() {
-	mutex.Lock()
-	defer mutex.Unlock()
-
 	lastState.RunningState = time.Now()
 	CommitLastState()
 }
 
 // StopRunningChecks marks all checks as not running.
 func StopRunningChecks() {
-	mutex.Lock()
-	defer mutex.Unlock()
-
 	lastState.RunningState = time.Time{}
 	CommitLastState()
 }
