@@ -51,26 +51,11 @@ if ($WithStartup) {
     $StartupShortcutObj.Save()
 }
 
-# Add uninstaller registry entry
-Write-Host "Adding uninstaller registry entry..."
-$UninstallKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\ParetoSecurity"
-if (-Not (Test-Path -Path $UninstallKey)) {
-    New-Item -Path $UninstallKey | Out-Null
-}
-Set-ItemProperty -Path $UninstallKey -Name "DisplayName" -Value "Pareto Security"
-Set-ItemProperty -Path $UninstallKey -Name "DisplayVersion" -Value $DisplayVersion
-Set-ItemProperty -Path $UninstallKey -Name "Publisher" -Value "Niteo GmbH"
-Set-ItemProperty -Path $UninstallKey -Name "InstallLocation" -Value $InstallPath
-Set-ItemProperty -Path $UninstallKey -Name "UninstallString" -Value "powershell.exe -ExecutionPolicy Bypass -File $InstallPath\uninstall.ps1"
-Set-ItemProperty -Path $UninstallKey -Name "DisplayIcon" -Value (Join-Path $InstallPath "paretosecurity-tray.exe,0")
-Set-ItemProperty -Path $UninstallKey -Name "HelpLink" -Value "https://paretosecurity.com/help"
-Set-ItemProperty -Path $UninstallKey -Name "URLInfoAbout" -Value "https://paretosecurity.com"
-
 # Register paretosecurity:// URL handler
 Write-Host "Registering paretosecurity:// URL handler..."
 $URLHandlerKey = "HKCU:\Software\Classes\paretosecurity"
 if (-Not (Test-Path -Path $URLHandlerKey)) {
-    New-Item -Path $URLHandlerKey | Out-Null
+    New-Item -Path $URLHandlerKey -Force | Out-Null
 }
 Set-ItemProperty -Path $URLHandlerKey -Name "(Default)" -Value "URL:ParetoSecurity Protocol"
 Set-ItemProperty -Path $URLHandlerKey -Name "URL Protocol" -Value ""
@@ -84,3 +69,18 @@ Set-ItemProperty -Path $CommandKey -Name "(Default)" -Value ('"' + $InstallPath 
 # Launch ParetoSecurity tray application
 Write-Host "Launching ParetoSecurity tray application..."
 Start-Process -FilePath (Join-Path $InstallPath "paretosecurity-tray.exe")
+
+# Add uninstaller registry entry
+Write-Host "Adding uninstaller registry entry..."
+$UninstallKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\ParetoSecurity"
+if (-Not (Test-Path -Path $UninstallKey)) {
+    New-Item -Path $UninstallKey -Force | Out-Null
+}
+Set-ItemProperty -Path $UninstallKey -Name "DisplayName" -Value "Pareto Security"
+Set-ItemProperty -Path $UninstallKey -Name "DisplayVersion" -Value $DisplayVersion
+Set-ItemProperty -Path $UninstallKey -Name "Publisher" -Value "Niteo GmbH"
+Set-ItemProperty -Path $UninstallKey -Name "InstallLocation" -Value $InstallPath
+Set-ItemProperty -Path $UninstallKey -Name "UninstallString" -Value "powershell.exe -ExecutionPolicy Bypass -File $InstallPath\uninstall.ps1"
+Set-ItemProperty -Path $UninstallKey -Name "DisplayIcon" -Value (Join-Path $InstallPath "paretosecurity-tray.exe,0")
+Set-ItemProperty -Path $UninstallKey -Name "HelpLink" -Value "https://paretosecurity.com/help"
+Set-ItemProperty -Path $UninstallKey -Name "URLInfoAbout" -Value "https://paretosecurity.com"
