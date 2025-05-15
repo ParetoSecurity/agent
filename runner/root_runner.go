@@ -2,6 +2,7 @@ package runner
 
 import (
 	"encoding/json"
+	"errors"
 	"net"
 
 	"github.com/ParetoSecurity/agent/claims"
@@ -104,7 +105,7 @@ func RunCheckViaRoot(uuid string) (*CheckStatus, error) {
 	conn, err := net.Dial("unix", SocketPath)
 	if err != nil {
 		log.WithError(err).Warn("Failed to connect to root helper")
-		return &CheckStatus{}, err
+		return &CheckStatus{}, errors.New("failed to connect to root helper")
 	}
 	defer conn.Close()
 
@@ -114,7 +115,7 @@ func RunCheckViaRoot(uuid string) (*CheckStatus, error) {
 	log.WithField("input", input).Debug("Sending input to helper")
 	if err := encoder.Encode(input); err != nil {
 		log.WithError(err).Warn("Failed to encode JSON")
-		return &CheckStatus{}, err
+		return &CheckStatus{}, errors.New("failed to encode JSON")
 	}
 
 	// Read response
@@ -122,7 +123,7 @@ func RunCheckViaRoot(uuid string) (*CheckStatus, error) {
 	var status = &CheckStatus{}
 	if err := decoder.Decode(status); err != nil {
 		log.WithError(err).Warn("Failed to decode JSON")
-		return &CheckStatus{}, err
+		return &CheckStatus{}, errors.New("failed to decode JSON")
 	}
 	log.WithField("status", status).Debug("Received status from helper")
 	return status, nil
