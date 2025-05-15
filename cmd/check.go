@@ -43,7 +43,11 @@ func checkCommand(skipUUIDs []string, onlyUUID string) {
 		log.WithError(err).Warn("failed to commit running state")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	if !runner.IsRootHelperRunning(claims.All) {
+		log.Fatal("Root helper is not enabled. Please restart device or run `systemctl daemon-reload && systemctl enable paretosecurity.service && systemctl enable paretosecurity.socket` as root.")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
 	done := make(chan struct{})

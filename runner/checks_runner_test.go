@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -177,6 +178,7 @@ func TestWrapStatusRoot(t *testing.T) {
 		name     string
 		status   *CheckStatus
 		check    check.Check
+		err      error
 		expected string
 	}{
 		{
@@ -186,6 +188,7 @@ func TestWrapStatusRoot(t *testing.T) {
 				Details: "test details",
 			},
 			check:    &DummyCheck{statusMsg: "should not use this"},
+			err:      nil,
 			expected: "[OK] test details",
 		},
 		{
@@ -195,6 +198,7 @@ func TestWrapStatusRoot(t *testing.T) {
 				Details: "",
 			},
 			check:    &DummyCheck{statusMsg: "check status"},
+			err:      nil,
 			expected: "[OK] check status",
 		},
 		{
@@ -204,6 +208,7 @@ func TestWrapStatusRoot(t *testing.T) {
 				Details: "test failure details",
 			},
 			check:    &DummyCheck{statusMsg: "should not use this"},
+			err:      nil,
 			expected: "[FAIL] test failure details",
 		},
 		{
@@ -213,15 +218,67 @@ func TestWrapStatusRoot(t *testing.T) {
 				Details: "",
 			},
 			check:    &DummyCheck{statusMsg: "check failure status"},
+			err:      nil,
 			expected: "[FAIL] check failure status",
+		},
+		{
+			name:     "with error",
+			status:   &CheckStatus{},
+			check:    &DummyCheck{},
+			err:      fmt.Errorf("test error"),
+			expected: "[DISABLED] test error",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := wrapStatusRoot(tt.status, tt.check)
+			result := wrapStatusRoot(tt.status, tt.check, tt.err)
+			// Strip ANSI color codes for comparison
+			result = strings.ReplaceAll(strings.ReplaceAll(
+				strings.ReplaceAll(result, "\033[31m", ""),
+				"\033[32m", ""), "\033[0m", "")
 			if result != tt.expected {
 				t.Errorf("wrapStatusRoot() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+func TestWrapStatus(t *testing.T) {
+	tests := []struct {
+		name     string
+		check    check.Check
+		err      error
+		expected string
+	}{
+		{
+			name:     "passed check",
+			check:    &DummyCheck{passedVal: true, statusMsg: "system is secure"},
+			err:      nil,
+			expected: "[OK] system is secure",
+		},
+		{
+			name:     "failed check",
+			check:    &DummyCheck{passedVal: false, statusMsg: "system is vulnerable"},
+			err:      nil,
+			expected: "[FAIL] system is vulnerable",
+		},
+		{
+			name:     "with error",
+			check:    &DummyCheck{},
+			err:      fmt.Errorf("test error"),
+			expected: "[DISABLED] test error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := wrapStatus(tt.check, tt.err)
+			// Strip ANSI color codes for comparison
+			result = strings.ReplaceAll(strings.ReplaceAll(
+				strings.ReplaceAll(result, "\033[31m", ""),
+				"\033[32m", ""), "\033[0m", "")
+			if result != tt.expected {
+				t.Errorf("wrapStatus() = %q, want %q", result, tt.expected)
 			}
 		})
 	}
