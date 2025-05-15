@@ -97,7 +97,7 @@ func Check(ctx context.Context, claimsTorun []claims.Claim, skipUUIDs []string, 
 							} else {
 								checkLogger.Warn(fmt.Sprintf("[root] %s: %s > %s", claim.Title, chk.Name(), wrapStatusRoot(status, chk, err)))
 							}
-							shared.UpdateLastState(shared.LastState{
+							shared.UpdateLastState(shared.CheckState{
 								UUID:    chk.UUID(),
 								Name:    chk.Name(),
 								State:   status.Passed,
@@ -114,7 +114,7 @@ func Check(ctx context.Context, claimsTorun []claims.Claim, skipUUIDs []string, 
 							} else {
 								checkLogger.Warn(fmt.Sprintf("%s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk, err)))
 							}
-							shared.UpdateLastState(shared.LastState{
+							shared.UpdateLastState(shared.CheckState{
 								UUID:    chk.UUID(),
 								Name:    chk.Name(),
 								State:   chk.Passed(),

@@ -12,23 +12,30 @@ import (
 	"github.com/pelletier/go-toml"
 )
 
+type CheckState struct {
+	Name    string `json:"name"`
+	UUID    string `json:"uuid"`
+	State   bool   `json:"state"`
+	Details string `json:"details"`
+}
+
 type LastState struct {
-	Name         string    `json:"name"`
-	UUID         string    `json:"uuid"`
-	State        bool      `json:"state"`
-	Details      string    `json:"details"`
-	RunningState time.Time `json:"running_state"` // Zero time means not running, otherwise start time
+	Checks       map[string]CheckState `json:"states"`
+	RunningState time.Time             `json:"running_state"` // Zero time means not running, otherwise start time
 }
 
 var (
 	mutex       sync.RWMutex
-	states      = make(map[string]LastState)
+	lastState   LastState
 	lastModTime time.Time
 	StatePath   string
 )
 
 func init() {
-	states = make(map[string]LastState)
+	lastState = LastState{
+		Checks:       make(map[string]CheckState),
+		RunningState: time.Time{},
+	}
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		log.WithError(err).Warn("failed to get user home directory, using current directory instead")
@@ -49,7 +56,7 @@ func CommitLastState() error {
 	defer file.Close()
 	lastModTime = time.Now()
 	encoder := toml.NewEncoder(file)
-	return encoder.Encode(states)
+	return encoder.Encode(lastState)
 }
 
 // AllChecksPassed returns true if all checks have passed.
@@ -57,7 +64,7 @@ func AllChecksPassed() bool {
 	mutex.RLock()
 	defer mutex.RUnlock()
 
-	for _, state := range states {
+	for _, state := range lastState.Checks {
 		if !state.State {
 			return false
 		}
@@ -66,12 +73,12 @@ func AllChecksPassed() bool {
 }
 
 // GetFailedChecks returns a slice of failed checks.
-func GetFailedChecks() []LastState {
+func GetFailedChecks() []CheckState {
 	mutex.RLock()
 	defer mutex.RUnlock()
 
-	var failedChecks []LastState
-	for _, state := range states {
+	var failedChecks []CheckState
+	for _, state := range lastState.Checks {
 		if !state.State {
 			failedChecks = append(failedChecks, state)
 		}
@@ -83,11 +90,11 @@ func GetFailedChecks() []LastState {
 func PrintStates() {
 	loadStates()
 
-	fmt.Printf("Loaded %d states from %s\n", len(states), StatePath)
+	fmt.Printf("Loaded %d states from %s\n", len(lastState.Checks), StatePath)
 	fmt.Printf("Last modified time: %s\n\n", lastModTime.Format(time.RFC3339))
 
 	data := [][]string{}
-	for uuid, state := range states {
+	for uuid, state := range lastState.Checks {
 		stateStr := "Pass"
 		if !state.State {
 			stateStr = "Fail"
@@ -113,30 +120,30 @@ func PrintStates() {
 }
 
 // UpdateState updates the LastState struct in the in-memory map and commits to the TOML file.
-func UpdateLastState(newState LastState) {
+func UpdateLastState(newState CheckState) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	lastModTime = time.Now()
-	states[newState.UUID] = newState
+	lastState.Checks[newState.UUID] = newState
 }
 
 // GetState retrieves the LastState struct by UUID.
-func GetLastState(uuid string) (LastState, bool, error) {
+func GetLastState(uuid string) (CheckState, bool, error) {
 	mutex.RLock()
 	defer mutex.RUnlock()
 
 	loadStates()
 
-	state, exists := states[uuid]
+	state, exists := lastState.Checks[uuid]
 	return state, exists, nil
 }
 
-func GetLastStates() map[string]LastState {
+func GetLastStates() map[string]CheckState {
 	mutex.RLock()
 	defer mutex.RUnlock()
 	loadStates()
 
-	return states
+	return lastState.Checks
 }
 
 // GetModifiedTime returns the last modified time of the state file.
@@ -158,12 +165,14 @@ func loadStates() {
 	if fileInfo.ModTime().After(lastModTime) {
 		file, err := os.Open(StatePath)
 		if err != nil {
+			log.WithError(err).Warnf("failed to open state file: %s", StatePath)
 			return
 		}
 		defer file.Close()
 
 		decoder := toml.NewDecoder(file)
-		if err := decoder.Decode(&states); err != nil {
+		if err := decoder.Decode(&lastState); err != nil {
+			log.WithError(err).Warnf("failed to decode state file: %s", StatePath)
 			return
 		}
 		lastModTime = fileInfo.ModTime()
@@ -178,70 +187,35 @@ func SetModifiedTime(t time.Time) {
 	lastModTime = t
 }
 
-// SetRunningState sets the running state for a specific check UUID.
-func SetRunningState(uuid string, isRunning bool) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	state, exists := states[uuid]
-	if !exists {
-		state = LastState{
-			UUID: uuid,
-		}
-	}
-
-	if isRunning {
-		state.RunningState = time.Now()
-	} else {
-		state.RunningState = time.Time{} // Zero time
-	}
-
-	states[uuid] = state
-	lastModTime = time.Now()
-}
-
-// IsRunning checks if a specific check is currently running.
-func IsRunning(uuid string) bool {
-	mutex.RLock()
-	defer mutex.RUnlock()
-
-	loadStates()
-
-	state, exists := states[uuid]
-	if !exists {
-		return false
-	}
-
-	return !state.RunningState.IsZero()
-}
-
 // AreChecksRunning checks if any checks are currently running.
+// AreChecksRunning determines if system checks are currently in progress.
+// It does this by checking if the lastState.RunningState timestamp is non-zero
+// or if the timestamp is more than 5 minutes in the past.
+// This function is concurrency-safe as it acquires a read lock on the mutex.
+// Returns true if checks are running, false otherwise.
 func AreChecksRunning() bool {
 	mutex.RLock()
 	defer mutex.RUnlock()
 
 	loadStates()
 
-	for _, state := range states {
-		if !state.RunningState.IsZero() {
-			return true
-		}
-	}
-
-	return false
+	return !lastState.RunningState.IsZero() || lastState.RunningState.After(time.Now().Add(-time.Minute*5))
 }
 
-// StopAllRunningChecks marks all checks as not running.
-func StopAllRunningChecks() {
+// StartRunningChecks marks all checks as running.
+func StartRunningChecks() {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	for uuid, state := range states {
-		if !state.RunningState.IsZero() {
-			state.RunningState = time.Time{} // Zero time
-			states[uuid] = state
-		}
-	}
+	lastState.RunningState = time.Now()
+	CommitLastState()
+}
 
-	lastModTime = time.Now()
+// StopRunningChecks marks all checks as not running.
+func StopRunningChecks() {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	lastState.RunningState = time.Time{}
+	CommitLastState()
 }

@@ -140,12 +140,6 @@ func OnReady() {
 	systray.SetTitle("Pareto Security")
 	log.Info("Starting Pareto Security tray application")
 
-	// Clear any running state that might be left from a previous crash
-	shared.StopAllRunningChecks()
-	if err := shared.CommitLastState(); err != nil {
-		log.WithError(err).Warn("failed to commit running state")
-	}
-
 	broadcaster := shared.NewBroadcaster()
 	log.Info("Setting up system tray icon")
 	setIcon()

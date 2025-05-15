@@ -2,141 +2,369 @@ package shared
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
+	"time"
 
-	"github.com/pelletier/go-toml"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestCommitLastState_Success(t *testing.T) {
-	// Create a temporary directory for our test file.
-	tmpDir, err := os.MkdirTemp("", "commitlaststate_success")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
+func TestCommitLastState(t *testing.T) {
+
+	tempFile, err := os.CreateTemp("", "test-state-*.toml")
+	assert.NoError(t, err)
+	tempFile.Close()
+	defer os.Remove(tempFile.Name())
+
+	StatePath = tempFile.Name()
+
+	// Reset state for test
+	lastState = LastState{
+		Checks:       make(map[string]CheckState),
+		RunningState: time.Time{},
 	}
-	defer os.RemoveAll(tmpDir)
 
-	// Override statePath to a file in the temporary directory.
-	testFile := filepath.Join(tmpDir, "test.state")
-	StatePath = testFile
-
-	// Prepare a test state.
-	testState := LastState{
+	// Add a test check
+	testCheck := CheckState{
+		Name:    "TestCheck",
 		UUID:    "test-uuid",
 		State:   true,
-		Details: "all good",
+		Details: "Test details",
 	}
 
-	// Clear and set the states map for a clean test.
-	mutex.Lock()
-	states = make(map[string]LastState)
-	states[testState.UUID] = testState
-	mutex.Unlock()
+	lastState.Checks[testCheck.UUID] = testCheck
 
-	// Commit the state to the file.
-	if err := CommitLastState(); err != nil {
-		t.Fatalf("CommitLastState failed: %v", err)
+	// Test
+	err = CommitLastState()
+	assert.NoError(t, err)
+
+	// Verify file exists and can be loaded
+	_, err = os.Stat(StatePath)
+	assert.NoError(t, err)
+
+	// Reset state and load from file
+	oldLastState := lastState
+	lastState = LastState{
+		Checks:       make(map[string]CheckState),
+		RunningState: time.Time{},
 	}
 
-	// Open the file and decode its contents.
-	file, err := os.Open(testFile)
-	if err != nil {
-		t.Fatalf("failed to open file: %v", err)
-	}
-	defer file.Close()
+	loadStates()
 
-	var decoded map[string]LastState
-	decoder := toml.NewDecoder(file)
-	if err := decoder.Decode(&decoded); err != nil {
-		t.Fatalf("failed to decode TOML file: %v", err)
-	}
+	// Verify content matches
+	assert.Equal(t, oldLastState.Checks, lastState.Checks)
 
-	// Validate that the decoded state matches the test state.
-	got, exists := decoded[testState.UUID]
-	if !exists {
-		t.Fatalf("expected state with UUID %s not found", testState.UUID)
-	}
-	if got != testState {
-		t.Fatalf("expected state %+v, got %+v", testState, got)
-	}
-}
-
-func TestCommitLastState_Error(t *testing.T) {
-	// Simulate an error by setting statePath to a directory path.
-	tmpDir, err := os.MkdirTemp("", "commitlaststate_error")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-	StatePath = tmpDir // os.Create on a directory should fail
-
-	// Clear the states map.
-	mutex.Lock()
-	states = make(map[string]LastState)
-	mutex.Unlock()
-
-	// Attempt to commit; it should return an error.
-	if err := CommitLastState(); err == nil {
-		t.Fatalf("expected error when committing to a directory, got none")
-	}
+	// Test error case
+	StatePath = "/nonexistent/directory/file.toml"
+	err = CommitLastState()
+	assert.Error(t, err)
 }
 
 func TestAllChecksPassed(t *testing.T) {
+
 	tests := []struct {
 		name     string
-		testData map[string]LastState
-		want     bool
+		setupFn  func()
+		expected bool
 	}{
 		{
 			name: "all checks pass",
-			testData: map[string]LastState{
-				"uuid1": {UUID: "uuid1", State: true, Details: "passed"},
-				"uuid2": {UUID: "uuid2", State: true, Details: "passed"},
-				"uuid3": {UUID: "uuid3", State: true, Details: "passed"},
+			setupFn: func() {
+				lastState = LastState{
+					Checks: map[string]CheckState{
+						"test1": {UUID: "test1", State: true},
+						"test2": {UUID: "test2", State: true},
+						"test3": {UUID: "test3", State: true},
+					},
+				}
 			},
-			want: true,
+			expected: true,
 		},
 		{
 			name: "one check fails",
-			testData: map[string]LastState{
-				"uuid1": {UUID: "uuid1", State: true, Details: "passed"},
-				"uuid2": {UUID: "uuid2", State: false, Details: "failed"},
-				"uuid3": {UUID: "uuid3", State: true, Details: "passed"},
+			setupFn: func() {
+				lastState = LastState{
+					Checks: map[string]CheckState{
+						"test1": {UUID: "test1", State: true},
+						"test2": {UUID: "test2", State: false},
+						"test3": {UUID: "test3", State: true},
+					},
+				}
 			},
-			want: false,
+			expected: false,
 		},
 		{
 			name: "all checks fail",
-			testData: map[string]LastState{
-				"uuid1": {UUID: "uuid1", State: false, Details: "failed"},
-				"uuid2": {UUID: "uuid2", State: false, Details: "failed"},
+			setupFn: func() {
+				lastState = LastState{
+					Checks: map[string]CheckState{
+						"test1": {UUID: "test1", State: false},
+						"test2": {UUID: "test2", State: false},
+					},
+				}
 			},
-			want: false,
+			expected: false,
 		},
 		{
-			name:     "no checks",
-			testData: map[string]LastState{},
-			want:     true,
+			name: "no checks",
+			setupFn: func() {
+				lastState = LastState{
+					Checks: map[string]CheckState{},
+				}
+			},
+			expected: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup test state
-			mutex.Lock()
-			states = make(map[string]LastState)
-			for k, v := range tt.testData {
-				states[k] = v
-			}
-			mutex.Unlock()
+			tt.setupFn()
+			result := AllChecksPassed()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
 
-			// Run the function
-			got := AllChecksPassed()
+func TestGetFailedChecks(t *testing.T) {
 
-			// Check result
-			if got != tt.want {
-				t.Errorf("AllChecksPassed() = %v, want %v", got, tt.want)
+	tests := []struct {
+		name     string
+		setupFn  func()
+		expected []CheckState
+	}{
+		{
+			name: "no failed checks",
+			setupFn: func() {
+				lastState = LastState{
+					Checks: map[string]CheckState{
+						"test1": {UUID: "test1", Name: "Check1", State: true},
+						"test2": {UUID: "test2", Name: "Check2", State: true},
+					},
+				}
+			},
+			expected: []CheckState{},
+		},
+		{
+			name: "some failed checks",
+			setupFn: func() {
+				lastState = LastState{
+					Checks: map[string]CheckState{
+						"test1": {UUID: "test1", Name: "Check1", State: true},
+						"test2": {UUID: "test2", Name: "Check2", State: false, Details: "Failed"},
+						"test3": {UUID: "test3", Name: "Check3", State: false, Details: "Also failed"},
+					},
+				}
+			},
+			expected: []CheckState{
+				{UUID: "test2", Name: "Check2", State: false, Details: "Failed"},
+				{UUID: "test3", Name: "Check3", State: false, Details: "Also failed"},
+			},
+		},
+		{
+			name: "all failed checks",
+			setupFn: func() {
+				lastState = LastState{
+					Checks: map[string]CheckState{
+						"test1": {UUID: "test1", Name: "Check1", State: false, Details: "Failed 1"},
+						"test2": {UUID: "test2", Name: "Check2", State: false, Details: "Failed 2"},
+					},
+				}
+			},
+			expected: []CheckState{
+				{UUID: "test1", Name: "Check1", State: false, Details: "Failed 1"},
+				{UUID: "test2", Name: "Check2", State: false, Details: "Failed 2"},
+			},
+		},
+		{
+			name: "no checks",
+			setupFn: func() {
+				lastState = LastState{
+					Checks: map[string]CheckState{},
+				}
+			},
+			expected: []CheckState{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupFn()
+			result := GetFailedChecks()
+
+			// Since map iteration order is not guaranteed, we need to check that all expected items are in the result
+			// rather than checking the exact order
+			assert.Len(t, result, len(tt.expected))
+
+			if len(tt.expected) > 0 {
+				// Create a map of expected CheckStates by UUID for easier comparison
+				expectedMap := make(map[string]CheckState)
+				for _, check := range tt.expected {
+					expectedMap[check.UUID] = check
+				}
+
+				// Verify each result is in the expected map
+				for _, check := range result {
+					expectedCheck, exists := expectedMap[check.UUID]
+					assert.True(t, exists, "Unexpected check in results: %s", check.UUID)
+					assert.Equal(t, expectedCheck, check)
+				}
 			}
 		})
 	}
+}
+
+func TestUpdateLastState(t *testing.T) {
+
+	// Reset state for test
+	lastState = LastState{
+		Checks:       make(map[string]CheckState),
+		RunningState: time.Time{},
+	}
+
+	// Test cases
+	tests := []struct {
+		name     string
+		newState CheckState
+		checkFn  func(t *testing.T)
+	}{
+		{
+			name: "add new check state",
+			newState: CheckState{
+				Name:    "TestCheck1",
+				UUID:    "test-uuid-1",
+				State:   true,
+				Details: "Test details 1",
+			},
+			checkFn: func(t *testing.T) {
+				state, exists, _ := GetLastState("test-uuid-1")
+				assert.True(t, exists)
+				assert.Equal(t, "TestCheck1", state.Name)
+				assert.True(t, state.State)
+				assert.Equal(t, "Test details 1", state.Details)
+			},
+		},
+		{
+			name: "update existing check state",
+			newState: CheckState{
+				Name:    "TestCheck1-Updated",
+				UUID:    "test-uuid-1",
+				State:   false,
+				Details: "Updated details",
+			},
+			checkFn: func(t *testing.T) {
+				state, exists, _ := GetLastState("test-uuid-1")
+				assert.True(t, exists)
+				assert.Equal(t, "TestCheck1-Updated", state.Name)
+				assert.False(t, state.State)
+				assert.Equal(t, "Updated details", state.Details)
+			},
+		},
+		{
+			name: "add another check state",
+			newState: CheckState{
+				Name:    "TestCheck2",
+				UUID:    "test-uuid-2",
+				State:   false,
+				Details: "Test details 2",
+			},
+			checkFn: func(t *testing.T) {
+				// Verify first check still exists
+				state1, exists1, _ := GetLastState("test-uuid-1")
+				assert.True(t, exists1)
+				assert.Equal(t, "TestCheck1-Updated", state1.Name)
+
+				// Verify second check was added
+				state2, exists2, _ := GetLastState("test-uuid-2")
+				assert.True(t, exists2)
+				assert.Equal(t, "TestCheck2", state2.Name)
+				assert.False(t, state2.State)
+				assert.Equal(t, "Test details 2", state2.Details)
+
+				// Verify we have exactly two checks
+				assert.Equal(t, 2, len(lastState.Checks))
+			},
+		},
+	}
+
+	// Before any updates, lastModTime should be zero or earlier than now
+	initialTime := lastModTime
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Record time before update
+			beforeUpdate := time.Now()
+
+			// Perform update
+			UpdateLastState(tt.newState)
+
+			// Run specific checks for this test case
+			tt.checkFn(t)
+
+			// Verify lastModTime was updated
+			assert.True(t, lastModTime.After(initialTime))
+			assert.True(t, !lastModTime.Before(beforeUpdate))
+		})
+	}
+}
+
+func TestAreChecksRunning(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		setupFn  func()
+		expected bool
+	}{
+		{
+			name: "checks are running",
+			setupFn: func() {
+				lastState = LastState{
+					Checks:       make(map[string]CheckState),
+					RunningState: time.Now(),
+				}
+			},
+			expected: true,
+		},
+		{
+			name: "checks are not running",
+			setupFn: func() {
+				lastState = LastState{
+					Checks:       make(map[string]CheckState),
+					RunningState: time.Time{},
+				}
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup test case
+			tt.setupFn()
+
+			// Test
+			result := AreChecksRunning()
+
+			// Verify
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestStartRunningChecks(t *testing.T) {
+
+	// Create temp file for state
+	tempFile, err := os.CreateTemp("", "test-running-*.toml")
+	assert.NoError(t, err)
+	tempFile.Close()
+	defer os.Remove(tempFile.Name())
+	StatePath = tempFile.Name()
+
+	// Reset state for test
+	lastState = LastState{
+		Checks:       make(map[string]CheckState),
+		RunningState: time.Time{}, // Not running
+	}
+
+	// Verify checks are not running initially
+	assert.False(t, AreChecksRunning())
+
 }

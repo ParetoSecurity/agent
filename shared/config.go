@@ -18,8 +18,8 @@ type ParetoConfig struct {
 	DisableChecks []string
 }
 
+// init initializes the configuration path based on the user's operating system
 func init() {
-	states = make(map[string]LastState)
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		log.WithError(err).Warn("failed to get user home directory, using current directory instead")
@@ -32,6 +32,7 @@ func init() {
 	log.Debugf("configPath: %s", ConfigPath)
 }
 
+// SaveConfig writes the current configuration to the config file
 func SaveConfig() error {
 
 	file, err := os.Create(ConfigPath)
@@ -43,6 +44,7 @@ func SaveConfig() error {
 	return encoder.Encode(Config)
 }
 
+// LoadConfig reads configuration from disk into the Config variable
 func LoadConfig() error {
 	if _, err := os.Stat(ConfigPath); os.IsNotExist(err) {
 		if err := SaveConfig(); err != nil {
@@ -65,6 +67,7 @@ func LoadConfig() error {
 	return nil
 }
 
+// ResetConfig clears all configuration values to defaults
 func ResetConfig() {
 	Config = ParetoConfig{
 		TeamID:        "",
@@ -74,6 +77,7 @@ func ResetConfig() {
 	SaveConfig()
 }
 
+// EnableCheck removes a check from the disabled checks list
 func EnableCheck(checkUUID string) error {
 	for i, check := range Config.DisableChecks {
 		if check == checkUUID {
@@ -84,6 +88,7 @@ func EnableCheck(checkUUID string) error {
 	return nil
 }
 
+// DisableCheck adds a check to the disabled checks list
 func DisableCheck(checkUUID string) error {
 	for _, check := range Config.DisableChecks {
 		if check == checkUUID {
@@ -94,7 +99,7 @@ func DisableCheck(checkUUID string) error {
 	return SaveConfig()
 }
 
-// IsCheckDisabled checks if a given check UUID is present in the list of disabled checks.
+// IsCheckDisabled checks if a given check UUID is present in the list of disabled checks
 func IsCheckDisabled(checkUUID string) bool {
 	if len(Config.DisableChecks) == 0 {
 		return false

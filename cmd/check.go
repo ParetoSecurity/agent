@@ -33,22 +33,22 @@ func checkCommand(skipUUIDs []string, onlyUUID string) {
 		log.Warn("Please run this command as a normal user, as it won't report all checks correctly.")
 	}
 
-	// Set running state for all checks
+	// Set running state for all checks at once
+	var checkUUIDs []string
 	for _, claim := range claims.All {
 		for _, chk := range claim.Checks {
-			shared.SetRunningState(chk.UUID(), true)
+			checkUUIDs = append(checkUUIDs, chk.UUID())
 		}
 	}
-	if err := shared.CommitLastState(); err != nil {
-		log.WithError(err).Warn("failed to commit running state")
-	}
-
 	if !runner.IsRootHelperRunning(claims.All) {
 		log.Fatal("Root helper is not enabled. Please restart device or run `systemctl daemon-reload && systemctl enable paretosecurity.service && systemctl enable paretosecurity.socket` as root.")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
+
+	// Start the checks
+	shared.StartRunningChecks()
 
 	done := make(chan struct{})
 	go func() {
@@ -77,17 +77,11 @@ func checkCommand(skipUUIDs []string, onlyUUID string) {
 			log.Fatal("You can use `paretosecurity check --verbose` to get a detailed report.")
 		}
 		// Clear running state for all checks
-		shared.StopAllRunningChecks()
-		if err := shared.CommitLastState(); err != nil {
-			log.WithError(err).Warn("failed to commit running state")
-		}
+		shared.StopRunningChecks()
 
 	case <-ctx.Done():
 		// Clear running state for all checks if timed out
-		shared.StopAllRunningChecks()
-		if err := shared.CommitLastState(); err != nil {
-			log.WithError(err).Warn("failed to commit running state")
-		}
+		shared.StopRunningChecks()
 		log.Fatal("Check run timed out")
 
 	}
