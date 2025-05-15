@@ -17,7 +17,11 @@ import (
 )
 
 // wrapStatusRoot formats the check status with color-coded indicators.
-func wrapStatusRoot(status *CheckStatus, chk check.Check) string {
+func wrapStatusRoot(status *CheckStatus, chk check.Check, err error) string {
+	if err != nil {
+		return fmt.Sprintf("%s %s", color.RedString("[DISABLED]"), err.Error())
+	}
+
 	msg := status.Details
 	if lo.IsEmpty(msg) {
 		msg = chk.Status()
@@ -29,7 +33,11 @@ func wrapStatusRoot(status *CheckStatus, chk check.Check) string {
 }
 
 // wrapStatus formats the check status with color-coded indicators.
-func wrapStatus(chk check.Check) string {
+func wrapStatus(chk check.Check, err error) string {
+	if err != nil {
+		return fmt.Sprintf("%s %s", color.RedString("[DISABLED]"), err.Error())
+	}
+
 	if chk.Passed() {
 		return fmt.Sprintf("%s %s", color.GreenString("[OK]"), chk.Status())
 	}
@@ -82,36 +90,37 @@ func Check(ctx context.Context, claimsTorun []claims.Claim, skipUUIDs []string, 
 						// Run as root
 						status, err := RunCheckViaRoot(chk.UUID())
 						if err != nil {
-							log.WithError(err).Warn("Failed to run check via root helper")
+							checkLogger.Info(fmt.Sprintf("[root] %s: %s > %s", claim.Title, chk.Name(), wrapStatusRoot(status, chk, err)))
+						} else {
+							if status.Passed {
+								checkLogger.Info(fmt.Sprintf("[root] %s: %s > %s", claim.Title, chk.Name(), wrapStatusRoot(status, chk, err)))
+							} else {
+								checkLogger.Warn(fmt.Sprintf("[root] %s: %s > %s", claim.Title, chk.Name(), wrapStatusRoot(status, chk, err)))
+							}
+							shared.UpdateLastState(shared.LastState{
+								UUID:    chk.UUID(),
+								Name:    chk.Name(),
+								State:   status.Passed,
+								Details: status.Details,
+							})
 						}
 
-						if status.Passed {
-							checkLogger.Info(fmt.Sprintf("[root] %s: %s > %s", claim.Title, chk.Name(), wrapStatusRoot(status, chk)))
-						} else {
-							checkLogger.Warn(fmt.Sprintf("[root] %s: %s > %s", claim.Title, chk.Name(), wrapStatusRoot(status, chk)))
-						}
-						shared.UpdateLastState(shared.LastState{
-							UUID:    chk.UUID(),
-							Name:    chk.Name(),
-							State:   status.Passed,
-							Details: status.Details,
-						})
 					} else {
 						if err := chk.Run(); err != nil {
-							log.WithError(err).Warnf("%s: %s > %s", claim.Title, chk.Name(), err.Error())
-						}
-
-						if chk.Passed() {
-							checkLogger.Info(fmt.Sprintf("%s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk)))
+							checkLogger.Info(fmt.Sprintf("%s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk, err)))
 						} else {
-							checkLogger.Warn(fmt.Sprintf("%s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk)))
+							if chk.Passed() {
+								checkLogger.Info(fmt.Sprintf("%s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk, err)))
+							} else {
+								checkLogger.Warn(fmt.Sprintf("%s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk, err)))
+							}
+							shared.UpdateLastState(shared.LastState{
+								UUID:    chk.UUID(),
+								Name:    chk.Name(),
+								State:   chk.Passed(),
+								Details: chk.Status(),
+							})
 						}
-						shared.UpdateLastState(shared.LastState{
-							UUID:    chk.UUID(),
-							Name:    chk.Name(),
-							State:   chk.Passed(),
-							Details: chk.Status(),
-						})
 					}
 
 				}

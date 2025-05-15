@@ -2,6 +2,7 @@ package runner
 
 import (
 	"encoding/json"
+	"errors"
 	"net"
 
 	"github.com/ParetoSecurity/agent/claims"
@@ -71,6 +72,25 @@ func HandleConnection(conn net.Conn) {
 	}
 }
 
+// IsRootHelperRunning checks if the root helper service is running when needed.
+func IsRootHelperRunning(claimsTorun []claims.Claim) bool {
+	for _, claim := range claimsTorun {
+		for _, chk := range claim.Checks {
+			if chk.RequiresRoot() {
+				conn, err := net.Dial("unix", SocketPath)
+				if err != nil {
+					log.WithError(err).Warn("Failed to connect to root helper")
+					return false
+				}
+				defer conn.Close()
+				return true
+			}
+		}
+	}
+	log.Debug("No checks require root")
+	return true
+}
+
 // RunCheckViaRoot connects to a Unix socket, sends a UUID, and receives a boolean status.
 // It is used to execute a check with root privileges via a helper process.
 // The function establishes a connection to the socket specified by SocketPath,
@@ -85,7 +105,7 @@ func RunCheckViaRoot(uuid string) (*CheckStatus, error) {
 	conn, err := net.Dial("unix", SocketPath)
 	if err != nil {
 		log.WithError(err).Warn("Failed to connect to root helper")
-		return &CheckStatus{}, err
+		return &CheckStatus{}, errors.New("failed to connect to root helper")
 	}
 	defer conn.Close()
 
@@ -95,7 +115,7 @@ func RunCheckViaRoot(uuid string) (*CheckStatus, error) {
 	log.WithField("input", input).Debug("Sending input to helper")
 	if err := encoder.Encode(input); err != nil {
 		log.WithError(err).Warn("Failed to encode JSON")
-		return &CheckStatus{}, err
+		return &CheckStatus{}, errors.New("failed to encode JSON")
 	}
 
 	// Read response
@@ -103,7 +123,7 @@ func RunCheckViaRoot(uuid string) (*CheckStatus, error) {
 	var status = &CheckStatus{}
 	if err := decoder.Decode(status); err != nil {
 		log.WithError(err).Warn("Failed to decode JSON")
-		return &CheckStatus{}, err
+		return &CheckStatus{}, errors.New("failed to decode JSON")
 	}
 	log.WithField("status", status).Debug("Received status from helper")
 	return status, nil
