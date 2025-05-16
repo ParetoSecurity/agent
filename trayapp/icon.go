@@ -74,8 +74,18 @@ func startBlinkingIcon() {
 	blinkCancelChan = newCancelChan
 
 	// Close the old channel if it exists
+	blinkMutex.Lock()
+	oldCancelChan := blinkCancelChan
+	blinkCancelChan = make(chan struct{})
+	blinkMutex.Unlock()
+
 	if oldCancelChan != nil {
-		close(oldCancelChan)
+		select {
+		case <-oldCancelChan:
+			// Channel already closed, do nothing
+		default:
+			close(oldCancelChan)
+		}
 	}
 
 	go func(cancelCh chan struct{}) {
