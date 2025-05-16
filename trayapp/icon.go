@@ -33,6 +33,7 @@ var blinkCancelChan = make(chan struct{})
 var isBlinking atomic.Bool
 
 // setIcon sets the system tray icon based on the OS and theme.
+// setIcon sets the system tray icon based on the OS and theme.
 func setIcon() {
 	state := BadgeNone
 	if !shared.GetModifiedTime().IsZero() {
@@ -72,12 +73,6 @@ func startBlinkingIcon() {
 
 	// Update the global variable
 	blinkCancelChan = newCancelChan
-
-	// Close the old channel if it exists
-	blinkMutex.Lock()
-	oldCancelChan := blinkCancelChan
-	blinkCancelChan = make(chan struct{})
-	blinkMutex.Unlock()
 
 	if oldCancelChan != nil {
 		select {
