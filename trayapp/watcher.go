@@ -1,8 +1,6 @@
 package trayapp
 
 import (
-	"time"
-
 	"github.com/ParetoSecurity/agent/shared"
 	"github.com/caarlos0/log"
 	"github.com/fsnotify/fsnotify"
@@ -23,10 +21,6 @@ func watch(broadcaster *shared.Broadcaster) {
 			return
 		}
 
-		// Rate limiting setup
-		var lastSend time.Time
-		throttle := time.Second // Only send once per second
-
 		for {
 			select {
 			case event, ok := <-watcher.Events:
@@ -34,16 +28,8 @@ func watch(broadcaster *shared.Broadcaster) {
 					return
 				}
 				if event.Op&fsnotify.Write == fsnotify.Write {
-
-					// Apply rate limiting
-					now := time.Now()
-					if now.Sub(lastSend) >= throttle {
-						log.Info("State file modified, updating...")
-						broadcaster.Send()
-						lastSend = now
-					} else {
-						log.Debug("State file modified, but throttled")
-					}
+					log.Info("State file modified, updating...")
+					broadcaster.Send()
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
