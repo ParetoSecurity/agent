@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/url"
 	"runtime"
-	"time"
 
 	"fyne.io/systray"
 	"github.com/ParetoSecurity/agent/check"
@@ -164,10 +163,6 @@ func OnReady() {
 	rcheck := systray.AddMenuItem("Run Checks", "")
 	go func(rcheck *systray.MenuItem) {
 		for range rcheck.ClickedCh {
-			if shared.AreChecksRunning() {
-				log.Info("Checks are already running...")
-				continue
-			}
 			rcheck.Disable()
 			rcheck.SetTitle("Checking...")
 			log.Info("Running checks...")
@@ -184,24 +179,6 @@ func OnReady() {
 			broadcaster.Send()
 		}
 	}(rcheck)
-
-	// Update run checks menu item if checks are running
-	go func() {
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
-
-		for range ticker.C {
-			if shared.AreChecksRunning() {
-				rcheck.Disable()
-				rcheck.SetTitle("Checking...")
-				startBlinkingIcon() // Start icon blinking
-			} else {
-				rcheck.SetTitle("Run Checks")
-				rcheck.Enable()
-				stopBlinkingIcon() // Stop icon blinking
-			}
-		}
-	}()
 
 	lCheck := systray.AddMenuItem(fmt.Sprintf("Last check: %s", lastUpdated()), "")
 	lCheck.Disable()
