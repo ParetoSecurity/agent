@@ -138,6 +138,7 @@ func addOptions() {
 func OnReady() {
 	systray.SetTitle("Pareto Security")
 	log.Info("Starting Pareto Security tray application")
+
 	broadcaster := shared.NewBroadcaster()
 	log.Info("Setting up system tray icon")
 	setIcon()
@@ -162,12 +163,19 @@ func OnReady() {
 	rcheck := systray.AddMenuItem("Run Checks", "")
 	go func(rcheck *systray.MenuItem) {
 		for range rcheck.ClickedCh {
+			rcheck.Disable()
+			rcheck.SetTitle("Checking...")
 			log.Info("Running checks...")
+			startBlinkingIcon() // Start icon blinking immediately
 			_, err := shared.RunCommand(shared.SelfExe(), "check")
 			if err != nil {
 				log.WithError(err).Error("failed to run check command")
+				stopBlinkingIcon() // Stop blinking if command failed
 			}
 			log.Info("Checks completed")
+			rcheck.SetTitle("Run Checks")
+			rcheck.Enable()
+			stopBlinkingIcon() // Stop icon blinking when done
 			broadcaster.Send()
 		}
 	}(rcheck)
