@@ -69,6 +69,7 @@ in {
   enterTest = ''
     go mod verify
     coverage
+    nix build
   '';
 
   # https://devenv.sh/pre-commit-hooks/
