@@ -19,7 +19,7 @@ import (
 // wrapStatusRoot formats the check status with color-coded indicators.
 func wrapStatusRoot(status *CheckStatus, chk check.Check, err error) string {
 	if err != nil {
-		return fmt.Sprintf("%s %s", color.RedString("[DISABLED]"), err.Error())
+		return fmt.Sprintf("%s %s", color.RedString("[ERROR]"), err.Error())
 	}
 
 	msg := status.Details
@@ -35,7 +35,7 @@ func wrapStatusRoot(status *CheckStatus, chk check.Check, err error) string {
 // wrapStatus formats the check status with color-coded indicators.
 func wrapStatus(chk check.Check, err error) string {
 	if err != nil {
-		return fmt.Sprintf("%s %s", color.RedString("[DISABLED]"), err.Error())
+		return fmt.Sprintf("%s %s", color.RedString("[ERROR]"), err.Error())
 	}
 
 	if chk.Passed() {

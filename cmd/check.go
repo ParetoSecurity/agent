@@ -33,7 +33,8 @@ func checkCommand(skipUUIDs []string, onlyUUID string) {
 		log.Warn("Please run this command as a normal user, as it won't report all checks correctly.")
 	}
 
-	if !runner.IsRootHelperRunning(claims.All) {
+	// Check if the root helper is running, but only if the user is not running any extra commands
+	if !runner.IsRootHelperRunning(claims.All) && len(skipUUIDs) == 0 && onlyUUID == "" {
 		log.Fatal("Root helper is not enabled. Please restart device or run `systemctl daemon-reload && systemctl enable paretosecurity.service && systemctl enable paretosecurity.socket` as root.")
 	}
 
