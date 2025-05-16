@@ -60,6 +60,8 @@ func (d *DummyCheck) FailedMessage() string { return "failed" }
 func (d *DummyCheck) RequiresRoot() bool    { return false }
 
 func TestCheckSuccess(t *testing.T) {
+	cleanup := setupTestStatePath(t)
+	defer cleanup()
 
 	// Create a dummy check that is runnable and passes.
 	dc := &DummyCheck{
@@ -83,6 +85,8 @@ func TestCheckSuccess(t *testing.T) {
 }
 
 func TestCheckNotRunnable(t *testing.T) {
+	cleanup := setupTestStatePath(t)
+	defer cleanup()
 
 	// Create a dummy check that is not runnable.
 	dc := &DummyCheck{
@@ -105,6 +109,8 @@ func TestCheckNotRunnable(t *testing.T) {
 }
 
 func TestCheckContextCanceled(t *testing.T) {
+	cleanup := setupTestStatePath(t)
+	defer cleanup()
 
 	// Create a dummy check that is runnable.
 	dc := &DummyCheck{
@@ -226,7 +232,7 @@ func TestWrapStatusRoot(t *testing.T) {
 			status:   &CheckStatus{},
 			check:    &DummyCheck{},
 			err:      fmt.Errorf("test error"),
-			expected: "[DISABLED] test error",
+			expected: "[ERROR] test error",
 		},
 	}
 
@@ -266,7 +272,7 @@ func TestWrapStatus(t *testing.T) {
 			name:     "with error",
 			check:    &DummyCheck{},
 			err:      fmt.Errorf("test error"),
-			expected: "[DISABLED] test error",
+			expected: "[ERROR] test error",
 		},
 	}
 
