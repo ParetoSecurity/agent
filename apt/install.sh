@@ -46,20 +46,14 @@ main() {
 
         show $curl "https://pkg.paretosecurity.com/paretosecurity.gpg"|\
             show $sudo install -DTm644 /dev/stdin /usr/share/keyrings/paretosecurity.gpg
-        show printf "%s\n" \
-            "Types: deb" \
-            "URIs: https://pkg.paretosecurity.com/debian" \
-            "Signed-By: /usr/share/keyrings/paretosecurity.gpg" \
-            "Architectures: amd64 arm64" \
-            "Suites: stable" \
-            "Components: main"|\
-                show $sudo install -DTm644 /dev/stdin /etc/apt/sources.list.d/pareto.list
+        echo 'deb [signed-by=/usr/share/keyrings/paretosecurity.gpg] https://pkg.paretosecurity.com/debian stable main' |\
+            show $sudo install -DTm644 /dev/stdin /etc/apt/sources.list.d/pareto.list
         show $sudo apt-get update
         show $sudo apt-get install -y paretosecurity
 
     elif available dnf; then
         if dnf --version|grep -q dnf5; then
-            show $sudo dnf config-manager --add-repo --overwrite --from-repofile=https://pkg.paretosecurity.com/rpm/paretosecurity.repo
+            show $sudo dnf config-manager addrepo --overwrite --from-repofile=https://pkg.paretosecurity.com/rpm/paretosecurity.repo
         else
             show $sudo dnf install -y 'dnf-command(config-manager)'
             show $sudo dnf config-manager --add-repo https://pkg.paretosecurity.com/rpm/paretosecurity.repo
