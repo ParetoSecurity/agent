@@ -72,6 +72,7 @@ main() {
         else
             show curl -fsSL https://pkg.paretosecurity.com/paretosecurity.gpg | show $sudo pacman-key --add -
             show $sudo pacman-key --lsign-key info@niteo.co
+            show $sudo pacman -Sy --needed --noconfirm paretosecurity
         fi
 
     elif available zypper; then
