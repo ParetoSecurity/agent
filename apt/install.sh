@@ -31,7 +31,7 @@ main() {
     esac
 
     case "$(first_of curl wget)" in
-        wget) curl="wget -qO-";;
+        wget) curl="wget -qO- --trust-server-names";;
         *) curl="curl -fsS";;
     esac
 
