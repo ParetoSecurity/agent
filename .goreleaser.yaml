@@ -154,6 +154,7 @@ changelog:
     - "^docs:"
     - "^test:"
 release:
+  skip_upload: true
   header: |
     ## Release {{ .Version }}
 
