@@ -92,7 +92,7 @@ main() {
         show $sudo rpm-ostree install -y --idempotent paretosecurity
 
     else
-        error "Could not find a supported package manager. Only apt/dnf/eopkg/pacman(+paru/pikaur/yay)/rpm-ostree/yum/zypper are supported." "" \
+        error "Could not find a supported package manager. Only apt/dnf/pacman(+paru/pikaur/yay)/rpm-ostree/yum/zypper are supported." "" \
             "If you'd like us to support your system better, please file an issue at" \
             "https://github.com/paretosecurity/agent/issues and include the following information:" "" \
             "$(uname -srvmo || true)" "" \
