@@ -1,155 +1,107 @@
-#!/bin/bash
+#!/bin/sh
 # Copyright (c) Tailscale Inc
 # Copyright (c) 2024 The Brave Authors
-# Copyright (c) 2025 The ParetoSecurity Authors
+# Copyright (c) 2025 Pareto Security
 # SPDX-License-Identifier: BSD-3-Clause
 #
-# This script installs the ParetoSecurity using the OS's package manager
+# This script installs the Pareto Security using the OS's package manager
 # Requires: coreutils, grep, sh and one of sudo/doas/run0/pkexec/sudo-rs
 # Source: https://github.com/brave/install.sh
 
+APT_VER_MIN="1.1"
+
 set -eu
 
-BASE_URL="https://github.com/ParetoSecurity/agent/releases/latest/download/paretosecurity_"
-
+# All the code is wrapped in a main function that gets called at the
+# bottom of the file, so that a truncated partial download doesn't end
+# up executing half a script.
 main() {
+    ## Check if the app can run on this system
 
-    # Determine architecture
-    ARCH=$(uname -m)
-    case "$ARCH" in
-        x86_64|amd64|aarch64) ;;
-        *) error "Unsupported architecture: $ARCH";;
+    case "$(uname -m)" in
+        aarch64|x86_64) ;;
+        *) error "Unsupported architecture $(uname -m). Only 64-bit x86 or ARM machines are supported.";;
     esac
 
-    # Locate necessary tools
-    sudo=""
-    if [ "$(whoami)" != "root" ]; then
-        sudo="$(first_of sudo doas run0 pkexec sudo-rs)" || error "Please install sudo/doas/run0/pkexec/sudo-rs to proceed."
-    fi
+    ## Locate the necessary tools
+
+    case "$(whoami)" in
+        root) sudo="";;
+        *) sudo="$(first_of sudo doas run0 pkexec sudo-rs)" || error "Please install sudo/doas/run0/pkexec/sudo-rs to proceed.";;
+    esac
 
     case "$(first_of curl wget)" in
-        wget) curl="wget -qO- --trust-server-names";;
-        *) curl="curl -fsSL";;
+        wget) curl="wget -qO-";;
+        *) curl="curl -fsS";;
     esac
 
-    echo "Starting installation of Pareto Security..."
+    ## Install the app
 
-    # Package manager detection and installation
-    if available apt-get; then
-        install_apt
+    if available apt-get && apt_supported; then
+        export DEBIAN_FRONTEND=noninteractive
+        if ! available curl && ! available wget; then
+            show $sudo apt-get update
+            show $sudo apt-get install -y curl
+        fi
+
+        show $curl "https://pkg.paretosecurity.com/paretosecurity.gpg"|\
+            show $sudo install -DTm644 /dev/stdin /usr/share/keyrings/paretosecurity.gpg
+        show printf "%s\n" \
+            "Types: deb" \
+            "URIs: https://pkg.paretosecurity.com/debian" \
+            "Signed-By: /usr/share/keyrings/paretosecurity.gpg" \
+            "Architectures: amd64 arm64" \
+            "Suites: stable" \
+            "Components: main"|\
+                show $sudo install -DTm644 /dev/stdin /etc/apt/sources.list.d/pareto.list
+        show $sudo apt-get update
+        show $sudo apt-get install -y paretosecurity
+
     elif available dnf; then
-        install_dnf
+        if dnf --version|grep -q dnf5; then
+            show $sudo dnf config-manager addrepo --overwrite --from-repofile=https://pkg.paretosecurity.com/rpm/paretosecurity.repo
+        else
+            show $sudo dnf install -y 'dnf-command(config-manager)'
+            show $sudo dnf config-manager --add-repo https://pkg.paretosecurity.com/rpm/paretosecurity.repo
+        fi
+        show $sudo dnf install -y paretosecurity
+
     elif available pacman; then
-        install_pacman
+        if pacman -Ss paretosecurity >/dev/null 2>&1; then
+            show $sudo pacman -Sy --needed --noconfirm paretosecurity
+        else
+            show curl -fsSL https://pkg.paretosecurity.com/paretosecurity.gpg | show $sudo pacman-key --add -
+            show $sudo pacman-key --lsign-key info@niteo.co
+        fi
+
+    elif available zypper; then
+        show $sudo zypper --non-interactive addrepo --gpgcheck --repo https://pkg.paretosecurity.com/rpm/paretosecurity.repo
+        show $sudo zypper --non-interactive --gpg-auto-import-keys refresh
+        show $sudo zypper --non-interactive install paretosecurity
+
     elif available yum; then
-        install_yum
+        available yum-config-manager || show $sudo yum install yum-utils -y
+        show $sudo yum-config-manager -y --add-repo https://pkg.paretosecurity.com/rpm/paretosecurity.repo
+        show $sudo yum install paretosecurity -y
+
+    elif available rpm-ostree; then
+        available curl || available wget || error "Please install curl/wget to proceed."
+        show $curl https://pkg.paretosecurity.com/rpm/paretosecurity.repo|\
+            show $sudo install -DTm644 /dev/stdin /etc/yum.repos.d/paretosecurity.repo
+        show $sudo rpm-ostree install -y --idempotent paretosecurity
+
     else
-        error "Could not find a supported package manager (apt, dnf, pacman, yum)."
+        error "Could not find a supported package manager. Only apt/dnf/eopkg/pacman(+paru/pikaur/yay)/rpm-ostree/yum/zypper are supported." "" \
+            "If you'd like us to support your system better, please file an issue at" \
+            "https://github.com/paretosecurity/agent/issues and include the following information:" "" \
+            "$(uname -srvmo || true)" "" \
+            "$(cat /etc/os-release || true)"
     fi
 
     echo "Pareto Security has been installed successfully."
     echo "From now on, your package manager will automatically handle updates."
     echo "To initiate the application, kindly execute the ‘paretosecurity check’ command. Alternatively, you may proceed with joining the team from the dashboard."
-}
 
-install_apt() {
-    TEMP_DIR=$(mktemp -d)
-    echo "Using apt-get..."
-    if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
-        PACKAGE="paretosecurity_amd64.deb"
-        ARCH_SUFFIX="amd64"
-    elif [[ "$ARCH" == "aarch64" ]]; then
-        PACKAGE="paretosecurity_arm64.deb"
-        ARCH_SUFFIX="arm64"
-    else
-        error "Unsupported architecture: $ARCH"
-    fi
-    
-    if dpkg -s "paretosecurity" >/dev/null 2>&1; then
-        echo "Pareto Security is already installed, updating..."
-        show $curl "${BASE_URL}${ARCH_SUFFIX}.deb" -o "$TEMP_DIR/$PACKAGE"
-        show $sudo dpkg -i "$TEMP_DIR/$PACKAGE"
-        show $sudo apt-get install -f -y # Fix dependencies
-    else
-        echo "Installing Pareto Security..."
-        show $curl "${BASE_URL}${ARCH_SUFFIX}.deb" -o "$TEMP_DIR/$PACKAGE"
-        show $sudo dpkg -i "$TEMP_DIR/$PACKAGE"
-        show $sudo apt-get install -f -y # Fix dependencies
-    fi
-    echo "Cleaning up..."
-    rm -rf "$TEMP_DIR"
-}
-
-install_dnf() {
-    TEMP_DIR=$(mktemp -d)
-    echo "Using dnf..."
-    if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
-        PACKAGE="paretosecurity_amd64.rpm"
-        ARCH_SUFFIX="amd64"
-    elif [[ "$ARCH" == "aarch64" ]]; then
-        PACKAGE="paretosecurity_arm64.rpm"
-        ARCH_SUFFIX="arm64"
-    else
-        error "Unsupported architecture: $ARCH"
-    fi
-    
-    if rpm -q "paretosecurity" >/dev/null 2>&1; then
-        echo "Pareto Security is already installed, updating..."
-        show $sudo rpm -e "paretosecurity"
-        show $curl "${BASE_URL}${ARCH_SUFFIX}.rpm" -o "$TEMP_DIR/$PACKAGE"
-        show $sudo rpm -i "$TEMP_DIR/$PACKAGE"
-    else
-        echo "Installing Pareto Security..."
-        show $curl "${BASE_URL}${ARCH_SUFFIX}.rpm" -o "$TEMP_DIR/$PACKAGE"
-        show $sudo rpm -i "$TEMP_DIR/$PACKAGE"
-    fi
-    echo "Cleaning up..."
-    rm -rf "$TEMP_DIR"
-}
-
-install_pacman() {
-    TEMP_DIR=$(mktemp -d)
-    echo "Using pacman..."
-    if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
-        PACKAGE="paretosecurity_amd64.archlinux.pkg.tar.zst"
-        ARCH_SUFFIX="amd64"
-    elif [[ "$ARCH" == "aarch64" ]]; then
-        PACKAGE="paretosecurity_arm64.archlinux.pkg.tar.zst"
-        ARCH_SUFFIX="arm64"
-    else
-        error "Unsupported architecture: $ARCH"
-    fi
-    
-    if pacman -Q "paretosecurity" >/dev/null 2>&1; then
-       echo "Pareto Security is already installed, updating..."
-       show $curl "${BASE_URL}${ARCH_SUFFIX}.archlinux.pkg.tar.zst" -o "$TEMP_DIR/$PACKAGE"
-       show $sudo pacman -U --noconfirm "$TEMP_DIR/$PACKAGE"
-    else
-       echo "Installing Pareto Security..."
-       show $curl "${BASE_URL}${ARCH_SUFFIX}.archlinux.pkg.tar.zst" -o "$TEMP_DIR/$PACKAGE"
-       show $sudo pacman -U --noconfirm "$TEMP_DIR/$PACKAGE"
-    fi
-    echo "Cleaning up..."
-    rm -rf "$TEMP_DIR"
-}
-
-install_yum() {
-    TEMP_DIR=$(mktemp -d)
-    echo "Using yum..."
-    if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
-        PACKAGE="paretosecurity_amd64.rpm"
-        ARCH_SUFFIX="amd64"
-    elif [[ "$ARCH" == "aarch64" ]]; then
-        PACKAGE="paretosecurity_arm64.rpm"
-        ARCH_SUFFIX="arm64"
-    else
-        error "Unsupported architecture: $ARCH"
-    fi
-    
-    show $curl "${BASE_URL}${ARCH_SUFFIX}.rpm" -o "$TEMP_DIR/$PACKAGE"
-    show $sudo yum -y install "$TEMP_DIR/$PACKAGE"
-    echo "Cleaning up..."
-    rm -rf "$TEMP_DIR"
 }
 
 # Helpers
@@ -157,5 +109,8 @@ available() { command -v "${1:?}" >/dev/null; }
 first_of() { for c in "${@:?}"; do if available "$c"; then echo "$c"; return 0; fi; done; return 1; }
 show() { (set -x; "${@:?}"); }
 error() { exec >&2; printf "Error: "; printf "%s\n" "${@:?}"; exit 1; }
+newer() { [ "$(printf "%s\n%s" "$1" "$2"|sort -V|head -n1)" = "${2:?}" ]; }
+supported() { newer "$2" "${3:?}" || error "Unsupported ${1:?} version ${2:-<empty>}. Only $1 versions >=$3 are supported."; }
+apt_supported() { supported apt "$(apt-get -v|head -n1|cut -d' ' -f2)" "${APT_VER_MIN:?}"; }
 
 main
