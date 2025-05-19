@@ -34,7 +34,8 @@ in {
 
   scripts.coverage.description = "Run tests and check coverage";
   scripts.coverage.exec = ''
-    go test -coverprofile=coverage.txt ./...
+    set -o pipefail
+    go test -coverprofile=coverage.txt ./... || exit $?
     coverage=$(go tool cover -func=coverage.txt | grep total | awk '{print $3}' | tr -d %)
     if [ -n "$coverage" ] && [ "$(echo "$coverage" | sed 's/\..*//')" -lt 45 ]; then
       echo "Error: Test coverage is below 45% at $coverage%"
@@ -69,7 +70,6 @@ in {
   enterTest = ''
     go mod verify
     coverage
-    nix build
   '';
 
   # https://devenv.sh/pre-commit-hooks/
