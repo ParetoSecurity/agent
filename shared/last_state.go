@@ -9,6 +9,7 @@ import (
 
 	"github.com/caarlos0/log"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/renderer"
 	"github.com/pelletier/go-toml"
 )
 
@@ -94,20 +95,11 @@ func PrintStates() {
 		data = append(data, []string{uuid, state.Name, stateStr, state.Details})
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"UUID", "Name", "State", "Details"})
-	table.SetAutoWrapText(false)
-	table.SetAutoFormatHeaders(true)
-	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetCenterSeparator("")
-	table.SetColumnSeparator("")
-	table.SetRowSeparator("")
-	table.SetHeaderLine(false)
-	table.SetBorder(false)
-	table.SetTablePadding("\t")
-	table.SetNoWhiteSpace(true)
-	table.AppendBulk(data)
+	table := tablewriter.NewTable(os.Stdout,
+		tablewriter.WithRenderer(renderer.NewMarkdown()),
+	)
+	table.Header([]string{"UUID", "Name", "State", "Details"})
+	table.Bulk(data)
 	table.Render()
 }
 

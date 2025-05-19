@@ -226,7 +226,7 @@ func TestWrapStatusRoot(t *testing.T) {
 			status:   &CheckStatus{},
 			check:    &DummyCheck{},
 			err:      fmt.Errorf("test error"),
-			expected: "[DISABLED] test error",
+			expected: "[ERROR] test error",
 		},
 	}
 
@@ -266,7 +266,7 @@ func TestWrapStatus(t *testing.T) {
 			name:     "with error",
 			check:    &DummyCheck{},
 			err:      fmt.Errorf("test error"),
-			expected: "[DISABLED] test error",
+			expected: "[ERROR] test error",
 		},
 	}
 
