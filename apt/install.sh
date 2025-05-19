@@ -32,7 +32,7 @@ main() {
 
     case "$(first_of curl wget)" in
         wget) curl="wget -qO- --trust-server-names";;
-        *) curl="curl -fsS";;
+        *) curl="curl -fsSL";;
     esac
 
     ## Install the app
