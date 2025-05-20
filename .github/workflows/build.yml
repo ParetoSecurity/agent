@@ -221,7 +221,7 @@ jobs:
 
       - name: Run installer
         run: |
-          sudo incus exec pareto -- curl -sL pkg.paretosecurity.com/install.sh | sudo bash
+          sudo incus exec pareto -- bash /opt/install.sh
       
       - name: Run Linux tests
         run: |
