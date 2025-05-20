@@ -219,8 +219,10 @@ jobs:
           Signed-By: /etc/apt/keyrings/zabbly.asc
 
           EOF'
-          sudo apt-get update
-          sudo apt-get install -y incus qemu-system
+          sudo apt update
+          sudo systemctl stop docker
+          sudo apt purge docker -y
+          sudo apt install -y incus qemu-system
           sudo chmod 666 /var/lib/incus/unix.socket
       - name: Prepare image
         run: |
