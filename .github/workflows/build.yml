@@ -246,20 +246,31 @@ jobs:
       - name: Run installer
         run: |
           sudo incus exec pareto -- bash /opt/install.sh
-      
+          sudo incus exec pareto -- sudo systemctl daemon-reload
+          sudo incus exec pareto -- sudo systemctl enable paretosecurity.service
+          sudo incus exec pareto -- sudo systemctl enable paretosecurity.socket
+    
       - name: Verify CLI is installed
         run: |
           sudo incus exec pareto -- paretosecurity info
       
       - name: Run Linux tests
         run: |
-            PARETOSEC_CHECK=$(sudo incus exec pareto -- /opt/paretosecurity check || true)
-            echo "::notice title=Pareto Security Checks for ${{ matrix.distribution }}::${PARETOSEC_CHECK}"
+          PARETOSEC_CHECK=$(sudo incus exec pareto -- /opt/paretosecurity check || true)
+          echo "::notice title=Pareto Security Checks for ${{ matrix.distribution }}::${PARETOSEC_CHECK}"
+          echo "## 🔒 Pareto Security Checks for ${{ matrix.distribution }}" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo "${PARETOSEC_CHECK}" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
 
-      - name: Run Linux tests
+      - name: Run Linux status
         run: |
-            PARETOSEC_STATUS=$(sudo incus exec pareto -- /opt/paretosecurity status)
-            echo "::notice title=Pareto Security Status for ${{ matrix.distribution }}::${PARETOSEC_STATUS}"
+          PARETOSEC_STATUS=$(sudo incus exec pareto -- /opt/paretosecurity status)
+          echo "::notice title=Pareto Security Status for ${{ matrix.distribution }}::${PARETOSEC_STATUS}"
+          echo "## 📊 Pareto Security Status for ${{ matrix.distribution }}" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo "${PARETOSEC_STATUS}" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
     
   build:
     name: Unstable build
