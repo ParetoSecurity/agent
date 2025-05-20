@@ -245,11 +245,13 @@ jobs:
 
       - name: Run installer
         run: |
-          sudo incus exec pareto -- bash /opt/install.sh
+          INSTALL=$(sudo incus exec pareto -- bash /opt/install.sh 2>&1)
+          echo "### 🔧 Pareto Security Install for ${{ matrix.distribution }}" >> $GITHUB_STEP_SUMMARY
+          echo "```\n${INSTALL}\n```" >> $GITHUB_STEP_SUMMARY
           sudo incus exec pareto -- sudo systemctl daemon-reload
           sudo incus exec pareto -- sudo systemctl enable paretosecurity.service
           sudo incus exec pareto -- sudo systemctl enable paretosecurity.socket
-    
+        
       - name: Verify CLI is installed
         run: |
           sudo incus exec pareto -- paretosecurity info
@@ -261,13 +263,13 @@ jobs:
       - name: Run Linux info
         run: |
           PARETOSEC_INFO=$(sudo incus exec pareto -- /opt/paretosecurity info 2>&1)
-          echo "### 📊 Pareto Security Info for ${{ matrix.distribution }}" >> $GITHUB_STEP_SUMMARY
+          echo "### ℹ️ Pareto Security Info for ${{ matrix.distribution }}" >> $GITHUB_STEP_SUMMARY
           echo "```\n${PARETOSEC_INFO}\n```" >> $GITHUB_STEP_SUMMARY
 
       - name: Run Linux status
         run: |
           PARETOSEC_STATUS=$(sudo incus exec pareto -- /opt/paretosecurity status 2>&1)
-          echo "### 📊 Pareto Security Status for ${{ matrix.distribution }}" >> $GITHUB_STEP_SUMMARY
+          echo "### 🟢 Pareto Security Status for ${{ matrix.distribution }}" >> $GITHUB_STEP_SUMMARY
           echo "${PARETOSEC_STATUS}" >> $GITHUB_STEP_SUMMARY
 
     
