@@ -218,7 +218,7 @@ jobs:
           sudo incus launch images:${{ matrix.distribution }} pareto
           sudo incus file push agent_linux_amd64_v1/paretosecurity pareto/opt/paretosecurity
           sudo incus file push apt/install.sh pareto/opt/install.sh
-          sudo incus exec target -- sudo systemctl is-system-running --wait
+          sudo incus exec pareto -- sudo systemctl is-system-running --wait
       - name: Wait for network
         run: |
           max_retry=10
