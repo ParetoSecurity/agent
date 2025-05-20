@@ -189,28 +189,36 @@ jobs:
               });
               console.log('Created new Windows screenshots comment with embedded images.');
             }
-  linux:
-    name: Linux Test of a Build
-    runs-on: ubuntu-latest
+
+  checks-on-linux:
+    name: "Linux run on ${{ matrix.distribution }}"
+    runs-on: namespace-profile-pareto-linux
     needs: [ build ]
+    strategy:
+      fail-fast: false
+      matrix:
+        # https://images.linuxcontainers.org/
+        distribution: [ubuntu/22.04, ubuntu/24.04, fedora/42, archlinux, debian/12, debian/13]
     steps:
       - name: Download build
         uses: actions/download-artifact@v4
         with:
           name: build
-      - name: Display structure of downloaded files
-        run: ls -R
-      - name: Make paretosecurity executable
-        run: chmod +x agent_linux_amd64_v1/paretosecurity
-      - name: Run Linux schema
-        run: agent_linux_amd64_v1/paretosecurity schema > linux.json
-      - name: Run Linux tests
-        run: agent_linux_amd64_v1/paretosecurity check || true
-      - name: Upload Linux schema
-        uses: actions/upload-artifact@v4
+      - uses: namespacelabs/nscloud-cache-action@v1
         with:
-          path: linux.json
-          name: linux.json
+          path: /var/cache/incus
+      - name: Install Incus
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y incus qemu-system
+      - name: Run image
+        run: |
+          chmod +x agent_linux_amd64_v1/paretosecurity
+          incus launch images:${{ matrix.distribution }} pareto-${{ matrix.distribution }} -c limits.cpu=1 -c limits.memory=512MiB
+          incus push agent_linux_amd64_v1/paretosecurity pareto-${{ matrix.distribution }}/opt/paretosecurity
+          incus exec pareto-${{ matrix.distribution }} -- /opt/paretosecurity check || true
+
+    
   build:
     name: Unstable build
     runs-on: ubuntu-latest
