@@ -237,19 +237,7 @@ jobs:
           
       - name: Wait for network
         run: |
-          max_retry=5
-          retry=0
-            until sudo incus exec pareto -- curl -s --connect-timeout 5 https://paretosecurity.com/robots.txt > /dev/null; do
-            retry=$((retry + 1))
-            echo "Attempt $retry of $max_retry"
-            if [ $retry -ge $max_retry ]; then
-              echo "Network is not ready after $max_retry attempts. Exiting."
-              exit 1
-            fi
-            echo "Waiting for network to be ready... retrying in 5 second."
-            sleep 5
-          done
-          echo "Network is ready. Performing system update."
+          sleep 10
 
       - name: Run Linux schema
         run: |
