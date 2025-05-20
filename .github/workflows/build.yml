@@ -211,7 +211,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y incus
-          sudo systemctl daemon-reload
       - name: Run image
         run: |
           sudo incus admin init --auto
