@@ -208,14 +208,24 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y incus
-      - name: Run image
+      - name: Prepapre image
         run: |
           sudo incus admin init --auto
           chmod +x agent_linux_amd64_v1/paretosecurity
           sudo incus launch images:${{ matrix.distribution }} pareto -c limits.cpu=1 -c limits.memory=512MiB
-          sudo incus push agent_linux_amd64_v1/paretosecurity pareto/opt/paretosecurity
-          sudo incus exec pareto -- /opt/paretosecurity check || true
+          sudo incus file push agent_linux_amd64_v1/paretosecurity pareto/opt/paretosecurity
+      
+      - name: Run Linux schema
+        run: |
+          sudo incus exec pareto -- /opt/paretosecurity schema
 
+      - name: Run installer
+        run: |
+          sudo incus exec pareto -- curl -sL pkg.paretosecurity.com/install.sh | sudo bash
+      
+      - name: Run Linux tests
+        run: |
+          sudo incus exec pareto -- /opt/paretosecurity check || true
     
   build:
     name: Unstable build
