@@ -71,7 +71,15 @@ main() {
             show $sudo pacman-key --lsign-key info@niteo.co
             if ! grep -q "\[paretosecurity\]" /etc/pacman.conf; then
                 show echo '[paretosecurity]' | show $sudo tee -a /etc/pacman.conf >/dev/null
-                show echo "Server = https://pkg.paretosecurity.com/aur/stable/$(uname -m)" | show $sudo tee -a /etc/pacman.conf >/dev/null
+                ARCH="$(uname -m)"
+                if [ "$ARCH" = "x86_64" ]; then
+                    ARCH="amd64"
+                elif [ "$ARCH" = "aarch64" ]; then
+                    ARCH="aarch64"
+                else
+                    error "Unsupported architecture $(uname -m). Only 64-bit x86 or ARM machines are supported."
+                fi
+                show echo "Server = https://pkg.paretosecurity.com/aur/stable/$ARCH" | show $sudo tee -a /etc/pacman.conf >/dev/null
             fi
             show $sudo pacman -Syu --needed --noconfirm paretosecurity
         fi
