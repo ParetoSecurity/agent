@@ -192,7 +192,7 @@ jobs:
 
   checks-on-linux:
     name: "Linux run on ${{ matrix.distribution }}"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [ build ]
     strategy:
       fail-fast: false
