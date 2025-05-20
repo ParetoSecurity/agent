@@ -53,8 +53,10 @@ main() {
 
     elif available dnf; then
         if dnf --version|grep -q dnf5; then
+            show $curl https://pkg.paretosecurity.com/paretosecurity.gpg | show $sudo rpm --import -
             show $sudo dnf config-manager addrepo --overwrite --from-repofile="https://pkg.paretosecurity.com/rpm/paretosecurity.repo"
         else
+            show $curl https://pkg.paretosecurity.com/paretosecurity.gpg | show $sudo rpm --import -
             show $sudo dnf install -y 'dnf-command(config-manager)'
             show $sudo dnf config-manager --add-repo "https://pkg.paretosecurity.com/rpm/paretosecurity.repo"
         fi
@@ -65,29 +67,13 @@ main() {
             show $sudo pacman -Sy --needed --noconfirm paretosecurity
         else
             show $curl https://pkg.paretosecurity.com/paretosecurity.gpg |\
-                show $sudo pacman-key --add -
+                show $sudo pacman-key --add --allow-weak-key-signatures -
             show $sudo pacman-key --lsign-key info@niteo.co
             show $sudo pacman -Sy --needed --noconfirm paretosecurity
         fi
 
-    elif available zypper; then
-        show $sudo zypper --non-interactive addrepo --gpgcheck --repo "https://pkg.paretosecurity.com/rpm/paretosecurity.repo"
-        show $sudo zypper --non-interactive --gpg-auto-import-keys refresh
-        show $sudo zypper --non-interactive install paretosecurity
-
-    elif available yum; then
-        available yum-config-manager || show $sudo yum install yum-utils -y
-        show $sudo yum-config-manager -y --add-repo "https://pkg.paretosecurity.com/rpm/paretosecurity.repo"
-        show $sudo yum install paretosecurity -y
-
-    elif available rpm-ostree; then
-        available curl || available wget || error "Please install curl/wget to proceed."
-        show $curl https://pkg.paretosecurity.com/rpm/paretosecurity.repo|\
-            show $sudo install -DTm644 /dev/stdin /etc/yum.repos.d/paretosecurity.repo
-        show $sudo rpm-ostree install -y --idempotent paretosecurity
-
     else
-        error "Could not find a supported package manager. Only apt/dnf/pacman(+paru/pikaur/yay)/rpm-ostree/yum/zypper are supported." "" \
+        error "Could not find a supported package manager. Only apt/dnf/pacman are supported." "" \
             "If you'd like us to support your system better, please file an issue at" \
             "https://github.com/paretosecurity/agent/issues and include the following information:" "" \
             "$(uname -srvmo || true)" "" \
