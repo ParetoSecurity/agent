@@ -210,10 +210,11 @@ jobs:
       - name: Install Incus
         run: |
           sudo apt-get update
-          sudo apt-get install -y incus qemu-system
-          sudo incus admin init --auto
+          sudo apt-get install -y incus
+          sudo systemctl daemon-reload
       - name: Run image
         run: |
+          sudo incus admin init --auto
           chmod +x agent_linux_amd64_v1/paretosecurity
           sudo incus launch images:${{ matrix.distribution }} pareto-${{ matrix.distribution }} -c limits.cpu=1 -c limits.memory=512MiB
           sudo incus push agent_linux_amd64_v1/paretosecurity pareto-${{ matrix.distribution }}/opt/paretosecurity
