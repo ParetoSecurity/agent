@@ -212,9 +212,9 @@ jobs:
         run: |
           sudo incus admin init --auto
           chmod +x agent_linux_amd64_v1/paretosecurity
-          sudo incus launch images:${{ matrix.distribution }} pareto-${{ matrix.distribution }} -c limits.cpu=1 -c limits.memory=512MiB
-          sudo incus push agent_linux_amd64_v1/paretosecurity pareto-${{ matrix.distribution }}/opt/paretosecurity
-          sudo incus exec pareto-${{ matrix.distribution }} -- /opt/paretosecurity check || true
+          sudo incus launch images:${{ matrix.distribution }} pareto -c limits.cpu=1 -c limits.memory=512MiB
+          sudo incus push agent_linux_amd64_v1/paretosecurity pareto/opt/paretosecurity
+          sudo incus exec pareto -- /opt/paretosecurity check || true
 
     
   build:
