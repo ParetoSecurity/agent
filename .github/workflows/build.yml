@@ -192,7 +192,7 @@ jobs:
 
   checks-on-linux:
     name: "Linux run on ${{ matrix.distribution }}"
-    runs-on: namespace-profile-pareto-linux
+    runs-on: ubuntu-latest
     needs: [ build ]
     strategy:
       fail-fast: false
