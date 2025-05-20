@@ -226,6 +226,7 @@ jobs:
           sudo nft flush ruleset
           sudo apt install -y incus
           sudo chmod 666 /var/lib/incus/unix.socket
+      
       - name: Prepare image
         run: |
           sudo incus admin init --auto
@@ -233,6 +234,22 @@ jobs:
           sudo incus launch images:${{ matrix.distribution }} pareto
           sudo incus file push agent_linux_amd64_v1/paretosecurity pareto/opt/paretosecurity
           sudo incus file push apt/install.sh pareto/opt/install.sh
+          
+      - name: Wait for network
+        run: |
+          max_retry=5
+          retry=0
+          until sudo incus exec target -- ping -c 1 8.8.8.8; do
+            retry=$((retry + 1))
+            echo "Attempt $retry of $max_retry"
+            if [ $retry -ge $max_retry ]; then
+              echo "Network is not ready after $max_retry attempts. Exiting."
+              exit 1
+            fi
+            echo "Waiting for network to be ready... retrying in 5 second."
+            sleep 5
+          done
+          echo "Network is ready. Performing system update."
 
       - name: Run Linux schema
         run: |
