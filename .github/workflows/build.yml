@@ -226,7 +226,7 @@ jobs:
         run: |
           sudo incus admin init --auto
           chmod +x agent_linux_amd64_v1/paretosecurity
-          sudo incus launch images:${{ matrix.distribution }} pareto --vm
+          sudo incus launch images:${{ matrix.distribution }} pareto
           sudo incus file push agent_linux_amd64_v1/paretosecurity pareto/opt/paretosecurity
           sudo incus file push apt/install.sh pareto/opt/install.sh
       - name: Wait for network
