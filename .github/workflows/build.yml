@@ -260,12 +260,10 @@ jobs:
 
       - name: Run Linux status
         run: |
-          PARETOSEC_STATUS=$(sudo incus exec pareto -- /opt/paretosecurity status)
-          echo "::notice title=Pareto Security Status for ${{ matrix.distribution }}::${PARETOSEC_STATUS}"
+          PARETOSEC_STATUS=$(sudo incus exec pareto -- /opt/paretosecurity status 2>&1)
           echo "## 📊 Pareto Security Status for ${{ matrix.distribution }}" >> $GITHUB_STEP_SUMMARY
-          echo "```" >> $GITHUB_STEP_SUMMARY
           echo "${PARETOSEC_STATUS}" >> $GITHUB_STEP_SUMMARY
-          echo "```" >> $GITHUB_STEP_SUMMARY
+
     
   build:
     name: Unstable build
