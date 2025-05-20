@@ -239,7 +239,7 @@ jobs:
         run: |
           max_retry=5
           retry=0
-          until sudo incus exec pareto -- ping -c 1 8.8.8.8; do
+            until sudo incus exec pareto -- curl -s --connect-timeout 5 https://paretosecurity.com/robots.txt > /dev/null; do
             retry=$((retry + 1))
             echo "Attempt $retry of $max_retry"
             if [ $retry -ge $max_retry ]; then
