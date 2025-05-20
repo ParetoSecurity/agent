@@ -67,9 +67,9 @@ main() {
             show $sudo pacman -Sy --needed --noconfirm paretosecurity
         else
             show $curl https://pkg.paretosecurity.com/paretosecurity.gpg |\
-                show $sudo pacman-key --add --allow-weak-key-signatures -
+                show $sudo pacman-key --add -
             show $sudo pacman-key --lsign-key info@niteo.co
-            show $sudo pacman -Sy --needed --noconfirm paretosecurity
+            show $sudo pacman -Syu --needed --noconfirm paretosecurity
         fi
 
     else
