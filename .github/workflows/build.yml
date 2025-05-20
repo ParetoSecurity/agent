@@ -191,7 +191,7 @@ jobs:
             }
 
   checks-on-linux:
-    name: "Linux run on ${{ matrix.distribution }}"
+    name: "Install and Run on ${{ matrix.distribution }}"
     runs-on: ubuntu-latest
     needs: [ build ]
     strategy:
@@ -247,9 +247,19 @@ jobs:
         run: |
           sudo incus exec pareto -- bash /opt/install.sh
       
+      - name: Verify CLI is installed
+        run: |
+          sudo incus exec pareto -- paretosecurity info
+      
       - name: Run Linux tests
         run: |
-          sudo incus exec pareto -- /opt/paretosecurity check || true
+            PARETOSEC_CHECK=$(sudo incus exec pareto -- /opt/paretosecurity check || true)
+            echo "::notice title=Pareto Security Checks for ${{ matrix.distribution }}::${PARETOSEC_CHECK}"
+
+      - name: Run Linux tests
+        run: |
+            PARETOSEC_STATUS=$(sudo incus exec pareto -- /opt/paretosecurity status)
+            echo "::notice title=Pareto Security Status for ${{ matrix.distribution }}::${PARETOSEC_STATUS}"
     
   build:
     name: Unstable build
