@@ -222,7 +222,9 @@ jobs:
           sudo apt update
           sudo systemctl stop docker
           sudo apt purge docker -y
-          sudo apt install -y incus qemu-system
+          sudo nft list ruleset
+          sudo nft flush ruleset
+          sudo apt install -y incus
           sudo chmod 666 /var/lib/incus/unix.socket
       - name: Prepare image
         run: |
