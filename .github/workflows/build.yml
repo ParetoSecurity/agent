@@ -200,12 +200,12 @@ jobs:
         # https://images.linuxcontainers.org/
         distribution: [ubuntu/22.04, ubuntu/24.04, fedora/42, archlinux, debian/12, debian/13]
     steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Download build
         uses: actions/download-artifact@v4
         with:
           name: build
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Install Incus
         run: |
           sudo apt-get update
