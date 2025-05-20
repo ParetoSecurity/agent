@@ -221,11 +221,6 @@ jobs:
           EOF'
           sudo apt-get update
           sudo apt-get install -y incus
-      - name: Allow egress network traffic flows for Incus
-        # https://linuxcontainers.org/incus/docs/main/howto/network_bridge_firewalld/#prevent-connectivity-issues-with-incus-and-docker
-        run: |
-          sudo iptables -I DOCKER-USER -i incusbr0 -j ACCEPT
-          sudo iptables -I DOCKER-USER -o incusbr0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
       - name: Prepare image
         run: |
           sudo incus admin init --minimal
