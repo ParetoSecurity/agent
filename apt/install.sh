@@ -70,8 +70,8 @@ main() {
                 show $sudo pacman-key --add -
             show $sudo pacman-key --lsign-key info@niteo.co
             if ! grep -q "\[paretosecurity\]" /etc/pacman.conf; then
-                echo '[paretosecurity]' | $sudo tee -a /etc/pacman.conf >/dev/null
-                echo "Server = https://pkg.paretosecurity.com/aur/stable/$(uname -m)" | $sudo tee -a /etc/pacman.conf >/dev/null
+                show echo '[paretosecurity]' | show $sudo tee -a /etc/pacman.conf >/dev/null
+                show echo "Server = https://pkg.paretosecurity.com/aur/stable/$(uname -m)" | show $sudo tee -a /etc/pacman.conf >/dev/null
             fi
             show $sudo pacman -Syu --needed --noconfirm paretosecurity
         fi
