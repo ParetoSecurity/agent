@@ -189,28 +189,90 @@ jobs:
               });
               console.log('Created new Windows screenshots comment with embedded images.');
             }
-  linux:
-    name: Linux Test of a Build
+
+  checks-on-linux:
+    name: "Install and Run on ${{ matrix.distribution }}"
     runs-on: ubuntu-latest
     needs: [ build ]
+    strategy:
+      fail-fast: false
+      matrix:
+        # https://images.linuxcontainers.org/
+        distribution: [ubuntu/22.04, ubuntu/24.04, fedora/42, archlinux, debian/12, debian/13]
     steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Download build
         uses: actions/download-artifact@v4
         with:
           name: build
-      - name: Display structure of downloaded files
-        run: ls -R
-      - name: Make paretosecurity executable
-        run: chmod +x agent_linux_amd64_v1/paretosecurity
+      - name: Install Incus
+        run: |
+          sudo wget -O /etc/apt/keyrings/zabbly.asc https://pkgs.zabbly.com/key.asc
+          sudo sh -c 'cat <<EOF > /etc/apt/sources.list.d/zabbly-incus-stable.sources
+          Enabled: yes
+          Types: deb
+          URIs: https://pkgs.zabbly.com/incus/stable
+          Suites: $(. /etc/os-release && echo ${VERSION_CODENAME})
+          Components: main
+          Architectures: $(dpkg --print-architecture)
+          Signed-By: /etc/apt/keyrings/zabbly.asc
+
+          EOF'
+          sudo apt update
+          sudo systemctl stop docker
+          sudo apt purge docker -y
+          sudo nft list ruleset
+          sudo nft flush ruleset
+          sudo apt install -y incus
+          sudo chmod 666 /var/lib/incus/unix.socket
+      
+      - name: Prepare image
+        run: |
+          sudo incus admin init --auto
+          chmod +x agent_linux_amd64_v1/paretosecurity
+          sudo incus launch images:${{ matrix.distribution }} pareto
+          sudo incus file push agent_linux_amd64_v1/paretosecurity pareto/opt/paretosecurity
+          sudo incus file push apt/install.sh pareto/opt/install.sh
+          
+      - name: Wait for network
+        run: |
+          sleep 10
+
       - name: Run Linux schema
-        run: agent_linux_amd64_v1/paretosecurity schema > linux.json
+        run: |
+          sudo incus exec pareto -- /opt/paretosecurity schema
+
+      - name: Run installer
+        run: |
+          INSTALL=$(sudo incus exec pareto -- bash /opt/install.sh 2>&1)
+          echo "### 🔧 Pareto Security Install" >> $GITHUB_STEP_SUMMARY
+          echo "${INSTALL}" >> $GITHUB_STEP_SUMMARY
+          sudo incus exec pareto -- sudo systemctl daemon-reload
+          sudo incus exec pareto -- sudo systemctl enable paretosecurity.service
+          sudo incus exec pareto -- sudo systemctl enable paretosecurity.socket
+        
+      - name: Verify CLI is installed
+        run: |
+          sudo incus exec pareto -- paretosecurity info
+      
       - name: Run Linux tests
-        run: agent_linux_amd64_v1/paretosecurity check || true
-      - name: Upload Linux schema
-        uses: actions/upload-artifact@v4
-        with:
-          path: linux.json
-          name: linux.json
+        run: |
+          sudo incus exec pareto -- /opt/paretosecurity check || true
+
+      - name: Run Linux info
+        run: |
+          PARETOSEC_INFO=$(sudo incus exec pareto -- /opt/paretosecurity info 2>&1)
+          echo "### ℹ️ Pareto Security Info" >> $GITHUB_STEP_SUMMARY
+          echo "${PARETOSEC_INFO}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Run Linux status
+        run: |
+          PARETOSEC_STATUS=$(sudo incus exec pareto -- /opt/paretosecurity status 2>&1)
+          echo "### 🟢 Pareto Security Status" >> $GITHUB_STEP_SUMMARY
+          echo "${PARETOSEC_STATUS}" >> $GITHUB_STEP_SUMMARY
+
+    
   build:
     name: Unstable build
     runs-on: ubuntu-latest

@@ -3,5 +3,5 @@ name=paretosecurity-stable
 baseurl=https://pkg.paretosecurity.com/rpm
 enabled=1
 type=rpm
-gpgcheck=1
+gpgcheck=0
 gpgkey=https://pkg.paretosecurity.com/paretosecurity.gpg

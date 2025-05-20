@@ -1,8 +1,6 @@
 name: Integration Tests
 
 on:
-  repository_dispatch:
-    types: [integration-test]
   workflow_dispatch:
   pull_request:
     branches:
@@ -11,7 +9,7 @@ on:
     - cron: '0 0 * * 0' # Runs every Sunday at midnight UTC
 
 jobs:
-  check:
+  check-on-nix:
     name: "Check: ${{ matrix.check }}"
     runs-on: namespace-profile-pareto-linux
     strategy:
