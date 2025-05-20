@@ -211,13 +211,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y incus qemu-system
-          sudo incus admin init
+          sudo incus admin init --auto
       - name: Run image
         run: |
           chmod +x agent_linux_amd64_v1/paretosecurity
-          incus launch images:${{ matrix.distribution }} pareto-${{ matrix.distribution }} -c limits.cpu=1 -c limits.memory=512MiB
-          incus push agent_linux_amd64_v1/paretosecurity pareto-${{ matrix.distribution }}/opt/paretosecurity
-          incus exec pareto-${{ matrix.distribution }} -- /opt/paretosecurity check || true
+          sudo incus launch images:${{ matrix.distribution }} pareto-${{ matrix.distribution }} -c limits.cpu=1 -c limits.memory=512MiB
+          sudo incus push agent_linux_amd64_v1/paretosecurity pareto-${{ matrix.distribution }}/opt/paretosecurity
+          sudo incus exec pareto-${{ matrix.distribution }} -- /opt/paretosecurity check || true
 
     
   build:
