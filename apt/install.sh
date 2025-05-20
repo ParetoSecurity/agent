@@ -53,10 +53,10 @@ main() {
 
     elif available dnf; then
         if dnf --version|grep -q dnf5; then
-            show $curl https://pkg.paretosecurity.com/paretosecurity.gpg | show $sudo rpm --import -
+            show $sudo rpm --import https://pkg.paretosecurity.com/paretosecurity.asc
             show $sudo dnf config-manager addrepo --overwrite --from-repofile="https://pkg.paretosecurity.com/rpm/paretosecurity.repo"
         else
-            show $curl https://pkg.paretosecurity.com/paretosecurity.gpg | show $sudo rpm --import -
+            show $sudo rpm --import https://pkg.paretosecurity.com/paretosecurity.asc
             show $sudo dnf install -y 'dnf-command(config-manager)'
             show $sudo dnf config-manager --add-repo "https://pkg.paretosecurity.com/rpm/paretosecurity.repo"
         fi
