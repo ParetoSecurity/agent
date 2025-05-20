@@ -256,12 +256,7 @@ jobs:
       
       - name: Run Linux tests
         run: |
-          PARETOSEC_CHECK=$(sudo incus exec pareto -- /opt/paretosecurity check || true)
-          echo "::notice title=Pareto Security Checks for ${{ matrix.distribution }}::${PARETOSEC_CHECK}"
-          echo "## 🔒 Pareto Security Checks for ${{ matrix.distribution }}" >> $GITHUB_STEP_SUMMARY
-          echo "```" >> $GITHUB_STEP_SUMMARY
-          echo "${PARETOSEC_CHECK}" >> $GITHUB_STEP_SUMMARY
-          echo "```" >> $GITHUB_STEP_SUMMARY
+          sudo incus exec pareto -- /opt/paretosecurity check || true
 
       - name: Run Linux status
         run: |
