@@ -208,6 +208,17 @@ jobs:
           name: build
       - name: Install Incus
         run: |
+          sudo wget -O /etc/apt/keyrings/zabbly.asc https://pkgs.zabbly.com/key.asc
+          sudo sh -c 'cat <<EOF > /etc/apt/sources.list.d/zabbly-incus-stable.sources
+          Enabled: yes
+          Types: deb
+          URIs: https://pkgs.zabbly.com/incus/stable
+          Suites: $(. /etc/os-release && echo ${VERSION_CODENAME})
+          Components: main
+          Architectures: $(dpkg --print-architecture)
+          Signed-By: /etc/apt/keyrings/zabbly.asc
+
+          EOF'
           sudo apt-get update
           sudo apt-get install -y incus
       - name: Allow egress network traffic flows for Incus
@@ -217,9 +228,9 @@ jobs:
           sudo iptables -I DOCKER-USER -o incusbr0 -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
       - name: Prepare image
         run: |
-          sudo incus admin init --auto
+          sudo incus admin init --minimal
           chmod +x agent_linux_amd64_v1/paretosecurity
-          sudo incus launch images:${{ matrix.distribution }} pareto --profile bridged
+          sudo incus launch images:${{ matrix.distribution }} pareto
           sudo incus file push agent_linux_amd64_v1/paretosecurity pareto/opt/paretosecurity
           sudo incus file push apt/install.sh pareto/opt/install.sh
       - name: Wait for network
