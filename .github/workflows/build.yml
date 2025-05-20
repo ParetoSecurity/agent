@@ -258,10 +258,16 @@ jobs:
         run: |
           sudo incus exec pareto -- /opt/paretosecurity check || true
 
+      - name: Run Linux info
+        run: |
+          PARETOSEC_INFO=$(sudo incus exec pareto -- /opt/paretosecurity info 2>&1)
+          echo "### 📊 Pareto Security Info for ${{ matrix.distribution }}" >> $GITHUB_STEP_SUMMARY
+          echo "```\n${PARETOSEC_INFO}\n```" >> $GITHUB_STEP_SUMMARY
+
       - name: Run Linux status
         run: |
           PARETOSEC_STATUS=$(sudo incus exec pareto -- /opt/paretosecurity status 2>&1)
-          echo "## 📊 Pareto Security Status for ${{ matrix.distribution }}" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Pareto Security Status for ${{ matrix.distribution }}" >> $GITHUB_STEP_SUMMARY
           echo "${PARETOSEC_STATUS}" >> $GITHUB_STEP_SUMMARY
 
     
