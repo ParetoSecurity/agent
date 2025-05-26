@@ -28,14 +28,25 @@ func (f *PasswordToUnlock) checkGnome() bool {
 	return result
 }
 
-func (f *PasswordToUnlock) checkKDE() bool {
+func (f *PasswordToUnlock) checkKDE5() bool {
 	out, err := shared.RunCommand("kreadconfig5", "--file", "kscreenlockerrc", "--group", "Daemon", "--key", "Autolock")
 	if err != nil {
-		log.WithError(err).Debug("Failed to check KDE screenlocker settings")
+		log.WithError(err).Debug("Failed to check KDE5 screenlocker settings")
 		return false
 	}
 	result := strings.TrimSpace(string(out)) == "true"
 	log.WithField("setting", out).WithField("passed", result).Debug("KDE screenlocker check")
+	return result
+}
+
+func (f *PasswordToUnlock) checkKDE6() bool {
+	out, err := shared.RunCommand("kreadconfig6", "--file", "kscreenlockerrc", "--group", "Daemon", "--key", "LockOnResume")
+	if err != nil {
+		log.WithError(err).Debug("Failed to check KDE6 screenlocker settings")
+		return false
+	}
+	result := strings.TrimSpace(string(out)) == "true"
+	log.WithField("setting", out).WithField("passed", result).Debug("KDE6 screenlocker check")
 	return result
 }
 
@@ -49,15 +60,22 @@ func (f *PasswordToUnlock) Run() error {
 		anyCheckPerformed = true
 		allChecksPassed = allChecksPassed && f.checkGnome()
 	} else {
-		log.Debug("GNOME environment not detected for screensaver lock check")
+		log.Info("GNOME environment not detected for screensaver lock check")
 	}
 
 	// Check if running KDE
 	if _, err := lookPath("kreadconfig5"); err == nil {
 		anyCheckPerformed = true
-		allChecksPassed = allChecksPassed && f.checkKDE()
+		allChecksPassed = allChecksPassed && f.checkKDE5()
 	} else {
-		log.Debug("KDE environment not detected for screensaver lock check")
+		log.Info("KDE environment(5) not detected for screensaver lock check")
+	}
+	// Check if running KDE
+	if _, err := lookPath("kreadconfig6"); err == nil {
+		anyCheckPerformed = true
+		allChecksPassed = allChecksPassed && f.checkKDE6()
+	} else {
+		log.Info("KDE environment(6) not detected for screensaver lock check")
 	}
 
 	// Performed at least one check and all performed checks passed
