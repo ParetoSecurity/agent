@@ -1,4 +1,11 @@
 name: Distro Tests
+description: |
+  This workflow tests the ParetoSecurity installation on various Linux distros.
+  It verifies that the installation works correctly and that the security checks
+  can be run.
+
+  The test case itself is a basic happy-path. Edge cases and specific features
+  are tested with NixOS integration tests in test/integration.
 
 on:
   workflow_dispatch:
@@ -7,50 +14,51 @@ on:
     branches:
       - main
 
-
 jobs:
   distro-tests:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - distro: ubuntu-22.04
             image: jrei/systemd-ubuntu:22.04
             setup: |
               apt-get update
-              apt-get install -y curl sudo
+            installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
           - distro: ubuntu-24.04
             image: jrei/systemd-ubuntu:24.04
             setup: |
               apt-get update
-              apt-get install -y curl sudo
+            installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
           - distro: debian-11
             image: jrei/systemd-debian:11
             setup: |
               apt-get update
-              apt-get install -y curl sudo
+            installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
           - distro: debian-12
             image: jrei/systemd-debian:12
             setup: |
               apt-get update
-              apt-get install -y curl sudo
+            installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
           - distro: fedora
             image: jrei/systemd-fedora
             setup: |
               dnf -y update
-              dnf -y install curl which sudo
+              dnf -y install which
+            installer: "dnf -y install"
             verify_package: "rpm -q paretosecurity"
           - distro: arch
             image: carlodepieri/docker-archlinux-systemd
             setup: |
               pacman-key --init
               pacman-key --populate archlinux
-              pacman -Syu --noconfirm
-              pacman -S --noconfirm curl which sudo
+              pacman -Syu --noconfirm which
+            installer: "pacman -S --noconfirm"
             verify_package: "pacman -Q paretosecurity"
 
     name: Test on ${{ matrix.distro }}
@@ -77,6 +85,9 @@ jobs:
         run: |
           # Distro-specific setup of the runner
           echo "${{ matrix.setup }}" | docker exec -i runner bash
+
+          # Install testing dependencies
+          docker exec runner ${{ matrix.installer }} curl keepassxc
 
           # Create test user
           docker exec runner useradd -m -s /bin/bash alice
@@ -109,9 +120,7 @@ jobs:
           docker exec -u alice runner paretosecurity config disable 37dee029-605b-4aab-96b9-5438e5aa44d8  # screenlock
           docker exec -u alice runner paretosecurity config disable c96524f2-850b-4bb9-abc7-517051b6c14e  # secureboot
           docker exec -u alice runner paretosecurity config disable 21830a4e-84f1-48fe-9c5b-beab436b2cdb  # luks
-          docker exec -u alice runner paretosecurity config disable f962c423-fdf5-428a-a57a-827abc9b253e  # password manager
           docker exec -u alice runner paretosecurity config disable 4ced961d-7cfc-4e7b-8f80-195f6379446e  # remote login
-          docker exec -u alice runner paretosecurity config disable 25443ceb-c1ec-408c-b4f3-2328ea0c84e1  # docker
           docker exec -u alice runner paretosecurity config disable da4edd80-6af0-4fb3-9fc7-f9a0e9d07f3b  # sshd config
           docker exec -u alice runner paretosecurity config disable 2e46c89a-5461-4865-a92e-3b799c12034a  # firewall
           docker exec -u alice runner paretosecurity config disable 7436553a-ae52-479b-937b-2ae14d15a520  # application updates
