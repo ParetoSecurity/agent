@@ -252,6 +252,7 @@ jobs:
           sudo incus exec pareto -- sudo systemctl daemon-reload
           sudo incus exec pareto -- sudo systemctl enable paretosecurity.service
           sudo incus exec pareto -- sudo systemctl enable paretosecurity.socket
+          sudo incus restart pareto
           sleep 10
           sudo incus exec pareto -- sudo systemctl status paretosecurity.service || true
           sudo incus exec pareto -- sudo systemctl status paretosecurity.socket || true
