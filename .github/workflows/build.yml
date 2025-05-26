@@ -279,9 +279,9 @@ jobs:
             mkdir -p test/fixtures
             touch test/fixtures/${fixture}.state
             
-            # Remove lines starting with "  Details:" from both files before comparison
-            grep -v "^  Details:" test/fixtures/${fixture}.state > test/fixtures/${fixture}.state.filtered || true
-            grep -v "^  Details:" current.state > current.state.filtered || true
+            # Remove lines starting with "Details:" from both files before comparison
+            grep -v "Details =" test/fixtures/${fixture}.state > test/fixtures/${fixture}.state.filtered || true
+            grep -v "Details =" current.state > current.state.filtered || true
             
             diff -u test/fixtures/${fixture}.state.filtered current.state.filtered > state.diff || true
           
