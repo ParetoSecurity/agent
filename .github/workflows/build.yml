@@ -276,8 +276,9 @@ jobs:
         run: |
           sudo incus exec pareto -- cat /root/.paretosecurity.state > current.state
           fixture=$(echo "${{ matrix.distribution }}" | tr '/' '-')
-          touch fixtures/${fixture}.state
-          diff -u fixtures/${fixture}.state current.state > state.diff || true
+          mkdir -p test/fixtures
+          touch test/fixtures/${fixture}.state
+          diff -u test/fixtures/${fixture}.state current.state > state.diff || true
           
           if [ -s state.diff ]; then
             echo "::error title=State Mismatch::Current state does not match fixture state"
