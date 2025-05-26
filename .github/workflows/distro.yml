@@ -120,7 +120,6 @@ jobs:
           docker exec -u alice runner paretosecurity config disable 37dee029-605b-4aab-96b9-5438e5aa44d8  # screenlock
           docker exec -u alice runner paretosecurity config disable c96524f2-850b-4bb9-abc7-517051b6c14e  # secureboot
           docker exec -u alice runner paretosecurity config disable 21830a4e-84f1-48fe-9c5b-beab436b2cdb  # luks
-          docker exec -u alice runner paretosecurity config disable 4ced961d-7cfc-4e7b-8f80-195f6379446e  # remote login
           docker exec -u alice runner paretosecurity config disable da4edd80-6af0-4fb3-9fc7-f9a0e9d07f3b  # sshd config
           docker exec -u alice runner paretosecurity config disable 2e46c89a-5461-4865-a92e-3b799c12034a  # firewall
           docker exec -u alice runner paretosecurity config disable 7436553a-ae52-479b-937b-2ae14d15a520  # application updates
