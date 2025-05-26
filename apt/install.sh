@@ -98,8 +98,14 @@ main() {
     fi
 
     echo "Pareto Security has been installed successfully."
-    echo "From now on, your package manager will automatically handle updates."
-    echo "To initiate the application, kindly execute the ‘paretosecurity check’ command. Alternatively, you may proceed with joining the team from the dashboard."
+    echo "From now on, your package manager will automatically handle the updates."
+    echo "If you encounter any issues, please refer to the documentation at https://paretosecurity.com/docs"
+
+    if [ ! -S /run/paretosecurity.sock ]; then
+        echo "To use the Pareto Security CLI, please restart the device."
+    else
+        echo "You can also use the Pareto Security CLI by running 'paretosecurity check'."
+    fi
 
 }
 

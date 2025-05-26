@@ -248,9 +248,14 @@ jobs:
           INSTALL=$(sudo incus exec pareto -- bash /opt/install.sh 2>&1)
           echo "### 🔧 Pareto Security Install" >> $GITHUB_STEP_SUMMARY
           echo "${INSTALL}" >> $GITHUB_STEP_SUMMARY
+          echo "${INSTALL}"
           sudo incus exec pareto -- sudo systemctl daemon-reload
           sudo incus exec pareto -- sudo systemctl enable paretosecurity.service
           sudo incus exec pareto -- sudo systemctl enable paretosecurity.socket
+          sudo incus restart pareto
+          sleep 10
+          sudo incus exec pareto -- sudo systemctl status paretosecurity.service || true
+          sudo incus exec pareto -- sudo systemctl status paretosecurity.socket || true
         
       - name: Verify CLI is installed
         run: |
@@ -258,19 +263,28 @@ jobs:
       
       - name: Run Linux tests
         run: |
-          sudo incus exec pareto -- /opt/paretosecurity check || true
+          CHECK_OUTPUT=$(sudo incus exec pareto -- /opt/paretosecurity check 2>&1 || true)
+          if echo "${CHECK_OUTPUT}" | grep -q "failed to connect to root helper"; then
+            echo "Error: Failed to connect to root helper"
+            exit 1
+          fi
+          echo "${CHECK_OUTPUT}"
+          echo "### 🔍 Pareto Security Check" >> $GITHUB_STEP_SUMMARY
+          echo "${CHECK_OUTPUT}" >> $GITHUB_STEP_SUMMARY
 
       - name: Run Linux info
         run: |
-          PARETOSEC_INFO=$(sudo incus exec pareto -- /opt/paretosecurity info 2>&1)
+          PARETOSEC_INFO=$(sudo incus exec pareto -- /opt/paretosecurity info 2>&1 || true)
           echo "### ℹ️ Pareto Security Info" >> $GITHUB_STEP_SUMMARY
           echo "${PARETOSEC_INFO}" >> $GITHUB_STEP_SUMMARY
+          echo "${PARETOSEC_INFO}"
 
       - name: Run Linux status
         run: |
-          PARETOSEC_STATUS=$(sudo incus exec pareto -- /opt/paretosecurity status 2>&1)
+          PARETOSEC_STATUS=$(sudo incus exec pareto -- /opt/paretosecurity status 2>&1 || true)
           echo "### 🟢 Pareto Security Status" >> $GITHUB_STEP_SUMMARY
           echo "${PARETOSEC_STATUS}" >> $GITHUB_STEP_SUMMARY
+          echo "${PARETOSEC_STATUS}"
 
     
   build:
