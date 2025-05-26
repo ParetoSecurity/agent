@@ -271,7 +271,31 @@ jobs:
           echo "${CHECK_OUTPUT}"
           echo "### 🔍 Pareto Security Check" >> $GITHUB_STEP_SUMMARY
           echo "${CHECK_OUTPUT}" >> $GITHUB_STEP_SUMMARY
-
+          
+      - name: Confirm results match fixtures
+        run: |
+          sudo incus exec pareto -- cat /root/.paretosecurity.state > current.state
+          touch fixtures/${{ matrix.distribution }}.state
+          diff -u fixtures/${{ matrix.distribution }}.state current.state > state.diff || true
+          
+          if [ -s state.diff ]; then
+            echo "::error title=State Mismatch::Current state does not match fixture state"
+            echo "::group::State Differences"
+            cat state.diff
+            echo "::endgroup::"
+            
+            # Add diff to step summary
+            echo "### ❌ State Comparison Failed" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`diff" >> $GITHUB_STEP_SUMMARY
+            cat state.diff >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            
+            exit 1
+          else
+            echo "::notice title=State Match::Current state matches fixture state"
+            echo "### ✅ State Comparison Passed" >> $GITHUB_STEP_SUMMARY
+            echo "Current state matches fixture state." >> $GITHUB_STEP_SUMMARY
+          fi
       - name: Run Linux info
         run: |
           PARETOSEC_INFO=$(sudo incus exec pareto -- /opt/paretosecurity info 2>&1 || true)
