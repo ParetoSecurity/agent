@@ -1,0 +1,66 @@
+
+[21830a4e-84f1-48fe-9c5b-beab436b2cdb]
+  Details = "Block device encryption is disabled"
+  Name = "Filesystem encryption is enabled"
+  State = false
+  UUID = "21830a4e-84f1-48fe-9c5b-beab436b2cdb"
+
+[2e46c89a-5461-4865-a92e-3b799c12034a]
+  Details = "Firewall is off"
+  Name = "Firewall is configured"
+  State = false
+  UUID = "2e46c89a-5461-4865-a92e-3b799c12034a"
+
+[37dee029-605b-4aab-96b9-5438e5aa44d8]
+  Details = "Password after sleep or screensaver is off"
+  Name = "Password is required to unlock the screen"
+  State = false
+  UUID = "37dee029-605b-4aab-96b9-5438e5aa44d8"
+
+[44e4754a-0b42-4964-9cc2-b88b2023cb1e]
+  Details = "Pareto Security is outdated Current version: 0.2.24-SNAPSHOT-7b19c4b, Latest version: 0.2.24"
+  Name = "Pareto Security is up to date"
+  State = false
+  UUID = "44e4754a-0b42-4964-9cc2-b88b2023cb1e"
+
+[4ced961d-7cfc-4e7b-8f80-195f6379446e]
+  Details = "No remote access services found running"
+  Name = "Remote login is disabled"
+  State = true
+  UUID = "4ced961d-7cfc-4e7b-8f80-195f6379446e"
+
+[7436553a-ae52-479b-937b-2ae14d15a520]
+  Details = "All packages are up to date"
+  Name = "Apps are up to date"
+  State = true
+  UUID = "7436553a-ae52-479b-937b-2ae14d15a520"
+
+[b96524e0-150b-4bb8-abc7-517051b6c14e]
+  Details = "Sharing printers is off"
+  Name = "Sharing printers is off"
+  State = true
+  UUID = "b96524e0-150b-4bb8-abc7-517051b6c14e"
+
+[b96524e0-850b-4bb8-abc7-517051b6c14e]
+  Details = "No file sharing services found running"
+  Name = "File Sharing is disabled"
+  State = true
+  UUID = "b96524e0-850b-4bb8-abc7-517051b6c14e"
+
+[c96524f2-850b-4bb9-abc7-517051b6c14e]
+  Details = "System is not running in UEFI mode"
+  Name = "SecureBoot is enabled"
+  State = false
+  UUID = "c96524f2-850b-4bb9-abc7-517051b6c14e"
+
+[f962c423-fdf5-428a-a57a-816abc9b253e]
+  Details = "Automatic login is off"
+  Name = "Automatic login is disabled"
+  State = true
+  UUID = "f962c423-fdf5-428a-a57a-816abc9b253e"
+
+[f962c423-fdf5-428a-a57a-827abc9b253e]
+  Details = "No password manager found"
+  Name = "Password Manager Presence"
+  State = false
+  UUID = "f962c423-fdf5-428a-a57a-827abc9b253e"
