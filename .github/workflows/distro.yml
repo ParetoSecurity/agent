@@ -25,6 +25,7 @@ jobs:
             image: jrei/systemd-ubuntu:22.04
             setup: |
               apt-get update
+              apt-get upgrade -y
               apt-get install -y nftables
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
@@ -32,24 +33,28 @@ jobs:
             image: jrei/systemd-ubuntu:24.04
             setup: |
               apt-get update
+              apt-get upgrade -y
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
           - distro: debian-11
             image: jrei/systemd-debian:11
             setup: |
               apt-get update
+              apt-get upgrade -y
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
           - distro: debian-12
             image: jrei/systemd-debian:12
             setup: |
               apt-get update
+              apt-get upgrade -y
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
           - distro: fedora
             image: jrei/systemd-fedora
             setup: |
               dnf -y update
+              dnf -y upgrade
               dnf -y install which
             installer: "dnf -y install"
             verify_package: "rpm -q paretosecurity"
@@ -109,22 +114,21 @@ jobs:
           docker exec runner which paretosecurity
           docker exec -u alice runner paretosecurity --help
 
-      - name: TODO - These should be run automatically by the install script
+      - name: TODO remove after https://github.com/ParetoSecurity/agent/pull/258
         run: docker exec runner systemctl enable --now paretosecurity.socket
 
       - name: Verify root helper is installed and ready
         run: |
-          # This command returns non-zero if the root helper is not active
+          # This command returns non-zero if root helper is not active
           docker exec runner systemctl status paretosecurity.socket --no-pager
 
       - name: Run security checks
         run: |
-          # Disable checks that are expected to fail in container
+          # Disable checks that are expected to fail in our test runner
           docker exec -u alice runner paretosecurity config disable 37dee029-605b-4aab-96b9-5438e5aa44d8  # screenlock
           docker exec -u alice runner paretosecurity config disable c96524f2-850b-4bb9-abc7-517051b6c14e  # secureboot
           docker exec -u alice runner paretosecurity config disable 21830a4e-84f1-48fe-9c5b-beab436b2cdb  # luks
           docker exec -u alice runner paretosecurity config disable da4edd80-6af0-4fb3-9fc7-f9a0e9d07f3b  # sshd config
-          docker exec -u alice runner paretosecurity config disable 7436553a-ae52-479b-937b-2ae14d15a520  # application updates
 
           # Run checks
           docker exec -u alice runner paretosecurity check
