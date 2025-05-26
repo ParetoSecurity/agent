@@ -61,7 +61,7 @@ main() {
             show $sudo dnf config-manager --add-repo "https://pkg.paretosecurity.com/rpm/paretosecurity.repo"
         fi
 
-        if dnf list installed paretosecurity >/dev/null 2>&1; then
+        if which paretosecurity >/dev/null 2>&1; then
             show $sudo dnf upgrade -y paretosecurity
         else
             show $sudo dnf install -y paretosecurity
