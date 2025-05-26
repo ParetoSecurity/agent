@@ -271,12 +271,13 @@ jobs:
           echo "${CHECK_OUTPUT}"
           echo "### 🔍 Pareto Security Check" >> $GITHUB_STEP_SUMMARY
           echo "${CHECK_OUTPUT}" >> $GITHUB_STEP_SUMMARY
-          
+
       - name: Confirm results match fixtures
         run: |
           sudo incus exec pareto -- cat /root/.paretosecurity.state > current.state
-          touch fixtures/${{ matrix.distribution }}.state
-          diff -u fixtures/${{ matrix.distribution }}.state current.state > state.diff || true
+          fixture=$(echo "${{ matrix.distribution }}" | tr '/' '-')
+          touch fixtures/${fixture}.state
+          diff -u fixtures/${fixture}.state current.state > state.diff || true
           
           if [ -s state.diff ]; then
             echo "::error title=State Mismatch::Current state does not match fixture state"
