@@ -14,8 +14,26 @@ jobs:
     strategy:
       matrix:
         include:
-          - distro: ubuntu
-            image: jrei/systemd-ubuntu
+          - distro: ubuntu-22.04
+            image: jrei/systemd-ubuntu:22.04
+            setup: |
+              apt-get update
+              apt-get install -y curl sudo
+            verify_package: "dpkg -l paretosecurity"
+          - distro: ubuntu-24.04
+            image: jrei/systemd-ubuntu:24.04
+            setup: |
+              apt-get update
+              apt-get install -y curl sudo
+            verify_package: "dpkg -l paretosecurity"
+          - distro: debian-11
+            image: jrei/systemd-debian:11
+            setup: |
+              apt-get update
+              apt-get install -y curl sudo
+            verify_package: "dpkg -l paretosecurity"
+          - distro: debian-12
+            image: jrei/systemd-debian:12
             setup: |
               apt-get update
               apt-get install -y curl sudo
