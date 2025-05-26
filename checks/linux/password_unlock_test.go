@@ -48,7 +48,52 @@ func TestCheckKDE(t *testing.T) {
 			}
 
 			f := &PasswordToUnlock{}
-			result := f.checkKDE()
+			result := f.checkKDE5()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestCheckKDE6(t *testing.T) {
+	tests := []struct {
+		name       string
+		commandOut string
+		commandErr error
+		expected   bool
+	}{
+		{
+			name:       "Autolock enabled",
+			commandOut: "true\n",
+			commandErr: nil,
+			expected:   true,
+		},
+		{
+			name:       "Autolock disabled",
+			commandOut: "false\n",
+			commandErr: nil,
+			expected:   false,
+		},
+		{
+			name:       "Command error",
+			commandOut: "",
+			commandErr: assert.AnError,
+			expected:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			shared.RunCommandMocks = []shared.RunCommandMock{
+				{
+					Command: "kreadconfig6",
+					Args:    []string{"--file", "kscreenlockerrc", "--group", "Daemon", "--key", "LockOnResume"},
+					Out:     tt.commandOut,
+					Err:     tt.commandErr,
+				},
+			}
+
+			f := &PasswordToUnlock{}
+			result := f.checkKDE6()
 			assert.Equal(t, tt.expected, result)
 		})
 	}
