@@ -93,7 +93,7 @@ func TestCheckKDE6(t *testing.T) {
 			}
 
 			f := &PasswordToUnlock{}
-			result := f.checkKDE5()
+			result := f.checkKDE6()
 			assert.Equal(t, tt.expected, result)
 		})
 	}
