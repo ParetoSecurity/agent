@@ -39,6 +39,13 @@ jobs:
               apt-get upgrade -y
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
+          - distro: ubuntu-25.04
+            image: jrei/systemd-ubuntu:25.04
+            setup: |
+              apt-get update
+              apt-get upgrade -y
+            installer: "apt-get install -y"
+            verify_package: "dpkg -l paretosecurity"
           - distro: debian-11
             image: jrei/systemd-debian:11
             setup: |
