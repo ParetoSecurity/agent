@@ -1,6 +1,7 @@
 package team
 
 import (
+	"os"
 	"sync/atomic"
 	"testing"
 
@@ -48,6 +49,12 @@ func TestNowReportEmpty(t *testing.T) {
 }
 
 func TestNowReportCounts(t *testing.T) {
+
+	shared.StatePath = t.TempDir() + "/test_TestNowReportCounts.toml"
+	defer func() {
+		os.Remove(shared.StatePath)
+	}()
+
 	// Prepare one claim with three checks:
 	// c1 -> runnable and passed, c2 -> runnable but failed, c3 -> disabled.
 	c1 := dummyCheck{
@@ -59,6 +66,12 @@ func TestNowReportCounts(t *testing.T) {
 		uuid:      "check1",
 		runCalled: 0,
 	}
+	shared.UpdateLastState(shared.LastState{
+		UUID:    c1.UUID(),
+		Name:    c1.Name(),
+		State:   c1.Passed(),
+		Details: c1.Status(),
+	})
 	c2 := dummyCheck{
 		name:      "c2",
 		runnable:  true,
@@ -68,6 +81,12 @@ func TestNowReportCounts(t *testing.T) {
 		uuid:      "check2",
 		runCalled: 0,
 	}
+	shared.UpdateLastState(shared.LastState{
+		UUID:    c2.UUID(),
+		Name:    c2.Name(),
+		State:   c2.Passed(),
+		Details: c2.Status(),
+	})
 	c3 := dummyCheck{
 		name:      "c3",
 		runnable:  false,
@@ -77,6 +96,12 @@ func TestNowReportCounts(t *testing.T) {
 		uuid:      "check3",
 		runCalled: 0,
 	}
+	shared.UpdateLastState(shared.LastState{
+		UUID:    c3.UUID(),
+		Name:    c3.Name(),
+		State:   c3.Passed(),
+		Details: c3.Status(),
+	})
 
 	dummyClaims := []claims.Claim{
 		{Title: "Test Case", Checks: []check.Check{
