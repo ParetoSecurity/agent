@@ -251,8 +251,8 @@ jobs:
           echo "${INSTALL}"
           sudo incus exec pareto -- sudo systemctl daemon-reload
           sudo incus exec pareto -- sudo systemctl enable paretosecurity.service
-          sudo incus exec pareto -- sudo systemctl enable paretosecurity.socket
-          sudo incus restart pareto
+          sudo incus exec pareto -- sudo systemctl enable --now paretosecurity.socket
+          # sudo incus restart pareto
           sleep 10  # Needed because there is no bulletproof method to wait for the network to be up.
           sudo incus exec pareto -- sudo systemctl status paretosecurity.service || true
           sudo incus exec pareto -- sudo systemctl status paretosecurity.socket || true
