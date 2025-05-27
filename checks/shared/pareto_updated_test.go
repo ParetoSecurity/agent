@@ -2,6 +2,7 @@ package shared
 
 import (
 	"testing"
+	"time"
 
 	"github.com/ParetoSecurity/agent/shared"
 	"github.com/h2non/gock"
@@ -90,5 +91,101 @@ func TestParetoUpdated_PassedMessage(t *testing.T) {
 	expectedPassedMessage := "Pareto Security is up to date"
 	if dockerAccess.PassedMessage() != expectedPassedMessage {
 		t.Errorf("Expected PassedMessage %s, got %s", expectedPassedMessage, dockerAccess.PassedMessage())
+	}
+}
+
+func TestParetoUpdated_checkVersion(t *testing.T) {
+	tests := []struct {
+		name            string
+		releases        []ParetoRelease
+		currentVersion  string
+		expectedVersion string
+		expectedPassed  bool
+	}{
+		{
+			name: "no stable releases found",
+			releases: []ParetoRelease{
+				{Version: "1.0.0", PublishedAt: time.Now().AddDate(0, 0, -5), Draft: true},
+				{Version: "1.1.0", PublishedAt: time.Now().AddDate(0, 0, -3), Prerelease: true},
+			},
+			expectedVersion: "Cound not compare versions",
+			expectedPassed:  false,
+		},
+		{
+			name: "latest release within 10 days grace period",
+			releases: []ParetoRelease{
+				{Version: "1.2.0", PublishedAt: time.Now().AddDate(0, 0, -5), Draft: false, Prerelease: false},
+				{Version: "1.1.0", PublishedAt: time.Now().AddDate(0, 0, -15), Draft: false, Prerelease: false},
+			},
+			currentVersion:  "1.1.0",
+			expectedVersion: "1.2.0",
+			expectedPassed:  true,
+		},
+		{
+			name: "current version matches latest older than 10 days",
+			releases: []ParetoRelease{
+				{Version: "1.2.0", PublishedAt: time.Now().AddDate(0, 0, -15), Draft: false, Prerelease: false},
+				{Version: "1.1.0", PublishedAt: time.Now().AddDate(0, 0, -20), Draft: false, Prerelease: false},
+			},
+			currentVersion:  "1.2.0",
+			expectedVersion: "1.2.0",
+			expectedPassed:  true,
+		},
+		{
+			name: "current version with prerelease suffix matches latest",
+			releases: []ParetoRelease{
+				{Version: "1.2.0", PublishedAt: time.Now().AddDate(0, 0, -15), Draft: false, Prerelease: false},
+			},
+			currentVersion:  "1.2.0-beta.1",
+			expectedVersion: "1.2.0",
+			expectedPassed:  true,
+		},
+		{
+			name: "current version outdated and latest older than 10 days",
+			releases: []ParetoRelease{
+				{Version: "1.3.0", PublishedAt: time.Now().AddDate(0, 0, -15), Draft: false, Prerelease: false},
+				{Version: "1.2.0", PublishedAt: time.Now().AddDate(0, 0, -20), Draft: false, Prerelease: false},
+			},
+			currentVersion:  "1.2.0",
+			expectedVersion: "1.3.0",
+			expectedPassed:  false,
+		},
+		{
+			name: "releases sorted correctly by date",
+			releases: []ParetoRelease{
+				{Version: "1.1.0", PublishedAt: time.Now().AddDate(0, 0, -20), Draft: false, Prerelease: false},
+				{Version: "1.3.0", PublishedAt: time.Now().AddDate(0, 0, -5), Draft: false, Prerelease: false},
+				{Version: "1.2.0", PublishedAt: time.Now().AddDate(0, 0, -10), Draft: false, Prerelease: false},
+			},
+			currentVersion:  "1.2.0",
+			expectedVersion: "1.3.0",
+			expectedPassed:  true,
+		},
+		{
+			name: "mixed draft and stable releases",
+			releases: []ParetoRelease{
+				{Version: "1.4.0", PublishedAt: time.Now().AddDate(0, 0, -2), Draft: true, Prerelease: false},
+				{Version: "1.3.0", PublishedAt: time.Now().AddDate(0, 0, -5), Draft: false, Prerelease: false},
+				{Version: "1.2.0", PublishedAt: time.Now().AddDate(0, 0, -15), Draft: false, Prerelease: false},
+			},
+			currentVersion:  "1.2.0",
+			expectedVersion: "1.3.0",
+			expectedPassed:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			shared.Version = tt.currentVersion
+			check := &ParetoUpdated{}
+			version, passed := check.checkVersion(tt.releases)
+
+			if version != tt.expectedVersion {
+				t.Errorf("Expected version %s, got %s", tt.expectedVersion, version)
+			}
+			if passed != tt.expectedPassed {
+				t.Errorf("Expected passed %v, got %v", tt.expectedPassed, passed)
+			}
+		})
 	}
 }

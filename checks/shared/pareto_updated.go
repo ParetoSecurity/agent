@@ -4,14 +4,21 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"slices"
+	"strings"
+	"time"
 
 	"github.com/ParetoSecurity/agent/shared"
 	"github.com/caarlos0/log"
 	"github.com/carlmjohnson/requests"
+	"github.com/samber/lo"
 )
 
-type ParetoReleases []struct {
-	TagName string `json:"tag_name,omitempty"`
+type ParetoRelease struct {
+	Version     string    `json:"tag_name,omitempty"`
+	PublishedAt time.Time `json:"published_at,omitempty"`
+	Draft       bool      `json:"draft,omitempty"`
+	Prerelease  bool      `json:"prerelease,omitempty"`
 }
 
 type ParetoUpdated struct {
@@ -27,7 +34,7 @@ func (f *ParetoUpdated) Name() string {
 // Run executes the check
 func (f *ParetoUpdated) Run() error {
 	f.passed = false
-	res := ParetoReleases{}
+	res := []ParetoRelease{}
 	device := shared.CurrentReportingDevice()
 	platform := "linux"
 	if runtime.GOOS == "darwin" {
@@ -61,14 +68,9 @@ func (f *ParetoUpdated) Run() error {
 			return err
 		}
 
-		if len(res) == 0 {
-			f.details = "No releases found"
-		}
-
-		if res[0].TagName == shared.Version {
-			f.passed = true
-		}
-		f.details = fmt.Sprintf("Current version: %s, Latest version: %s", shared.Version, res[0].TagName)
+		latestVersion, latest := f.checkVersion(res)
+		f.passed = latest
+		f.details = fmt.Sprintf("Current version: %s, Latest version: %s", shared.Version, latestVersion)
 		return nil
 	}
 
@@ -84,17 +86,49 @@ func (f *ParetoUpdated) Run() error {
 		return err
 	}
 
-	if len(res) == 0 {
-		f.details = "No releases found"
-		return nil
-	}
-
-	if res[0].TagName == shared.Version {
-		f.passed = true
-	}
-	f.details = fmt.Sprintf("Current version: %s, Latest version: %s", shared.Version, res[0].TagName)
+	latestVersion, latest := f.checkVersion(res)
+	f.passed = latest
+	f.details = fmt.Sprintf("Current version: %s, Latest version: %s", shared.Version, latestVersion)
 	return nil
 
+}
+
+func (f *ParetoUpdated) checkVersion(res []ParetoRelease) (string, bool) {
+
+	// Sort releases by published date (newest first)
+	slices.SortFunc(res, func(a, b ParetoRelease) int {
+		if a.PublishedAt.Equal(b.PublishedAt) {
+			return 0
+		} else if a.PublishedAt.Before(b.PublishedAt) {
+			return 1 // a is older than b
+		}
+		return -1 // a is newer than b
+	})
+
+	// Find the latest stable release
+	latestRelease, found := lo.Find(res, func(release ParetoRelease) bool {
+		return !release.Draft && !release.Prerelease
+	})
+
+	if !found {
+		return "Cound not compare versions", false
+	}
+
+	// Only fail if latest release is older than 10 days and current version does not match
+	tenDaysAgo := time.Now().AddDate(0, 0, -10)
+	if latestRelease.PublishedAt.Before(tenDaysAgo) {
+		currentVersion := shared.Version
+		if strings.Contains(currentVersion, "-") {
+			// Strip any pre-release suffix for comparison
+			currentVersion = strings.Split(currentVersion, "-")[0]
+		}
+		if currentVersion != latestRelease.Version {
+			return latestRelease.Version, false
+		}
+	}
+
+	// Within 10 days grace period or version matches
+	return latestRelease.Version, true
 }
 
 // Passed returns the status of the check
