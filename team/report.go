@@ -89,6 +89,7 @@ func ReportToTeam(initial bool) error {
 		Pathf("/api/v1/team/%s/device", shared.Config.TeamID).
 		Method(method).
 		Header("X-Device-Auth", "Bearer "+shared.Config.AuthToken).
+		Header("User-Agent", shared.UserAgent()).
 		BodyJSON(&report).
 		ToString(&res).
 		AddValidator(
