@@ -97,12 +97,7 @@ func (f *ParetoUpdated) checkVersion(res []ParetoRelease) (string, bool) {
 
 	// Sort releases by published date (newest first)
 	slices.SortFunc(res, func(a, b ParetoRelease) int {
-		if a.PublishedAt.Equal(b.PublishedAt) {
-			return 0
-		} else if a.PublishedAt.Before(b.PublishedAt) {
-			return 1 // a is older than b
-		}
-		return -1 // a is newer than b
+		return strings.Compare(b.PublishedAt.Format(time.RFC3339), a.PublishedAt.Format(time.RFC3339))
 	})
 
 	// Find the latest stable release

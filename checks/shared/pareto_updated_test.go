@@ -19,7 +19,12 @@ func TestParetoUpdated_Run(t *testing.T) {
 
 	gock.New("https://paretosecurity.com/api/updates").
 		Reply(200).
-		JSON([]map[string]string{{"tag_name": "1.7.91"}})
+		JSON([]map[string]any{{
+			"tag_name":     "1.7.91",
+			"published_at": time.Now().AddDate(0, 0, -5).Format(time.RFC3339),
+			"draft":        false,
+			"prerelease":   false,
+		}})
 	check := &ParetoUpdated{}
 	err := check.Run()
 
@@ -36,7 +41,12 @@ func TestParetoUpdated_RunPublic(t *testing.T) {
 
 	gock.New("https://api.github.com").
 		Reply(200).
-		JSON([]map[string]string{{"tag_name": "1.7.91"}})
+		JSON([]map[string]any{{
+			"tag_name":     "1.7.91",
+			"published_at": time.Now().AddDate(0, 0, -5).Format(time.RFC3339),
+			"draft":        false,
+			"prerelease":   false,
+		}})
 	check := &ParetoUpdated{}
 	err := check.Run()
 
@@ -108,7 +118,7 @@ func TestParetoUpdated_checkVersion(t *testing.T) {
 				{Version: "1.0.0", PublishedAt: time.Now().AddDate(0, 0, -5), Draft: true},
 				{Version: "1.1.0", PublishedAt: time.Now().AddDate(0, 0, -3), Prerelease: true},
 			},
-+			expectedVersion: "Could not compare versions",
+			expectedVersion: "Could not compare versions",
 			expectedPassed:  false,
 		},
 		{
@@ -124,11 +134,12 @@ func TestParetoUpdated_checkVersion(t *testing.T) {
 		{
 			name: "current version matches latest older than 10 days",
 			releases: []ParetoRelease{
-				{Version: "1.2.0", PublishedAt: time.Now().AddDate(0, 0, -15), Draft: false, Prerelease: false},
 				{Version: "1.1.0", PublishedAt: time.Now().AddDate(0, 0, -20), Draft: false, Prerelease: false},
+				{Version: "1.3.0", PublishedAt: time.Now().AddDate(0, 0, -5), Draft: false, Prerelease: false},
+				{Version: "1.2.0", PublishedAt: time.Now().AddDate(0, 0, -20), Draft: false, Prerelease: false},
 			},
-			currentVersion:  "1.2.0",
-			expectedVersion: "1.2.0",
+			currentVersion:  "1.3.0",
+			expectedVersion: "1.3.0",
 			expectedPassed:  true,
 		},
 		{
