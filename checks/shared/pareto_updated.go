@@ -111,7 +111,7 @@ func (f *ParetoUpdated) checkVersion(res []ParetoRelease) (string, bool) {
 	})
 
 	if !found {
-		return "Cound not compare versions", false
+		return "Could not compare versions", false
 	}
 
 	// Only fail if latest release is older than 10 days and current version does not match
