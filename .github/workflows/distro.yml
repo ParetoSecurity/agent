@@ -117,9 +117,6 @@ jobs:
           docker exec runner which paretosecurity
           docker exec -u alice runner paretosecurity --help
 
-      - name: TODO remove after https://github.com/ParetoSecurity/agent/pull/258
-        run: docker exec runner systemctl enable --now paretosecurity.socket
-
       - name: Verify root helper is installed and ready
         run: |
           # This command returns non-zero if root helper is not active
