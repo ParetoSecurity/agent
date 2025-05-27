@@ -108,7 +108,7 @@ func TestParetoUpdated_checkVersion(t *testing.T) {
 				{Version: "1.0.0", PublishedAt: time.Now().AddDate(0, 0, -5), Draft: true},
 				{Version: "1.1.0", PublishedAt: time.Now().AddDate(0, 0, -3), Prerelease: true},
 			},
-			expectedVersion: "Cound not compare versions",
++			expectedVersion: "Could not compare versions",
 			expectedPassed:  false,
 		},
 		{
