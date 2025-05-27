@@ -28,7 +28,7 @@ jobs:
             image: jrei/systemd-ubuntu:22.04
             setup: |
               apt-get update
-              apt-get upgrade -y
+              # apt-get upgrade -y
               apt-get install -y nftables
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
@@ -36,28 +36,28 @@ jobs:
             image: jrei/systemd-ubuntu:24.04
             setup: |
               apt-get update
-              apt-get upgrade -y
+              # apt-get upgrade -y
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
           - distro: debian-11
             image: jrei/systemd-debian:11
             setup: |
               apt-get update
-              apt-get upgrade -y
+              # apt-get upgrade -y
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
           - distro: debian-12
             image: jrei/systemd-debian:12
             setup: |
               apt-get update
-              apt-get upgrade -y
+              # apt-get upgrade -y
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
           - distro: fedora
             image: jrei/systemd-fedora
             setup: |
               dnf -y update
-              dnf -y upgrade
+              # dnf -y upgrade
               dnf -y install which
             installer: "dnf -y install"
             verify_package: "rpm -q paretosecurity"
@@ -66,7 +66,8 @@ jobs:
             setup: |
               pacman-key --init
               pacman-key --populate archlinux
-              pacman -Syu --noconfirm which
+              #pacman -Syu --noconfirm which
+              pacman -S --noconfirm which
             installer: "pacman -S --noconfirm"
             verify_package: "pacman -Q paretosecurity"
 
