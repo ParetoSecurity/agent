@@ -8,12 +8,13 @@ On NixOS, you can run the tests with the following command:
 
 ```console
 $ nix build .#checks.x86_64-linux.firewall
+$ nix build .#checks.aarch64-linux.firewall
 ```
 
 On macOS with nix-darwin and linux-builder enabled, you can run the tests with the following command:
 
 ```console
-$ nix check .#checks.aarch64-darwin.firewall
+$ nix build .#checks.aarch64-darwin.firewall
 ```
 
 

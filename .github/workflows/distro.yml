@@ -1,0 +1,143 @@
+name: Distro Tests
+description: |
+  This workflow tests the ParetoSecurity installation on various Linux distros.
+  It verifies that the installation works correctly and that the security checks
+  can be run.
+
+  The test case itself is a basic happy-path. Edge cases and specific features
+  are tested with NixOS integration tests in test/integration.
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  distro-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: ubuntu-22.04
+            image: jrei/systemd-ubuntu:22.04
+            setup: |
+              apt-get update
+              apt-get upgrade -y
+              apt-get install -y nftables
+            installer: "apt-get install -y"
+            verify_package: "dpkg -l paretosecurity"
+          - distro: ubuntu-24.04
+            image: jrei/systemd-ubuntu:24.04
+            setup: |
+              apt-get update
+              apt-get upgrade -y
+            installer: "apt-get install -y"
+            verify_package: "dpkg -l paretosecurity"
+          - distro: debian-11
+            image: jrei/systemd-debian:11
+            setup: |
+              apt-get update
+              apt-get upgrade -y
+            installer: "apt-get install -y"
+            verify_package: "dpkg -l paretosecurity"
+          - distro: debian-12
+            image: jrei/systemd-debian:12
+            setup: |
+              apt-get update
+              apt-get upgrade -y
+            installer: "apt-get install -y"
+            verify_package: "dpkg -l paretosecurity"
+          - distro: fedora
+            image: jrei/systemd-fedora
+            setup: |
+              dnf -y update
+              dnf -y upgrade
+              dnf -y install which
+            installer: "dnf -y install"
+            verify_package: "rpm -q paretosecurity"
+          - distro: arch
+            image: carlodepieri/docker-archlinux-systemd
+            setup: |
+              pacman-key --init
+              pacman-key --populate archlinux
+              pacman -Syu --noconfirm which
+            installer: "pacman -S --noconfirm"
+            verify_package: "pacman -Q paretosecurity"
+
+    name: Test on ${{ matrix.distro }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run ${{ matrix.distro }} container with systemd
+        run: |
+          docker run -d --name runner \
+            --privileged \
+            --cgroupns=host \
+            -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+            -v $PWD:/workspace:ro \
+            ${{ matrix.image }}
+
+          # Wait for systemd to initialize
+          sleep 3
+
+          # Verify systemd is running
+          docker exec runner systemctl --version
+
+      - name: Prepare environment
+        run: |
+          # Distro-specific setup of the runner
+          echo "${{ matrix.setup }}" | docker exec -i runner bash
+
+          # Install testing dependencies
+          docker exec runner ${{ matrix.installer }} curl keepassxc firewalld
+          docker exec runner systemctl enable firewalld
+          docker exec runner systemctl start firewalld
+
+          # Create test user
+          docker exec runner useradd -m -s /bin/bash alice
+          docker exec runner bash -c "echo 'alice:foobar' | chpasswd"
+
+          # Create config directory for alice
+          docker exec -u alice runner mkdir -p /home/alice/.config
+
+      - name: Install ParetoSecurity
+        run: |
+          docker exec runner bash /workspace/apt/install.sh
+
+      - name: Verify installation
+        run: |
+          docker exec runner ${{ matrix.verify_package }}
+          docker exec runner which paretosecurity
+          docker exec -u alice runner paretosecurity --help
+
+      - name: TODO remove after https://github.com/ParetoSecurity/agent/pull/258
+        run: docker exec runner systemctl enable --now paretosecurity.socket
+
+      - name: Verify root helper is installed and ready
+        run: |
+          # This command returns non-zero if root helper is not active
+          docker exec runner systemctl status paretosecurity.socket --no-pager
+
+      - name: Run security checks
+        run: |
+          # Disable checks that are expected to fail in our test runner
+          docker exec -u alice runner paretosecurity config disable 37dee029-605b-4aab-96b9-5438e5aa44d8  # screenlock
+          docker exec -u alice runner paretosecurity config disable c96524f2-850b-4bb9-abc7-517051b6c14e  # secureboot
+          docker exec -u alice runner paretosecurity config disable 21830a4e-84f1-48fe-9c5b-beab436b2cdb  # luks
+          docker exec -u alice runner paretosecurity config disable da4edd80-6af0-4fb3-9fc7-f9a0e9d07f3b  # sshd config
+
+          # Run checks
+          docker exec -u alice runner paretosecurity check
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop runner || true
+          docker rm runner || true

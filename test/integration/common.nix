@@ -1,4 +1,14 @@
 {
+  # Create dummy user account
+  users = {}: {
+    users.users.alice = {
+      isNormalUser = true;
+      description = "Alice Foobar";
+      password = "foobar";
+      uid = 1000;
+    };
+  };
+
   # Override paretosecurity to use the local codebase
   pareto = {
     pkgs,

@@ -58,6 +58,7 @@
             config = {allowUnsupportedSystem = true;};
           };
         in {
+          cli = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/cli.nix;
           firewall = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/firewall.nix;
           help = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/help.nix;
           luks = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/luks.nix;
