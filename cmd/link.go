@@ -47,10 +47,10 @@ var linkCmd = &cobra.Command{
 		err := runLinkCommand(args[0])
 		if err != nil {
 			log.WithError(err).Error("Failed to link team")
-			go notify.Toast("Failed to add device to the team!")
+			notify.Toast("Failed to add device to the team!")
 			return err
 		}
-		go notify.Toast("Device successfully linked to the team!")
+		notify.Toast("Device successfully linked to the team!")
 		return nil
 	},
 }
