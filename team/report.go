@@ -84,7 +84,15 @@ func ReportToTeam(initial bool) error {
 	} else {
 		report = NowReport(claims.All)
 	}
-	log.Debug(spew.Sdump(report))
+
+	// Create a context with a timeout for the request
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	log.WithField("report", spew.Sdump(report)).
+		WithField("method", method).
+		WithField("teamID", shared.Config.TeamID).
+		Debug("Reporting to team")
 	err := requests.URL(reportURL).
 		Pathf("/api/v1/team/%s/device", shared.Config.TeamID).
 		Method(method).
@@ -97,7 +105,7 @@ func ReportToTeam(initial bool) error {
 				requests.DefaultValidator,
 				requests.ToString(&errRes),
 			)).
-		Fetch(context.Background())
+		Fetch(ctx)
 	if err != nil {
 		log.WithField("response", errRes).
 			WithError(err).
