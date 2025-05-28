@@ -1,7 +1,6 @@
 package checks
 
 import (
-	"os/exec"
 	"strings"
 
 	"github.com/ParetoSecurity/agent/shared"
@@ -19,15 +18,53 @@ func (f *ApplicationUpdates) Name() string {
 	return "Apps are up to date"
 }
 
+// parseFlatpak parses the output of flatpak update commands and extracts application
+func (f *ApplicationUpdates) parseFlatpak(updateLines string) (apps map[string]string) {
+	apps = make(map[string]string)
+	for line := range strings.Lines(updateLines) {
+		// Skip empty lines
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+
+		// Skip lines that do not contain a dot, which indicates a version number
+		if !strings.Contains(line, ".") {
+			continue
+		}
+
+		// Split the line into parts, expecting at least two: application ID and version
+		parts := strings.Fields(line)
+		if len(parts) >= 2 {
+			apps[parts[0]] = parts[1]
+		}
+	}
+	return
+}
+
 func (f *ApplicationUpdates) checkUpdates() (bool, string) {
 	updates := []string{}
 
 	// Check flatpak
 	if _, err := lookPath("flatpak"); err == nil {
-		output, err := shared.RunCommand("flatpak", "remote-ls", "--updates")
-		log.WithField("output", string(output)).Debug("Flatpak updates")
-		if err == nil && len(output) > 0 {
-			updates = append(updates, "Flatpak")
+		updatesOutput, err := shared.RunCommand("flatpak", "remote-ls", "--app", "--updates", "--columns=application,version")
+		if err != nil {
+			log.WithError(err).Error("Failed to check flatpak updates")
+			return true, "Flatpak updates check failed"
+		}
+		installedOutput, err := shared.RunCommand("flatpak", "list", "--app", "--columns=application,version")
+		if err != nil {
+			log.WithError(err).Error("Failed to list installed flatpak apps")
+			return true, "Flatpak installed apps check failed"
+		}
+		installedApps := f.parseFlatpak(string(installedOutput))
+		updatableApps := f.parseFlatpak(string(updatesOutput))
+		log.WithField("updates", updatesOutput).WithField("installed", installedOutput).Debug("Flatpak updates")
+
+		for app, version := range installedApps {
+			if installed, ok := updatableApps[app]; ok && version != installed {
+				updates = append(updates, "Flatpak")
+				break
+			}
 		}
 	}
 
@@ -42,8 +79,9 @@ func (f *ApplicationUpdates) checkUpdates() (bool, string) {
 
 	// Check dnf
 	if _, err := lookPath("dnf"); err == nil {
-		if _, err := shared.RunCommand("dnf", "check-update", "--quiet"); err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 100 {
+		if out, _ := shared.RunCommand("dnf", "updateinfo", "list", "--security", "--quiet"); !lo.IsEmpty(out) {
+			outStr := string(out)
+			if strings.Contains(outStr, "security") && strings.Count(outStr, "\n") > 0 {
 				updates = append(updates, "DNF")
 			}
 		}
