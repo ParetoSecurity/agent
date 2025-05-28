@@ -24,10 +24,45 @@ func (f *ApplicationUpdates) checkUpdates() (bool, string) {
 
 	// Check flatpak
 	if _, err := lookPath("flatpak"); err == nil {
-		output, err := shared.RunCommand("flatpak", "remote-ls", "--updates")
-		log.WithField("output", string(output)).Debug("Flatpak updates")
-		if err == nil && len(output) > 0 {
-			updates = append(updates, "Flatpak")
+		updatesOutput, err := shared.RunCommand("flatpak", "remote-ls", "--app", "--updates", "--columns=application,version")
+		log.WithField("output", string(updatesOutput)).Debug("Flatpak updates")
+		if err == nil && len(updatesOutput) > 0 {
+			// Parse available updates
+			updateLines := strings.Split(strings.TrimSpace(string(updatesOutput)), "\n")
+			if len(updateLines) > 1 { // Skip header line
+				availableUpdates := make(map[string]string)
+				for _, line := range updateLines[1:] {
+					if strings.TrimSpace(line) == "" {
+						continue
+					}
+					parts := strings.Fields(line)
+					if len(parts) >= 2 {
+						availableUpdates[parts[0]] = parts[1]
+					}
+				}
+
+				// Get currently installed versions
+				installedOutput, err := shared.RunCommand("flatpak", "list", "--app", "--columns=application,version")
+				if err == nil {
+					installedLines := strings.Split(strings.TrimSpace(string(installedOutput)), "\n")
+					if len(installedLines) > 1 {
+						for _, line := range installedLines[1:] {
+							if strings.TrimSpace(line) == "" {
+								continue
+							}
+							parts := strings.Fields(line)
+							if len(parts) >= 2 {
+								appId := parts[0]
+								currentVersion := parts[1]
+								if updateVersion, hasUpdate := availableUpdates[appId]; hasUpdate && updateVersion != currentVersion {
+									updates = append(updates, "Flatpak")
+									break // Found at least one update
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 

@@ -18,7 +18,7 @@ func TestCheckUpdates(t *testing.T) {
 		{
 			name: "All up to date",
 			setupMocks: []shared.RunCommandMock{
-				{Command: "flatpak", Args: []string{"remote-ls", "--updates"}, Out: "", Err: nil},
+				{Command: "flatpak", Args: []string{"remote-ls", "--app", "--updates", "--columns", "application,version"}, Out: "Application ID                  Version\n", Err: nil},
 				{Command: "apt", Args: []string{"list", "--upgradable"}, Out: "", Err: nil},
 				{Command: "dnf", Args: []string{"check-update", "--quiet"}, Out: "", Err: nil},
 				{Command: "pacman", Args: []string{"-Qu"}, Out: "", Err: nil},
@@ -31,7 +31,8 @@ func TestCheckUpdates(t *testing.T) {
 		{
 			name: "Updates available",
 			setupMocks: []shared.RunCommandMock{
-				{Command: "flatpak", Args: []string{"remote-ls", "--updates"}, Out: "some updates", Err: nil},
+				{Command: "flatpak", Args: []string{"remote-ls", "--app", "--updates", "--columns", "application,version"}, Out: "Application ID                  Version\norg.gnome.World.Secrets         9.6\n", Err: nil},
+				{Command: "flatpak", Args: []string{"list", "--app", "--columns", "application,version"}, Out: "Application ID                  Version\norg.gnome.World.Secrets         9.5\n", Err: nil},
 				{Command: "apt", Args: []string{"list", "--upgradable"}, Out: "upgradable, upgradable", Err: nil},
 				{Command: "dnf", Args: []string{"check-update", "--quiet"}, Out: "some updates", Err: nil},
 				{Command: "pacman", Args: []string{"-Qu"}, Out: "some updates", Err: nil},
@@ -44,7 +45,7 @@ func TestCheckUpdates(t *testing.T) {
 		{
 			name: "Snapd not running",
 			setupMocks: []shared.RunCommandMock{
-				{Command: "flatpak", Args: []string{"remote-ls", "--updates"}, Out: "", Err: nil},
+				{Command: "flatpak", Args: []string{"remote-ls", "--app", "--updates", "--columns", "application,version"}, Out: "Application ID                  Version\n", Err: nil},
 				{Command: "apt", Args: []string{"list", "--upgradable"}, Out: "", Err: nil},
 				{Command: "dnf", Args: []string{"check-update", "--quiet"}, Out: "", Err: nil},
 				{Command: "pacman", Args: []string{"-Qu"}, Out: "", Err: nil},
@@ -56,7 +57,7 @@ func TestCheckUpdates(t *testing.T) {
 		{
 			name: "Snap reports all up to date",
 			setupMocks: []shared.RunCommandMock{
-				{Command: "flatpak", Args: []string{"remote-ls", "--updates"}, Out: "", Err: nil},
+				{Command: "flatpak", Args: []string{"remote-ls", "--app", "--updates", "--columns", "application,version"}, Out: "Application ID                  Version\n", Err: nil},
 				{Command: "apt", Args: []string{"list", "--upgradable"}, Out: "", Err: nil},
 				{Command: "dnf", Args: []string{"check-update", "--quiet"}, Out: "", Err: nil},
 				{Command: "pacman", Args: []string{"-Qu"}, Out: "", Err: nil},
@@ -94,7 +95,7 @@ func TestApplicationUpdates_Run(t *testing.T) {
 		{
 			name: "All up to date",
 			setupMocks: []shared.RunCommandMock{
-				{Command: "flatpak", Args: []string{"remote-ls", "--updates"}, Out: "", Err: nil},
+				{Command: "flatpak", Args: []string{"remote-ls", "--app", "--updates", "--columns", "application,version"}, Out: "Application ID                  Version\n", Err: nil},
 				{Command: "apt", Args: []string{"list", "--upgradable"}, Out: "", Err: nil},
 				{Command: "dnf", Args: []string{"check-update", "--quiet"}, Out: "", Err: nil},
 				{Command: "pacman", Args: []string{"-Qu"}, Out: "", Err: nil},
@@ -107,7 +108,7 @@ func TestApplicationUpdates_Run(t *testing.T) {
 		{
 			name: "Updates available",
 			setupMocks: []shared.RunCommandMock{
-				{Command: "flatpak", Args: []string{"remote-ls", "--updates"}, Out: "some updates", Err: nil},
+				{Command: "flatpak", Args: []string{"remote-ls", "--app", "--updates", "--columns", "application,version"}, Out: "Application ID                  Version\norg.gnome.World.Secrets         9.6\n", Err: nil},
 				{Command: "apt", Args: []string{"list", "--upgradable"}, Out: "upgradable, upgradable", Err: nil},
 				{Command: "dnf", Args: []string{"check-update", "--quiet"}, Out: "some updates", Err: nil},
 				{Command: "pacman", Args: []string{"-Qu"}, Out: "some updates", Err: nil},
@@ -120,7 +121,7 @@ func TestApplicationUpdates_Run(t *testing.T) {
 		{
 			name: "Snapd not running",
 			setupMocks: []shared.RunCommandMock{
-				{Command: "flatpak", Args: []string{"remote-ls", "--updates"}, Out: "", Err: nil},
+				{Command: "flatpak", Args: []string{"remote-ls", "--app", "--updates", "--columns", "application,version"}, Out: "Application ID                  Version\n", Err: nil},
 				{Command: "apt", Args: []string{"list", "--upgradable"}, Out: "", Err: nil},
 				{Command: "dnf", Args: []string{"check-update", "--quiet"}, Out: "", Err: nil},
 				{Command: "pacman", Args: []string{"-Qu"}, Out: "", Err: nil},
@@ -132,7 +133,7 @@ func TestApplicationUpdates_Run(t *testing.T) {
 		{
 			name: "Snap reports all up to date",
 			setupMocks: []shared.RunCommandMock{
-				{Command: "flatpak", Args: []string{"remote-ls", "--updates"}, Out: "", Err: nil},
+				{Command: "flatpak", Args: []string{"remote-ls", "--app", "--updates", "--columns", "application,version"}, Out: "Application ID                  Version\n", Err: nil},
 				{Command: "apt", Args: []string{"list", "--upgradable"}, Out: "", Err: nil},
 				{Command: "dnf", Args: []string{"check-update", "--quiet"}, Out: "", Err: nil},
 				{Command: "pacman", Args: []string{"-Qu"}, Out: "", Err: nil},
