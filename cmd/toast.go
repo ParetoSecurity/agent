@@ -12,7 +12,6 @@ var toastCMD = &cobra.Command{
 	Use:   "toast",
 	Short: "Display random toast messages",
 	Run: func(cc *cobra.Command, args []string) {
-
 		notify.Toast("Welcome to Pareto Security Agent!")
 	},
 }
