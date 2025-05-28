@@ -30,6 +30,8 @@ builds:
   - -mod=readonly
   gcflags:
   - all=-trimpath=${GOPATH} -l -B
+  tags:
+  - toast
   ldflags:
   - -s -w
   - -X github.com/ParetoSecurity/agent/shared.Version={{.Version}}

@@ -7,6 +7,6 @@ import (
 
 // Toast displays a system notification on macOS using AppleScript.
 func Toast(message string) {
-	cmd := exec.Command("osascript", "-e", fmt.Sprintf(`display notification "%s"`, message))
+	cmd := exec.Command("osascript", "-e", fmt.Sprintf(`display notification "%s" with title "Pareto Security"`, message))
 	cmd.Run()
 }

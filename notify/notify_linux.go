@@ -7,7 +7,7 @@ import (
 
 // Toast sends a persistent desktop notification using D-Bus on Linux systems.
 // It displays a notification with the title "Pareto Security" and the provided body text.
-// The notification is configured to be resident (persistent) and will expire after 5 seconds.
+// The notification is configured to be resident (persistent) and will expire after 10 seconds.
 func Toast(body string) {
 	conn, err := dbus.SessionBus()
 	if err != nil {
