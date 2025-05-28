@@ -13,7 +13,7 @@ import (
 // with "OK" action button. The function blocks until either:
 // - User clicks the action button (or notification area)
 // - 5 second timeout is reached
-// This is done so that notification is show even if he has muted notifications in the system settings.
+// This is done so that notification is show even if notifications are muted in the system settings.
 func Blocking(message string) {
 	conn, err := dbus.SessionBus()
 	if err != nil {
