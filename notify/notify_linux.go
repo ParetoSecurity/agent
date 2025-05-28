@@ -18,7 +18,7 @@ func Toast(body string) {
 	obj := conn.Object("org.freedesktop.Notifications", "/org/freedesktop/Notifications")
 
 	call := obj.Call("org.freedesktop.Notifications.Notify", 0,
-		"pareto-agent",       // app_name
+		"paretosecurity",     // app_name
 		uint32(0),            // replaces_id
 		"dialog-information", // app_icon
 		"Pareto Security",    // summary
