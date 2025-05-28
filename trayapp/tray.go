@@ -93,13 +93,13 @@ func addOptions() {
 				if !systemd.IsTimerEnabled() {
 					if err := systemd.EnableTimer(); err != nil {
 						log.WithError(err).Error("failed to enable timer")
-						notify.Blocking("Failed to enable timer, please check the logs for more information.")
+						notify.Toast("Failed to enable timer, please check the logs for more information.")
 					}
 
 				} else {
 					if err := systemd.DisableTimer(); err != nil {
 						log.WithError(err).Error("failed to enable timer")
-						notify.Blocking("Failed to enable timer, please check the logs for more information.")
+						notify.Toast("Failed to enable timer, please check the logs for more information.")
 					}
 				}
 				if systemd.IsTimerEnabled() {
@@ -115,13 +115,13 @@ func addOptions() {
 				if !systemd.IsTrayIconEnabled() {
 					if err := systemd.EnableTrayIcon(); err != nil {
 						log.WithError(err).Error("failed to enable tray icon")
-						notify.Blocking("Failed to enable tray icon, please check the logs for more information.")
+						notify.Toast("Failed to enable tray icon, please check the logs for more information.")
 					}
 
 				} else {
 					if err := systemd.DisableTrayIcon(); err != nil {
 						log.WithError(err).Error("failed to disable tray icon")
-						notify.Blocking("Failed to disable tray icon, please check the logs for more information.")
+						notify.Toast("Failed to disable tray icon, please check the logs for more information.")
 					}
 				}
 				if systemd.IsTrayIconEnabled() {

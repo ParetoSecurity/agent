@@ -1,27 +1,21 @@
 package notify
 
 import (
-	"unsafe"
-
 	"github.com/caarlos0/log"
-	"golang.org/x/sys/windows"
+	"github.com/kolide/toast"
 )
 
-func Blocking(message string) {
-	// Use MessageBoxW from user32.dll
-	user32 := windows.NewLazySystemDLL("user32.dll")
-	procMessageBoxW := user32.NewProc("MessageBoxW")
-
-	// HWND = 0 (no owner), text, caption, MB_OK
-	ret, _, err := procMessageBoxW.Call(
-		0,
-		uintptr(unsafe.Pointer(windows.StringToUTF16Ptr(message))),
-		uintptr(unsafe.Pointer(windows.StringToUTF16Ptr("Notification"))),
-		0, // MB_OK
-	)
-	if ret == 0 {
-		log.WithError(err).Error("Failed to send notification")
+// Toast displays a notification balloon on Windows using the Shell_NotifyIcon API.
+// If the notification fails to display, an error is logged.
+func Toast(message string) {
+	notification := toast.Notification{
+		AppID:   "Pareto Security",
+		Title:   "Notification",
+		Message: message,
+	}
+	err := notification.Push()
+	if err != nil {
+		log.WithError(err).Error("failed to send notification")
 		return
 	}
-	return
 }

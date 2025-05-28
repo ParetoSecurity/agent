@@ -43,6 +43,9 @@ func (f *ParetoUpdated) Run() error {
 	if runtime.GOOS == "windows" {
 		platform = "windows"
 	}
+	// Create a context with a timeout for the request
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	if shared.IsLinked() {
 		err := requests.URL("https://paretosecurity.com/api/updates").
@@ -61,7 +64,7 @@ func (f *ParetoUpdated) Run() error {
 			Header("X-GitHub-Api-Version", "2022-11-28").
 			Header("User-Agent", shared.UserAgent()).
 			ToJSON(&res).
-			Fetch(context.Background())
+			Fetch(ctx)
 		if err != nil {
 			log.WithError(err).
 				Warnf("Failed to check for updates")
@@ -79,7 +82,7 @@ func (f *ParetoUpdated) Run() error {
 		Header("X-GitHub-Api-Version", "2022-11-28").
 		Header("User-Agent", shared.UserAgent()).
 		ToJSON(&res).
-		Fetch(context.Background())
+		Fetch(ctx)
 	if err != nil {
 		log.WithError(err).
 			Warnf("Failed to check for updates")

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/caarlos0/log"
 	"github.com/carlmjohnson/requests"
@@ -74,11 +75,17 @@ func getApp() (string, string, error) {
 }
 
 func getLatestRelease() error {
+
+	// Create a context with a timeout for the request
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	// Get the latest release from GitHub (paretosecurity/agent)
 	err := requests.
 		URL("https://api.github.com/repos/paretosecurity/agent/releases/latest").
+		Header("User-Agent", UserAgent()).
 		ToJSON(&release).
-		Fetch(context.Background())
+		Fetch(ctx)
 	if err != nil {
 		return err
 	}
