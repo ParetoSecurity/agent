@@ -7,6 +7,10 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// Blocking displays a modal message box on Windows using the Win32 API.
+// The function shows a blocking dialog with the provided message and an "OK" button.
+// The dialog has "Notification" as its title and will block execution until the user clicks OK.
+// If the message box fails to display, an error is logged.
 func Blocking(message string) {
 	// Use MessageBoxW from user32.dll
 	user32 := windows.NewLazySystemDLL("user32.dll")
