@@ -57,6 +57,34 @@ func TestPasswordManagerCheck_Run_Linux(t *testing.T) {
 			expectedStatus: "Password manager is present",
 		},
 		{
+			name: "gnome-keyring found in PATH",
+			mockCommands: map[string]string{
+				"which gnome-keyring": "/usr/bin/gnome-keyring",
+			},
+			expectedPassed: true,
+			expectedStatus: "Password manager is present",
+		},
+		{
+			name: "gnome-keyring present via apt",
+			mockCommands: map[string]string{
+				"which 1password":     "not found",
+				"which bitwarden":     "not found",
+				"which dashlane":      "not found",
+				"which keepassx":      "not found",
+				"which keepassxc":     "not found",
+				"which gnome-keyring": "not found",
+				"which dpkg":          "/usr/bin/dpkg",
+				"sh -c dpkg -l":       "ii  gnome-keyring  1.0  all  Password manager",
+				"which snap":          "not found",
+				"which yum":           "not found",
+				"which flatpak":       "not found",
+				"which pacman":        "not found",
+				"which nix-store":     "not found",
+			},
+			expectedPassed: true,
+			expectedStatus: "Password manager is present",
+		},
+		{
 			name: "1Password present via apt",
 			mockCommands: map[string]string{
 				"which 1password": "not found",
