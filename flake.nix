@@ -65,6 +65,9 @@
           pwd-manager = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/pwd-manager.nix;
           screenlock = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/screenlock.nix;
           secureboot = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/secureboot.nix;
+          xfce = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/desktop/xfce.nix;
+          kde = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/desktop/kde.nix;
+          gnome = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/desktop/gnome.nix;
         };
       };
     };
