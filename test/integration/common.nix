@@ -1,4 +1,11 @@
-{
+let
+  # Use local Pareto codebase
+  paretoLocalPkg = {
+    pkgs,
+    lib,
+  }:
+    pkgs.callPackage ../../package.nix {inherit lib;};
+in {
   # Create dummy user account
   users = {}: {
     users.users.alice = {
@@ -9,7 +16,7 @@
     };
   };
 
-  # Override paretosecurity to use the local codebase
+  # Paretosecurity that uses local codebase
   pareto = {
     pkgs,
     lib,
@@ -17,8 +24,61 @@
   }: {
     services.paretosecurity = {
       enable = true;
-      package = pkgs.callPackage ../../package.nix {inherit lib;};
+      package = paretoLocalPkg {inherit pkgs lib;};
     };
+  };
+
+  # Paretosecurity with local codebase and patched dashboard URL
+  paretoPatchedDash = {
+    pkgs,
+    lib,
+    ...
+  }: let
+    paretoPkg = paretoLocalPkg {inherit pkgs lib;};
+  in {
+    services.paretosecurity = {
+      enable = true;
+      package = paretoPkg.overrideAttrs (oldAttrs: {
+        postPatch =
+          oldAttrs.postPatch or ""
+          + ''
+            substituteInPlace team/report.go \
+              --replace-warn 'const reportURL = "https://cloud.paretosecurity.com"' \
+                             'const reportURL = "http://dashboard"'
+          '';
+      });
+    };
+  };
+
+  # Dashboard mockup server
+  dashboard = {}: {
+    networking.firewall.allowedTCPPorts = [80];
+
+    services.nginx = {
+      enable = true;
+      virtualHosts."dashboard" = {
+        locations."/api/v1/team/".extraConfig = ''
+          add_header Content-Type application/json;
+          return 200 '{"message": "Linked device."}';
+        '';
+      };
+    };
+  };
+
+  # Common configuration for Display Manager
+  displayManager = {pkgs}: {
+    services.displayManager.autoLogin = {
+      enable = true;
+      user = "alice";
+    };
+
+    virtualisation.resolution = {
+      x = 800;
+      y = 600;
+    };
+
+    environment.systemPackages = [pkgs.xdotool];
+    environment.variables.XAUTHORITY = "/home/alice/.Xauthority";
   };
 
   # Easier tests debugging by SSH-ing into nodes
