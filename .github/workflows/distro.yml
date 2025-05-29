@@ -60,8 +60,16 @@ jobs:
               apt-get upgrade -y
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
-          - distro: fedora
-            image: jrei/systemd-fedora
+          - distro: fedora-41
+            image: jrei/systemd-fedora:41
+            setup: |
+              dnf -y update
+              dnf -y upgrade
+              dnf -y install which
+            installer: "dnf -y install"
+            verify_package: "rpm -q paretosecurity"
+          - distro: fedora-42
+            image: jrei/systemd-fedora:42
             setup: |
               dnf -y update
               dnf -y upgrade
