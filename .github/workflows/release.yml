@@ -121,7 +121,7 @@ jobs:
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
               
       - name: Install repo tools
-        run: sudo apt install -y reprepro createrepo-c
+        run: sudo apt install -y reprepro createrepo-c rpm
 
       - name: Create Debian repository
         run: reprepro -b apt includedeb stable dist/*.deb
@@ -137,7 +137,7 @@ jobs:
           gpg --list-secret-keys --keyid-format LONG
           for file in dist/*.rpm; do \
             echo "Signing $file..." && \
-            rpm --define "_gpg_name 196FECB38F8C215A" \
+            rpm --define "_gpg_name A4D4A453F8BCD8044188B00D196FECB38F8C215A" \
                 --define "_gpg_passphrase_file ~/.gnupg/passphrase.txt" \
                 --addsign $file
           done
