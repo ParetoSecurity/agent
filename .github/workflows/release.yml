@@ -126,6 +126,21 @@ jobs:
       - name: Create Debian repository
         run: reprepro -b apt includedeb stable dist/*.deb
 
+      - name: Create GPG keyring
+        run: |
+          mkdir -p ~/.gnupg
+          echo "${{ secrets.GPG_PASSPHRASE }}" > ~/.gnupg/passphrase.txt
+          chmod 600 ~/.gnupg/passphrase.txt
+
+      - name: Sign RPM packages
+        run: |
+          for file in dist/*.rpm; do \
+            echo "Signing $file..." && \
+            rpm --define "_gpg_name 8FF664F40A898937BFA41A9033232C0395A4391B" \
+                --define "_gpg_passphrase_file ~/.gnupg/passphrase.txt" \
+                --addsign $file
+          done
+
       - name: Create RPM repository
         run: mv dist/*.rpm apt/rpm && createrepo_c apt/rpm
 
