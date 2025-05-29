@@ -69,7 +69,7 @@ func TestNowReportCounts(t *testing.T) {
 	shared.UpdateLastState(shared.LastState{
 		UUID:    c1.UUID(),
 		Name:    c1.Name(),
-		State:   c1.Passed(),
+		Passed:  c1.Passed(),
 		Details: c1.Status(),
 	})
 	c2 := dummyCheck{
@@ -84,7 +84,7 @@ func TestNowReportCounts(t *testing.T) {
 	shared.UpdateLastState(shared.LastState{
 		UUID:    c2.UUID(),
 		Name:    c2.Name(),
-		State:   c2.Passed(),
+		Passed:  c2.Passed(),
 		Details: c2.Status(),
 	})
 	c3 := dummyCheck{
@@ -99,7 +99,7 @@ func TestNowReportCounts(t *testing.T) {
 	shared.UpdateLastState(shared.LastState{
 		UUID:    c3.UUID(),
 		Name:    c3.Name(),
-		State:   c3.Passed(),
+		Passed:  c3.Passed(),
 		Details: c3.Status(),
 	})
 

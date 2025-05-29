@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ParetoSecurity/agent/check"
 	"github.com/caarlos0/log"
 	"github.com/olekukonko/tablewriter"
 	"github.com/olekukonko/tablewriter/renderer"
@@ -14,10 +15,11 @@ import (
 )
 
 type LastState struct {
-	Name    string `json:"name"`
-	UUID    string `json:"uuid"`
-	State   bool   `json:"state"`
-	Details string `json:"details"`
+	Name     string `json:"name"`
+	UUID     string `json:"uuid"`
+	Passed   bool   `json:"state"`
+	HasError bool   `json:"hasError"`
+	Details  string `json:"details"`
 }
 
 var (
@@ -58,7 +60,7 @@ func AllChecksPassed() bool {
 	defer mutex.RUnlock()
 
 	for _, state := range states {
-		if !state.State {
+		if !state.Passed {
 			return false
 		}
 	}
@@ -72,7 +74,7 @@ func GetFailedChecks() []LastState {
 
 	var failedChecks []LastState
 	for _, state := range states {
-		if !state.State {
+		if !state.Passed {
 			failedChecks = append(failedChecks, state)
 		}
 	}
@@ -88,11 +90,11 @@ func PrintStates() {
 
 	data := [][]string{}
 	for uuid, state := range states {
-		stateStr := "Pass"
-		if !state.State {
-			stateStr = "Fail"
+		stateStr := check.CheckStatePassed
+		if !state.Passed {
+			stateStr = check.CheckStateFailed
 		}
-		data = append(data, []string{uuid, state.Name, stateStr, state.Details})
+		data = append(data, []string{uuid, state.Name, string(stateStr), state.Details})
 	}
 
 	table := tablewriter.NewTable(os.Stdout,

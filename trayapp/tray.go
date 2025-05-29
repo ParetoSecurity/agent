@@ -26,7 +26,10 @@ func addQuitItem() {
 }
 
 // checkStatusToIcon converts a boolean status to an icon string.
-func checkStatusToIcon(status bool) string {
+func checkStatusToIcon(status, withError bool) string {
+	if withError {
+		return "⚠️"
+	}
 	if status {
 		return "✅"
 	}
@@ -35,18 +38,16 @@ func checkStatusToIcon(status bool) string {
 
 // updateCheck updates the status of a specific check in the menu.
 func updateCheck(chk check.Check, mCheck *systray.MenuItem) {
-	if !chk.IsRunnable() {
+	checkStatus, found, _ := shared.GetLastState(chk.UUID())
+	if !chk.IsRunnable() || !found {
 		mCheck.Disable()
 		mCheck.SetTitle(fmt.Sprintf("🚫 %s", chk.Name()))
 		return
 	}
-	mCheck.Enable()
-	checkStatus, found, _ := shared.GetLastState(chk.UUID())
-	state := chk.Passed()
 	if found {
-		state = checkStatus.State
+		mCheck.Enable()
+		mCheck.SetTitle(fmt.Sprintf("%s %s", checkStatusToIcon(checkStatus.Passed, checkStatus.HasError), chk.Name()))
 	}
-	mCheck.SetTitle(fmt.Sprintf("%s %s", checkStatusToIcon(state), chk.Name()))
 }
 
 // updateClaim updates the status of a claim in the menu.
@@ -54,7 +55,7 @@ func updateClaim(claim claims.Claim, mClaim *systray.MenuItem) {
 	mClaim.SetTitle(fmt.Sprintf("❌ %s", claim.Title))
 	for _, chk := range claim.Checks {
 		checkStatus, found, _ := shared.GetLastState(chk.UUID())
-		if found && !checkStatus.State && chk.IsRunnable() {
+		if found && !checkStatus.Passed && chk.IsRunnable() {
 			return
 		}
 	}

@@ -23,7 +23,7 @@ func TestCommitLastState_Success(t *testing.T) {
 	// Prepare a test state.
 	testState := LastState{
 		UUID:    "test-uuid",
-		State:   true,
+		Passed:  true,
 		Details: "all good",
 	}
 
@@ -90,26 +90,26 @@ func TestAllChecksPassed(t *testing.T) {
 		{
 			name: "all checks pass",
 			testData: map[string]LastState{
-				"uuid1": {UUID: "uuid1", State: true, Details: "passed"},
-				"uuid2": {UUID: "uuid2", State: true, Details: "passed"},
-				"uuid3": {UUID: "uuid3", State: true, Details: "passed"},
+				"uuid1": {UUID: "uuid1", Passed: true, Details: "passed"},
+				"uuid2": {UUID: "uuid2", Passed: true, Details: "passed"},
+				"uuid3": {UUID: "uuid3", Passed: true, Details: "passed"},
 			},
 			want: true,
 		},
 		{
 			name: "one check fails",
 			testData: map[string]LastState{
-				"uuid1": {UUID: "uuid1", State: true, Details: "passed"},
-				"uuid2": {UUID: "uuid2", State: false, Details: "failed"},
-				"uuid3": {UUID: "uuid3", State: true, Details: "passed"},
+				"uuid1": {UUID: "uuid1", Passed: true, Details: "passed"},
+				"uuid2": {UUID: "uuid2", Passed: false, Details: "failed"},
+				"uuid3": {UUID: "uuid3", Passed: true, Details: "passed"},
 			},
 			want: false,
 		},
 		{
 			name: "all checks fail",
 			testData: map[string]LastState{
-				"uuid1": {UUID: "uuid1", State: false, Details: "failed"},
-				"uuid2": {UUID: "uuid2", State: false, Details: "failed"},
+				"uuid1": {UUID: "uuid1", Passed: false, Details: "failed"},
+				"uuid2": {UUID: "uuid2", Passed: false, Details: "failed"},
 			},
 			want: false,
 		},

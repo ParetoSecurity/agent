@@ -84,12 +84,13 @@ func Check(ctx context.Context, claimsTorun []claims.Claim, skipUUIDs []string, 
 						checkLogger.Warn(fmt.Sprintf("%s: %s > %s %s", claim.Title, chk.Name(), color.YellowString("[DISABLED]"), reason))
 						return
 					}
-
+					hasError := false
 					if chk.RequiresRoot() {
 						log.Debug("Running check via root helper")
 						// Run as root
 						status, err := RunCheckViaRoot(chk.UUID())
 						if err != nil {
+							hasError = true
 							checkLogger.Info(fmt.Sprintf("[root] %s: %s > %s", claim.Title, chk.Name(), wrapStatusRoot(status, chk, err)))
 						} else {
 							if status.Passed {
@@ -97,16 +98,18 @@ func Check(ctx context.Context, claimsTorun []claims.Claim, skipUUIDs []string, 
 							} else {
 								checkLogger.Warn(fmt.Sprintf("[root] %s: %s > %s", claim.Title, chk.Name(), wrapStatusRoot(status, chk, err)))
 							}
-							shared.UpdateLastState(shared.LastState{
-								UUID:    chk.UUID(),
-								Name:    chk.Name(),
-								State:   status.Passed,
-								Details: status.Details,
-							})
-						}
 
+						}
+						shared.UpdateLastState(shared.LastState{
+							UUID:     chk.UUID(),
+							Name:     chk.Name(),
+							Passed:   status.Passed,
+							HasError: hasError,
+							Details:  status.Details,
+						})
 					} else {
 						if err := chk.Run(); err != nil {
+							hasError = true
 							checkLogger.Info(fmt.Sprintf("%s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk, err)))
 						} else {
 							if chk.Passed() {
@@ -114,13 +117,14 @@ func Check(ctx context.Context, claimsTorun []claims.Claim, skipUUIDs []string, 
 							} else {
 								checkLogger.Warn(fmt.Sprintf("%s: %s > %s", claim.Title, chk.Name(), wrapStatus(chk, err)))
 							}
-							shared.UpdateLastState(shared.LastState{
-								UUID:    chk.UUID(),
-								Name:    chk.Name(),
-								State:   chk.Passed(),
-								Details: chk.Status(),
-							})
 						}
+						shared.UpdateLastState(shared.LastState{
+							UUID:     chk.UUID(),
+							Name:     chk.Name(),
+							Passed:   chk.Passed(),
+							HasError: hasError,
+							Details:  chk.Status(),
+						})
 					}
 
 				}
