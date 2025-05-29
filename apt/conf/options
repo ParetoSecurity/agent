@@ -1,5 +1,2 @@
-# don't delete old debs by default
-keepunreferencedfiles
-
 # output dir
 outdir +b/../apt/debian
