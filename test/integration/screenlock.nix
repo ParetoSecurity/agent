@@ -63,7 +63,7 @@ in {
 
     # Test KDE
     # Test 1: Check passes with lock enabled
-    kde.succeed("kwriteconfig5 --file kscreenlockerrc --group Daemon --key Autolock true")
+    kde.succeed("kwriteconfig5 --file kscreenlockerrc --group Daemon --key LockOnResume true")
     out = kde.succeed("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
     expected = (
         "  • Starting checks...\n"
@@ -73,7 +73,7 @@ in {
     assert out == expected, f"Expected did not match actual, got \n{out}"
 
     # Test 2: Check fails when lock is disabled
-    kde.succeed("kwriteconfig5 --file kscreenlockerrc --group Daemon --key Autolock false")
+    kde.succeed("kwriteconfig5 --file kscreenlockerrc --group Daemon --key LockOnResume false")
     status, out = kde.execute("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
     expected = (
         "  • Starting checks...\n"

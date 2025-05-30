@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/ParetoSecurity/agent/shared"
@@ -29,25 +30,23 @@ func (f *PasswordToUnlock) checkGnome() bool {
 }
 
 func (f *PasswordToUnlock) checkKDE5() bool {
-	out, err := shared.RunCommand("kreadconfig5", "--file", "kscreenlockerrc", "--group", "Daemon", "--key", "Autolock")
-	if err != nil {
-		log.WithError(err).Debug("Failed to check KDE5 screenlocker settings")
-		return false
+	// First try reading config file directly
+	homeDir, err := shared.UserHomeDir()
+	if err == nil {
+		configPath := filepath.Join(homeDir, ".config", "kscreenlockerrc")
+		if content, err := shared.ReadFile(configPath); err == nil {
+			configStr := string(content)
+			// Check if LockOnResume=false is present
+			if strings.Contains(configStr, "LockOnResume=false") {
+				log.WithField("config_file", configPath).Debug("Found LockOnResume=false in KDE config")
+				return false
+			}
+			// If LockOnResume=true is explicitly set or not present (defaults to true)
+			log.WithField("config_file", configPath).Debug("KDE config allows screen locking")
+			return true
+		}
 	}
-	result := strings.TrimSpace(string(out)) == "true"
-	log.WithField("setting", out).WithField("passed", result).Debug("KDE screenlocker check")
-	return result
-}
-
-func (f *PasswordToUnlock) checkKDE6() bool {
-	out, err := shared.RunCommand("kreadconfig6", "--file", "kscreenlockerrc", "--group", "Daemon", "--key", "LockOnResume")
-	if err != nil {
-		log.WithError(err).Debug("Failed to check KDE6 screenlocker settings")
-		return false
-	}
-	result := strings.TrimSpace(string(out)) == "true"
-	log.WithField("setting", out).WithField("passed", result).Debug("KDE6 screenlocker check")
-	return result
+	return false
 }
 
 // Run executes the check
@@ -69,13 +68,6 @@ func (f *PasswordToUnlock) Run() error {
 		allChecksPassed = allChecksPassed && f.checkKDE5()
 	} else {
 		log.Debug("KDE environment(5) not detected for screensaver lock check")
-	}
-	// Check if running KDE
-	if _, err := lookPath("kreadconfig6"); err == nil {
-		anyCheckPerformed = true
-		allChecksPassed = allChecksPassed && f.checkKDE6()
-	} else {
-		log.Debug("KDE environment(6) not detected for screensaver lock check")
 	}
 
 	// Performed at least one check and all performed checks passed

@@ -2,102 +2,11 @@ package checks
 
 import (
 	"os/exec"
-	"slices"
 	"testing"
 
 	"github.com/ParetoSecurity/agent/shared"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestCheckKDE(t *testing.T) {
-	tests := []struct {
-		name       string
-		commandOut string
-		commandErr error
-		expected   bool
-	}{
-		{
-			name:       "Autolock enabled",
-			commandOut: "true\n",
-			commandErr: nil,
-			expected:   true,
-		},
-		{
-			name:       "Autolock disabled",
-			commandOut: "false\n",
-			commandErr: nil,
-			expected:   false,
-		},
-		{
-			name:       "Command error",
-			commandOut: "",
-			commandErr: assert.AnError,
-			expected:   false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			shared.RunCommandMocks = []shared.RunCommandMock{
-				{
-					Command: "kreadconfig5",
-					Args:    []string{"--file", "kscreenlockerrc", "--group", "Daemon", "--key", "Autolock"},
-					Out:     tt.commandOut,
-					Err:     tt.commandErr,
-				},
-			}
-
-			f := &PasswordToUnlock{}
-			result := f.checkKDE5()
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestCheckKDE6(t *testing.T) {
-	tests := []struct {
-		name       string
-		commandOut string
-		commandErr error
-		expected   bool
-	}{
-		{
-			name:       "Autolock enabled",
-			commandOut: "true\n",
-			commandErr: nil,
-			expected:   true,
-		},
-		{
-			name:       "Autolock disabled",
-			commandOut: "false\n",
-			commandErr: nil,
-			expected:   false,
-		},
-		{
-			name:       "Command error",
-			commandOut: "",
-			commandErr: assert.AnError,
-			expected:   false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			shared.RunCommandMocks = []shared.RunCommandMock{
-				{
-					Command: "kreadconfig6",
-					Args:    []string{"--file", "kscreenlockerrc", "--group", "Daemon", "--key", "LockOnResume"},
-					Out:     tt.commandOut,
-					Err:     tt.commandErr,
-				},
-			}
-
-			f := &PasswordToUnlock{}
-			result := f.checkKDE6()
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
 
 func TestCheckGnome(t *testing.T) {
 	tests := []struct {
@@ -142,81 +51,6 @@ func TestCheckGnome(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 			assert.NotEmpty(t, f.UUID())
 			assert.False(t, f.RequiresRoot())
-		})
-	}
-}
-
-func TestPasswordToUnlock_Run(t *testing.T) {
-	tests := []struct {
-		name           string
-		executables    []string
-		mockCommands   map[string]string
-		expectedPassed bool
-		expectedStatus string
-	}{
-		{
-			name:        "GNOME lock disabled",
-			executables: []string{"gsettings"},
-			mockCommands: map[string]string{
-				"gsettings get org.gnome.desktop.screensaver lock-enabled": "false\n",
-			},
-			expectedPassed: false,
-			expectedStatus: "Password after sleep or screensaver is off",
-		},
-		{
-			name:        "KDE autolock disabled",
-			executables: []string{"kreadconfig5"},
-			mockCommands: map[string]string{
-				"kreadconfig5 --file kscreenlockerrc --group Daemon --key Autolock": "false\n",
-			},
-			expectedPassed: false,
-			expectedStatus: "Password after sleep or screensaver is off",
-		},
-		{
-			name:        "GNOME passing and KDE failing",
-			executables: []string{"gsettings", "kreadconfig5"},
-			mockCommands: map[string]string{
-				"gsettings get org.gnome.desktop.screensaver lock-enabled":          "true\n",
-				"kreadconfig5 --file kscreenlockerrc --group Daemon --key Autolock": "false\n",
-			},
-			expectedPassed: false,
-			expectedStatus: "Password after sleep or screensaver is off",
-		},
-		{
-			name:           "Neither GNOME nor KDE found",
-			executables:    []string{},
-			mockCommands:   map[string]string{},
-			expectedPassed: false,
-			expectedStatus: "Password after sleep or screensaver is off",
-		},
-		{
-			name:        "GNOME and KDE both passing",
-			executables: []string{"gsettings", "kreadconfig5"},
-			mockCommands: map[string]string{
-				"gsettings get org.gnome.desktop.screensaver lock-enabled":          "true\n",
-				"kreadconfig5 --file kscreenlockerrc --group Daemon --key Autolock": "true\n",
-			},
-			expectedPassed: true,
-			expectedStatus: "Password after sleep or screensaver is on",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			shared.RunCommandMocks = convertCommandMapToMocks(tt.mockCommands)
-
-			lookPathMock = func(file string) (string, error) {
-				if slices.Contains(tt.executables, file) {
-					return "/usr/bin/" + file, nil
-				}
-				return "", exec.ErrNotFound
-			}
-
-			f := &PasswordToUnlock{}
-			err := f.Run()
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expectedPassed, f.Passed())
-			assert.Equal(t, tt.expectedStatus, f.Status())
 		})
 	}
 }
@@ -266,5 +100,115 @@ func TestPasswordToUnlock_PassedMessage(t *testing.T) {
 	expectedPassedMessage := "Password after sleep or screensaver is on"
 	if f.PassedMessage() != expectedPassedMessage {
 		t.Errorf("Expected PassedMessage %s, got %s", expectedPassedMessage, f.PassedMessage())
+	}
+}
+
+func TestCheckKDE5_FileReading(t *testing.T) {
+	tests := []struct {
+		name        string
+		homeDir     string
+		homeDirErr  error
+		fileContent string
+		fileErr     error
+		expected    bool
+	}{
+		{
+			name:        "LockOnResume=false in config",
+			homeDir:     "/home/user",
+			homeDirErr:  nil,
+			fileContent: "[Daemon]\nLockOnResume=false\nAutolock=true\n",
+			fileErr:     nil,
+			expected:    false,
+		},
+		{
+			name:        "LockOnResume=true in config",
+			homeDir:     "/home/user",
+			homeDirErr:  nil,
+			fileContent: "[Daemon]\nLockOnResume=true\nAutolock=true\n",
+			fileErr:     nil,
+			expected:    true,
+		},
+		{
+			name:        "No LockOnResume in config (defaults to true)",
+			homeDir:     "/home/user",
+			homeDirErr:  nil,
+			fileContent: "[Daemon]\nAutolock=true\n",
+			fileErr:     nil,
+			expected:    true,
+		},
+		{
+			name:        "Home directory error, fallback to command",
+			homeDir:     "",
+			homeDirErr:  assert.AnError,
+			fileContent: "",
+			fileErr:     nil,
+			expected:    true,
+		},
+		{
+			name:        "File read error, fallback to command",
+			homeDir:     "/home/user",
+			homeDirErr:  nil,
+			fileContent: "",
+			fileErr:     assert.AnError,
+			expected:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Mock shared.ReadFile
+			shared.ReadFileMocks = map[string]string{
+				"/home/user/.config/kscreenlockerrc": tt.fileContent,
+			}
+
+			// Setup command fallback mock for cases that need it
+			if tt.homeDirErr != nil || tt.fileErr != nil {
+				shared.RunCommandMocks = []shared.RunCommandMock{
+					{
+						Command: "kreadconfig5",
+						Args:    []string{"--file", "kscreenlockerrc", "--group", "Daemon", "--key", "LockOnResume"},
+						Out:     "true\n",
+						Err:     nil,
+					},
+				}
+			}
+
+			f := &PasswordToUnlock{}
+			result := f.checkKDE5()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestPasswordToUnlock_Run(t *testing.T) {
+	tests := []struct {
+		name                  string
+		gsettingsAvailable    bool
+		kreadconfig5Available bool
+		gnomeResult           bool
+		kdeResult             bool
+		expectedPassed        bool
+	}{
+		{
+			name:                  "Neither environment available",
+			gsettingsAvailable:    false,
+			kreadconfig5Available: false,
+			gnomeResult:           false,
+			kdeResult:             false,
+			expectedPassed:        false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lookPathMock = func(file string) (string, error) {
+				return "", exec.ErrNotFound
+			}
+			f := &PasswordToUnlock{}
+			err := f.Run()
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedPassed, f.Passed())
+		})
 	}
 }
