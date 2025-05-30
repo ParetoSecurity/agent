@@ -68,14 +68,14 @@ func (f *PasswordToUnlock) Run() error {
 		anyCheckPerformed = true
 		allChecksPassed = allChecksPassed && f.checkKDE5()
 	} else {
-		log.Info("KDE environment(5) not detected for screensaver lock check")
+		log.Debug("KDE environment(5) not detected for screensaver lock check")
 	}
 	// Check if running KDE
 	if _, err := lookPath("kreadconfig6"); err == nil {
 		anyCheckPerformed = true
 		allChecksPassed = allChecksPassed && f.checkKDE6()
 	} else {
-		log.Info("KDE environment(6) not detected for screensaver lock check")
+		log.Debug("KDE environment(6) not detected for screensaver lock check")
 	}
 
 	// Performed at least one check and all performed checks passed
