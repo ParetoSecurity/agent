@@ -51,27 +51,21 @@ func (f *PasswordToUnlock) checkKDE5() bool {
 
 // Run executes the check
 func (f *PasswordToUnlock) Run() error {
-	anyCheckPerformed := false
-	allChecksPassed := true
 
 	// Check if running GNOME
 	if _, err := lookPath("gsettings"); err == nil {
-		anyCheckPerformed = true
-		allChecksPassed = allChecksPassed && f.checkGnome()
+		f.passed = f.checkGnome()
 	} else {
 		log.Info("GNOME environment not detected for screensaver lock check")
 	}
 
 	// Check if running KDE
 	if _, err := lookPath("kreadconfig5"); err == nil {
-		anyCheckPerformed = true
-		allChecksPassed = allChecksPassed && f.checkKDE5()
+		f.passed = f.checkKDE5()
 	} else {
 		log.Debug("KDE environment(5) not detected for screensaver lock check")
 	}
 
-	// Performed at least one check and all performed checks passed
-	f.passed = anyCheckPerformed && allChecksPassed
 	return nil
 }
 
