@@ -11,21 +11,22 @@ import (
 	"github.com/carlmjohnson/requests"
 	"github.com/davecgh/go-spew/spew"
 
+	"github.com/ParetoSecurity/agent/check"
 	"github.com/ParetoSecurity/agent/claims"
 	shared "github.com/ParetoSecurity/agent/shared"
 )
 
-const reportURL = "https://dash.paretosecurity.com"
+const reportURL = "https://cloud.paretosecurity.com"
 
 type Report struct {
-	PassedCount       int                    `json:"passedCount"`
-	FailedCount       int                    `json:"failedCount"`
-	DisabledCount     int                    `json:"disabledCount"`
-	Device            shared.ReportingDevice `json:"device"`
-	Version           string                 `json:"version"`
-	LastCheck         string                 `json:"lastCheck"`
-	SignificantChange string                 `json:"significantChange"`
-	State             map[string]string      `json:"state"`
+	PassedCount       int                         `json:"passedCount"`
+	FailedCount       int                         `json:"failedCount"`
+	DisabledCount     int                         `json:"disabledCount"`
+	Device            shared.ReportingDevice      `json:"device"`
+	Version           string                      `json:"version"`
+	LastCheck         string                      `json:"lastCheck"`
+	SignificantChange string                      `json:"significantChange"`
+	State             map[string]check.CheckState `json:"state"`
 }
 
 // NowReport compiles and returns a Report that summarizes the results of all runnable checks.
@@ -35,25 +36,25 @@ func NowReport(all []claims.Claim) Report {
 	disabled := 0
 	disabledSeed, _ := shared.SystemUUID()
 	failedSeed, _ := shared.SystemUUID()
-	checkStates := make(map[string]string)
+	checkStates := make(map[string]check.CheckState)
 	lastCheckStates := shared.GetLastStates()
 
 	for _, claim := range all {
-		for _, check := range claim.Checks {
-			lastState, found := lastCheckStates[check.UUID()]
-			if check.IsRunnable() && found {
-				if lastState.State {
+		for _, checkS := range claim.Checks {
+			lastState, found := lastCheckStates[checkS.UUID()]
+			if checkS.IsRunnable() && found {
+				if lastState.Passed {
 					passed++
-					checkStates[check.UUID()] = "pass"
+					checkStates[checkS.UUID()] = check.CheckStatePassed
 				} else {
 					failed++
-					failedSeed += check.UUID()
-					checkStates[check.UUID()] = "fail"
+					failedSeed += checkS.UUID()
+					checkStates[checkS.UUID()] = check.CheckStateFailed
 				}
 			} else {
 				disabled++
-				disabledSeed += check.UUID()
-				checkStates[check.UUID()] = "off"
+				disabledSeed += checkS.UUID()
+				checkStates[checkS.UUID()] = check.CheckStateDisabled
 			}
 		}
 	}

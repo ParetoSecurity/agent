@@ -1,5 +1,14 @@
 package check
 
+type CheckState string
+
+const (
+	CheckStatePassed   CheckState = "pass"
+	CheckStateFailed   CheckState = "fail"
+	CheckStateDisabled CheckState = "off"
+	CheckStateError    CheckState = "error"
+)
+
 type Check interface {
 	Name() string
 	PassedMessage() string
