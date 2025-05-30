@@ -1,13 +1,18 @@
 package shared
 
 import (
+	"fmt"
 	"testing"
 )
 
 func TestReadFile(t *testing.T) {
 	// Mock data for testing
-	ReadFileMocks = map[string]string{
-		"testfile1.txt": "This is a test file content",
+
+	ReadFileMock = func(name string) ([]byte, error) {
+		if name == "testfile1.txt" {
+			return []byte("This is a test file content"), nil
+		}
+		return nil, fmt.Errorf("ReadFile fixture not found: %s", name)
 	}
 
 	t.Run("ReadFile from mock", func(t *testing.T) {
@@ -32,4 +37,21 @@ func TestReadFile(t *testing.T) {
 		}
 	})
 
+}
+func TestUserHomeDir(t *testing.T) {
+	t.Run("UserHomeDir returns mock path in tests", func(t *testing.T) {
+
+		UserHomeDirMock = func() (string, error) {
+			return "/home/user", nil
+		}
+
+		homeDir, err := UserHomeDir()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		expected := "/home/user"
+		if homeDir != expected {
+			t.Fatalf("expected %s, got %s", expected, homeDir)
+		}
+	})
 }

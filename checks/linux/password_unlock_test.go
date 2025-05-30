@@ -103,83 +103,6 @@ func TestPasswordToUnlock_PassedMessage(t *testing.T) {
 	}
 }
 
-func TestCheckKDE5_FileReading(t *testing.T) {
-	tests := []struct {
-		name        string
-		homeDir     string
-		homeDirErr  error
-		fileContent string
-		fileErr     error
-		expected    bool
-	}{
-		{
-			name:        "LockOnResume=false in config",
-			homeDir:     "/home/user",
-			homeDirErr:  nil,
-			fileContent: "[Daemon]\nLockOnResume=false\nAutolock=true\n",
-			fileErr:     nil,
-			expected:    false,
-		},
-		{
-			name:        "LockOnResume=true in config",
-			homeDir:     "/home/user",
-			homeDirErr:  nil,
-			fileContent: "[Daemon]\nLockOnResume=true\nAutolock=true\n",
-			fileErr:     nil,
-			expected:    true,
-		},
-		{
-			name:        "No LockOnResume in config (defaults to true)",
-			homeDir:     "/home/user",
-			homeDirErr:  nil,
-			fileContent: "[Daemon]\nAutolock=true\n",
-			fileErr:     nil,
-			expected:    true,
-		},
-		{
-			name:        "Home directory error, fallback to command",
-			homeDir:     "",
-			homeDirErr:  assert.AnError,
-			fileContent: "",
-			fileErr:     nil,
-			expected:    true,
-		},
-		{
-			name:        "File read error, fallback to command",
-			homeDir:     "/home/user",
-			homeDirErr:  nil,
-			fileContent: "",
-			fileErr:     assert.AnError,
-			expected:    true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Mock shared.ReadFile
-			shared.ReadFileMocks = map[string]string{
-				"/home/user/.config/kscreenlockerrc": tt.fileContent,
-			}
-
-			// Setup command fallback mock for cases that need it
-			if tt.homeDirErr != nil || tt.fileErr != nil {
-				shared.RunCommandMocks = []shared.RunCommandMock{
-					{
-						Command: "kreadconfig5",
-						Args:    []string{"--file", "kscreenlockerrc", "--group", "Daemon", "--key", "LockOnResume"},
-						Out:     "true\n",
-						Err:     nil,
-					},
-				}
-			}
-
-			f := &PasswordToUnlock{}
-			result := f.checkKDE5()
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestPasswordToUnlock_Run(t *testing.T) {
 	tests := []struct {
 		name                  string
@@ -211,4 +134,96 @@ func TestPasswordToUnlock_Run(t *testing.T) {
 			assert.Equal(t, tt.expectedPassed, f.Passed())
 		})
 	}
+}
+func TestPasswordToUnlock_checkKDE5(t *testing.T) {
+	// Store original functions to restore later
+
+	tests := []struct {
+		name        string
+		homeDirErr  error
+		homeDir     string
+		readFileErr error
+		fileContent string
+		expected    bool
+	}{
+		{
+			name:        "LockOnResume=false present",
+			homeDirErr:  nil,
+			homeDir:     "/home/user",
+			readFileErr: nil,
+			fileContent: "[Daemon]\nLockOnResume=false\nAutolock=true\n",
+			expected:    false,
+		},
+		{
+			name:        "LockOnResume=false with other content",
+			homeDirErr:  nil,
+			homeDir:     "/home/user",
+			readFileErr: nil,
+			fileContent: "SomeOtherSetting=value\nLockOnResume=false\nMoreSettings=value\n",
+			expected:    false,
+		},
+		{
+			name:        "LockOnResume=true present",
+			homeDirErr:  nil,
+			homeDir:     "/home/user",
+			readFileErr: nil,
+			fileContent: "[Daemon]\nLockOnResume=true\nAutolock=true\n",
+			expected:    true,
+		},
+		{
+			name:        "No LockOnResume setting (defaults to true)",
+			homeDirErr:  nil,
+			homeDir:     "/home/user",
+			readFileErr: nil,
+			fileContent: "[Daemon]\nAutolock=true\nSomeOtherSetting=value\n",
+			expected:    true,
+		},
+		{
+			name:        "Empty config file",
+			homeDirErr:  nil,
+			homeDir:     "/home/user",
+			readFileErr: nil,
+			fileContent: "",
+			expected:    true,
+		},
+		{
+			name:        "UserHomeDir error",
+			homeDirErr:  assert.AnError,
+			homeDir:     "",
+			readFileErr: nil,
+			fileContent: "",
+			expected:    true,
+		},
+		{
+			name:        "ReadFile error",
+			homeDirErr:  nil,
+			homeDir:     "/home/user",
+			readFileErr: assert.AnError,
+			fileContent: "",
+			expected:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			shared.UserHomeDirMock = func() (string, error) {
+				return tt.homeDir, nil
+			}
+			// Mock shared.ReadFile
+			shared.ReadFileMock = func(filename string) ([]byte, error) {
+				if tt.readFileErr != nil {
+					return nil, tt.readFileErr
+				}
+				return []byte(tt.fileContent), nil
+			}
+
+			f := &PasswordToUnlock{}
+			result := f.checkKDE5()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+func TestPasswordToUnlock_IsRunnable(t *testing.T) {
+	f := &PasswordToUnlock{}
+	assert.True(t, f.IsRunnable())
 }

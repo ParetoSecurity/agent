@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -38,6 +39,9 @@ func TestHasPassword(t *testing.T) {
 	t.Run("NonExistentFile", func(t *testing.T) {
 		// Provide a file path that does not exist.
 		nonExistent := filepath.Join(tmpDir, "nonexistent")
+		sharedG.ReadFileMock = func(name string) ([]byte, error) {
+			return nil, os.ErrNotExist
+		}
 		// Expect true since ReadFile will fail.
 		if got := s.hasPassword(nonExistent); got != true {
 			t.Errorf("hasPassword() = %v; want true", got)
@@ -45,8 +49,14 @@ func TestHasPassword(t *testing.T) {
 	})
 
 	t.Run("ValidUnencryptedKey", func(t *testing.T) {
-		sharedG.ReadFileMocks = map[string]string{
-			"unencrypted": unencryptedPrivateKey,
+		sharedG.ReadFileMock = func(name string) ([]byte, error) {
+			mockFiles := map[string]string{
+				"unencrypted": unencryptedPrivateKey,
+			}
+			if content, ok := mockFiles[name]; ok {
+				return []byte(content), nil
+			}
+			return nil, nil // Return nil if file not found
 		}
 		// Expect false because the key is unencrypted (no password).
 		if got := s.hasPassword("unencrypted"); got != false {
@@ -55,8 +65,14 @@ func TestHasPassword(t *testing.T) {
 	})
 
 	t.Run("InvalidKeyContent", func(t *testing.T) {
-		sharedG.ReadFileMocks = map[string]string{
-			"invalid": invalidKey,
+		sharedG.ReadFileMock = func(name string) ([]byte, error) {
+			mockFiles := map[string]string{
+				"invalid": invalidKey,
+			}
+			if content, ok := mockFiles[name]; ok {
+				return []byte(content), nil
+			}
+			return nil, nil // Return nil if file not found
 		}
 		// Expect true because parsing will fail.
 		if got := s.hasPassword("invalid"); got != true {

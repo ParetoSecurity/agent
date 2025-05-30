@@ -174,8 +174,11 @@ func TestMaybeCryptoViaKernel(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Mock the ReadFile function
-			shared.ReadFileMocks = map[string]string{
-				"/proc/cmdline": tt.cmdlineData,
+			shared.ReadFileMock = func(name string) ([]byte, error) {
+				if name == "/proc/cmdline" {
+					return []byte(tt.cmdlineData), tt.readFileErr
+				}
+				return nil, nil
 			}
 
 			result := maybeCryptoViaKernel()

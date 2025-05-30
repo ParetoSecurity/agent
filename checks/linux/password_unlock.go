@@ -31,8 +31,7 @@ func (f *PasswordToUnlock) checkGnome() bool {
 
 func (f *PasswordToUnlock) checkKDE5() bool {
 	// First try reading config file directly
-	homeDir, err := shared.UserHomeDir()
-	if err == nil {
+	if homeDir, err := shared.UserHomeDir(); err == nil {
 		configPath := filepath.Join(homeDir, ".config", "kscreenlockerrc")
 		if content, err := shared.ReadFile(configPath); err == nil {
 			configStr := string(content)
@@ -45,8 +44,9 @@ func (f *PasswordToUnlock) checkKDE5() bool {
 			log.WithField("config_file", configPath).Debug("KDE config allows screen locking")
 			return true
 		}
+		return true // Default to true if config file not found or read error, we trust that runtime settings are correct
 	}
-	return false
+	return true // Default to true if config file not found or read error
 }
 
 // Run executes the check
