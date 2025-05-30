@@ -43,13 +43,19 @@ func NowReport(all []claims.Claim) Report {
 		for _, checkS := range claim.Checks {
 			lastState, found := lastCheckStates[checkS.UUID()]
 			if checkS.IsRunnable() && found {
-				if lastState.Passed {
-					passed++
-					checkStates[checkS.UUID()] = check.CheckStatePassed
-				} else {
+				if lastState.HasError {
 					failed++
 					failedSeed += checkS.UUID()
-					checkStates[checkS.UUID()] = check.CheckStateFailed
+					checkStates[checkS.UUID()] = check.CheckStateError
+				} else {
+					if lastState.Passed {
+						passed++
+						checkStates[checkS.UUID()] = check.CheckStatePassed
+					} else {
+						failed++
+						failedSeed += checkS.UUID()
+						checkStates[checkS.UUID()] = check.CheckStateFailed
+					}
 				}
 			} else {
 				disabled++

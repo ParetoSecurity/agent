@@ -67,10 +67,11 @@ func TestNowReportCounts(t *testing.T) {
 		runCalled: 0,
 	}
 	shared.UpdateLastState(shared.LastState{
-		UUID:    c1.UUID(),
-		Name:    c1.Name(),
-		Passed:  c1.Passed(),
-		Details: c1.Status(),
+		UUID:     c1.UUID(),
+		Name:     c1.Name(),
+		Passed:   c1.Passed(),
+		Details:  c1.Status(),
+		HasError: false,
 	})
 	c2 := dummyCheck{
 		name:      "c2",
@@ -82,10 +83,11 @@ func TestNowReportCounts(t *testing.T) {
 		runCalled: 0,
 	}
 	shared.UpdateLastState(shared.LastState{
-		UUID:    c2.UUID(),
-		Name:    c2.Name(),
-		Passed:  c2.Passed(),
-		Details: c2.Status(),
+		UUID:     c2.UUID(),
+		Name:     c2.Name(),
+		Passed:   c2.Passed(),
+		Details:  c2.Status(),
+		HasError: false,
 	})
 	c3 := dummyCheck{
 		name:      "c3",
@@ -97,10 +99,27 @@ func TestNowReportCounts(t *testing.T) {
 		runCalled: 0,
 	}
 	shared.UpdateLastState(shared.LastState{
-		UUID:    c3.UUID(),
-		Name:    c3.Name(),
-		Passed:  c3.Passed(),
-		Details: c3.Status(),
+		UUID:     c3.UUID(),
+		Name:     c3.Name(),
+		Passed:   c3.Passed(),
+		Details:  c3.Status(),
+		HasError: false,
+	})
+	c4 := dummyCheck{
+		name:      "c4",
+		runnable:  true,
+		runErr:    nil,
+		passedVal: false,
+		statusMsg: "error",
+		uuid:      "check4",
+		runCalled: 0,
+	}
+	shared.UpdateLastState(shared.LastState{
+		UUID:     c4.UUID(),
+		Name:     c4.Name(),
+		Passed:   c4.Passed(),
+		Details:  c4.Status(),
+		HasError: true,
 	})
 
 	dummyClaims := []claims.Claim{
@@ -108,6 +127,7 @@ func TestNowReportCounts(t *testing.T) {
 			&c1,
 			&c2,
 			&c3,
+			&c4,
 		}},
 	}
 	report := NowReport(dummyClaims)
@@ -115,7 +135,7 @@ func TestNowReportCounts(t *testing.T) {
 	if report.PassedCount != 1 {
 		t.Errorf("Expected PassedCount = 1, got %d", report.PassedCount)
 	}
-	if report.FailedCount != 1 {
+	if report.FailedCount != 2 {
 		t.Errorf("Expected FailedCount = 1, got %d", report.FailedCount)
 	}
 	if report.DisabledCount != 1 {
@@ -130,6 +150,9 @@ func TestNowReportCounts(t *testing.T) {
 	}
 	if state, ok := report.State["check3"]; !ok || state != "off" {
 		t.Errorf("Expected check3 state = off, got %s", state)
+	}
+	if state, ok := report.State["check4"]; !ok || state != "error" {
+		t.Errorf("Expected check4 state = error, got %s", state)
 	}
 
 	// The SignificantChange should be a valid hex string of length 64.
