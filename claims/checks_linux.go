@@ -13,7 +13,6 @@ var All = []Claim{
 		&checks.PasswordToUnlock{},
 		&shared.SSHKeys{},
 		&shared.SSHKeysAlgo{},
-		&checks.SSHConfigCheck{},
 		&checks.PasswordManagerCheck{},
 	}},
 	{"Application Updates", []check.Check{
