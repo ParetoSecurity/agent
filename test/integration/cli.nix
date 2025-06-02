@@ -44,7 +44,6 @@ in {
         "  • [root] System Integrity: Filesystem encryption is enabled > [FAIL] Block device encryption is disabled\n"
         "  • Firewall & Sharing: Remote login is disabled > [OK] No remote access services found running\n"
         "  • Firewall & Sharing: File Sharing is disabled > [OK] No file sharing services found running\n"
-        "  • Access Security: SSH Server Configuration is Secure > [DISABLED] sshd or ssh service is not running\n"
         "  • Application Updates: Pareto Security is up to date > [ERROR] ErrTransport: Get \"https://api.github.com/repos/ParetoSecurity/agent/releases\": dial tcp: lookup api.github.com: no such host\n"
         "  • Access Security: Password Manager Presence > [FAIL] No password manager found\n"
         "  • [root] Firewall & Sharing: Firewall is configured > [OK] Firewall is on\n"
