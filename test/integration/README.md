@@ -17,7 +17,6 @@ On macOS with nix-darwin and linux-builder enabled, you can run the tests with t
 $ nix build .#checks.aarch64-darwin.firewall
 ```
 
-
 ## Debugging Tests
 
 Appending `.driverInteractive` to the test name will build the test runner with interactive mode enabled. This allows you to debug the test by SSHing into the test VM.
@@ -47,4 +46,19 @@ For a nicer shell, add the following to `firewall.nix`, rebuild the test and run
     ];
   };
 ```
+
+## Seeing UI changes
+
+A quick way to see the changes you made to the UI is to build the test runner in
+`screenlock.nix` and run it on a NixOS (VM) machine, so that QEMU can display the UI.
+
+```console
+$ nix build .#checks.x86_64-linux.screenlock.driverInteractive
+$ ./result/bin/nixos-test-driver
+>>> start_all()
+```
+
+A NixOS VM, managed by UTM on a Mac, running the `screenlock` test VMs:
+
+![NixOS VM with screenlock test](vms.png)
 
