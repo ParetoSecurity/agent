@@ -223,9 +223,16 @@ func OnReady() {
 						arch = "check-windows"
 					}
 
-					url := fmt.Sprintf("https://paretosecurity.com/%s/%s?details=%s", arch, chk.UUID(), url.QueryEscape(chk.Status()))
+					checkStatus, found, _ := shared.GetLastState(chk.UUID())
 
-					if err := browser.OpenURL(url); err != nil {
+					var targetURL string
+					if found && checkStatus.HasError {
+						targetURL = "https://paretosecurity.com/docs/linux/check-error"
+					} else {
+						targetURL = fmt.Sprintf("https://paretosecurity.com/%s/%s?details=%s", arch, chk.UUID(), url.QueryEscape(chk.Status()))
+					}
+
+					if err := browser.OpenURL(targetURL); err != nil {
 						log.WithError(err).Error("failed to open check URL")
 					}
 				}
