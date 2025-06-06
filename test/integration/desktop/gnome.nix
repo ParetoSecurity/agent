@@ -26,14 +26,13 @@ in {
       y = 600;
     };
 
-    services.xserver.displayManager.lightdm.enable = true;
-    services.xserver.displayManager.gdm.wayland = false;
+    services.xserver.enable = true;
     services.xserver.desktopManager.gnome.enable = true;
 
     environment.systemPackages = [pkgs.gnomeExtensions.appindicator];
     services.udev.packages = [pkgs.gnome-settings-daemon];
 
-    # Enable AppIndicator extension for tray icons
+    # Enable AppIndicator extension automatically
     programs.dconf.profiles.user.databases = [
       {
         settings = {
@@ -70,13 +69,14 @@ in {
 
   testScript = ''
     # Test setup
+    # terminal.succeed("su - alice -c 'mkdir -p /home/alice/.config'")
     for m in [gnome, dashboard]:
       m.systemctl("start network-online.target")
       m.wait_for_unit("network-online.target")
 
-    gnome.wait_for_x()
 
-    # Test: Test the tray icon
+    # Test 4: Test the tray icon
+    gnome.wait_for_x()
     for unit in [
         'paretosecurity-trayicon',
         'paretosecurity-user',
@@ -85,24 +85,28 @@ in {
         status, out = gnome.systemctl("is-enabled " + unit, "alice")
         assert status == 0, f"Unit {unit} is not enabled (status: {status}): {out}"
 
+    # GNOME system tray is in the top-right corner
     gnome.succeed("xdotool mousemove 670 10")
+    gnome.screenshot("1-mouse-at-670-10.png")
+    # gnome.succeed("xdotool click 1")
     gnome.succeed("sleep 3")
+    gnome.screenshot("2-pareto-trayicon-after-1-click.png")
     gnome.succeed("xdotool click 1")
-    gnome.wait_for_text("Run Checks", 30)
+    # gnome.succeed("sleep 3")
+    gnome.screenshot("3-pareto-trayicon-after-2-clicks.png")
+    gnome.wait_for_text("Run Checks", timeout=30)
 
-    # Hide the tray menu
+    # Test 5: Desktop entry
     gnome.succeed("xdotool mousemove 10 100")
-    gnome.succeed("xdotool click 1")
-
-    # Test: Pareto Desktop entry
+    gnome.succeed("xdotool click 1")  # hide the tray icon window
     gnome.succeed("xdotool key Super_r")
     gnome.succeed("sleep 3")
-    gnome.wait_for_text("Type to search", 30)
     gnome.succeed("xdotool type 'Pareto'")
-    gnome.wait_for_text("Pareto Security", 30)
+    gnome.wait_for_text("Pareto Security", timeout=30)
 
-    # Test: paretosecurity:// URL handler is registered
+    # Test 6: paretosecurity:// URL handler is registered
     gnome.execute("su - alice -c 'xdg-open paretosecurity://foo >/dev/null &'")
     gnome.wait_for_text("Failed to add device")
+
   '';
 }
