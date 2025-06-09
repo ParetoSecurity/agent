@@ -31,11 +31,13 @@ type Report struct {
 
 // NowReport compiles and returns a Report that summarizes the results of all runnable checks.
 func NowReport(all []claims.Claim) Report {
+
+	device := shared.CurrentReportingDevice()
 	passed := 0
 	failed := 0
 	disabled := 0
-	disabledSeed, _ := shared.SystemUUID()
-	failedSeed, _ := shared.SystemUUID()
+	disabledSeed := device.MachineUUID
+	failedSeed := device.MachineUUID
 	checkStates := make(map[string]check.CheckState)
 	lastCheckStates := shared.GetLastStates()
 

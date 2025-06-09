@@ -380,3 +380,79 @@ func TestDisableCheck(t *testing.T) {
 		})
 	}
 }
+
+func TestGetDeviceUUID(t *testing.T) {
+	// Create a temporary directory for testing.
+	tempDir, err := os.MkdirTemp("", "config-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Set ConfigPath to a temporary file.
+	ConfigPath = filepath.Join(tempDir, "pareto.toml")
+
+	tests := []struct {
+		name           string
+		initialUUID    string
+		mockSystemUUID func() (string, error)
+		expectedUUID   string
+		shouldContain  bool // for generated UUIDs
+	}{
+		{
+			name:         "Returns existing UUID from config",
+			initialUUID:  "existing-uuid-123",
+			expectedUUID: "existing-uuid-123",
+		},
+		{
+			name:          "Falls back to random UUID when system fails",
+			initialUUID:   "",
+			shouldContain: true, // UUID will be randomly generated
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset config
+			Config = ParetoConfig{SystemUUID: tt.initialUUID}
+
+			// Call GetDeviceUUID
+			result := GetDeviceUUID()
+
+			// Validate result
+			if tt.shouldContain {
+				// For generated UUIDs, just check it's not empty and saved to config
+				if result == "" {
+					t.Error("expected non-empty UUID, got empty string")
+				}
+				if Config.SystemUUID != result {
+					t.Errorf("expected Config.SystemUUID to be %q, got %q", result, Config.SystemUUID)
+				}
+			} else {
+				if result != tt.expectedUUID {
+					t.Errorf("expected UUID %q, got %q", tt.expectedUUID, result)
+				}
+				if Config.SystemUUID != tt.expectedUUID {
+					t.Errorf("expected Config.SystemUUID to be %q, got %q", tt.expectedUUID, Config.SystemUUID)
+				}
+			}
+
+			// Verify config was saved to disk (except when UUID already existed)
+			if tt.initialUUID == "" {
+				data, err := os.ReadFile(ConfigPath)
+				if err != nil {
+					t.Fatalf("failed to read config file: %v", err)
+				}
+
+				var loadedConfig ParetoConfig
+				if err := toml.Unmarshal(data, &loadedConfig); err != nil {
+					t.Fatalf("failed to decode config file: %v", err)
+				}
+
+				if loadedConfig.SystemUUID != result {
+					t.Errorf("expected saved SystemUUID to be %q, got %q", result, loadedConfig.SystemUUID)
+				}
+			}
+		})
+	}
+}

@@ -10,13 +10,13 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/fyne-io/image v0.1.1
 	github.com/godbus/dbus/v5 v5.1.0
+	github.com/kolide/toast v1.0.2
 	github.com/olekukonko/tablewriter v1.0.6
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.9
 	golang.org/x/crypto v0.38.0
 	golang.org/x/sys v0.33.0
-	gopkg.in/toast.v1 v1.0.0-20180812000517-0a84660828b2
 )
 
 require (
@@ -49,7 +49,6 @@ require (
 	github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1 // indirect
 	github.com/jsummers/gobmp v0.0.0-20230614200233-a9de23ed2e25 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
-	github.com/kolide/toast v1.0.2 // indirect
 	github.com/leaanthony/go-ansi-parser v1.6.1 // indirect
 	github.com/leaanthony/u v1.1.1 // indirect
 	github.com/lmittmann/tint v1.0.7 // indirect
@@ -58,7 +57,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
-	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/olekukonko/errors v1.1.0 // indirect
 	github.com/olekukonko/ll v0.0.8 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect

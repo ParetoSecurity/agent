@@ -6,15 +6,21 @@ import (
 	"runtime"
 
 	"github.com/caarlos0/log"
+	"github.com/google/uuid"
 	"github.com/pelletier/go-toml"
 )
 
 var Config ParetoConfig
 var ConfigPath string
 
+// LoadConfig reads configuration from disk into the Config variable
+// Can only be called once during initialization
+var configLoaded bool
+
 type ParetoConfig struct {
 	TeamID        string
 	AuthToken     string
+	SystemUUID    string
 	DisableChecks []string
 }
 
@@ -44,12 +50,17 @@ func SaveConfig() error {
 	return encoder.Encode(Config)
 }
 
-// LoadConfig reads configuration from disk into the Config variable
 func LoadConfig() error {
+	if configLoaded {
+		log.Fatal("LoadConfig can only be called once during initialization")
+		return nil
+	}
+
 	if _, err := os.Stat(ConfigPath); os.IsNotExist(err) {
 		if err := SaveConfig(); err != nil {
 			return err
 		}
+		configLoaded = true
 		return nil
 	}
 	file, err := os.Open(ConfigPath)
@@ -64,6 +75,7 @@ func LoadConfig() error {
 		return err
 	}
 
+	configLoaded = true
 	return nil
 }
 
@@ -72,6 +84,7 @@ func ResetConfig() {
 	Config = ParetoConfig{
 		TeamID:        "",
 		AuthToken:     "",
+		SystemUUID:    "",
 		DisableChecks: []string{},
 	}
 	SaveConfig()
@@ -110,4 +123,29 @@ func IsCheckDisabled(checkUUID string) bool {
 		}
 	}
 	return false
+}
+
+// GetDeviceUUID returns the system UUID from the configuration
+func GetDeviceUUID() string {
+	if Config.SystemUUID != "" {
+		return Config.SystemUUID
+	}
+
+	duid, err := systemUUID()
+	if err != nil || duid == "" {
+		log.Warn("Failed to get system UUID, using fallback")
+		duid, err := uuid.NewRandom()
+		if err != nil {
+			log.WithError(err).Fatal("Failed to generate fallback system UUID")
+		}
+		Config.SystemUUID = duid.String()
+	} else {
+		Config.SystemUUID = duid
+	}
+
+	if err := SaveConfig(); err != nil {
+		log.WithError(err).Fatal("Failed to save system UUID to config")
+	}
+
+	return Config.SystemUUID
 }

@@ -94,11 +94,6 @@ func NewLinkingDevice() (*LinkingDevice, error) {
 	}
 	envInfo := hostInfo.Info()
 
-	systemUUID, err := SystemUUID()
-	if err != nil {
-		log.Warn("Failed to get system UUID")
-		return nil, err
-	}
 	ticket, err := uuid.NewRandom()
 	if err != nil {
 		log.Warn("Failed to generate ticket")
@@ -115,7 +110,7 @@ func NewLinkingDevice() (*LinkingDevice, error) {
 		OS:        envInfo.OS.Name,
 		OSVersion: envInfo.OS.Version,
 		Kernel:    envInfo.OS.Build,
-		UUID:      systemUUID,
+		UUID:      GetDeviceUUID(),
 		Ticket:    ticket.String(),
 	}, nil
 }
