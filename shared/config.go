@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	"github.com/caarlos0/log"
+	"github.com/google/uuid"
 	"github.com/pelletier/go-toml"
 )
 
@@ -15,6 +16,7 @@ var ConfigPath string
 type ParetoConfig struct {
 	TeamID        string
 	AuthToken     string
+	SystemUUID    string
 	DisableChecks []string
 }
 
@@ -35,6 +37,10 @@ func init() {
 // SaveConfig writes the current configuration to the config file
 func SaveConfig() error {
 
+	if err := os.MkdirAll(filepath.Dir(ConfigPath), 0755); err != nil {
+		log.WithError(err).Error("failed to create config directory")
+	}
+
 	file, err := os.Create(ConfigPath)
 	if err != nil {
 		return err
@@ -44,8 +50,8 @@ func SaveConfig() error {
 	return encoder.Encode(Config)
 }
 
-// LoadConfig reads configuration from disk into the Config variable
 func LoadConfig() error {
+
 	if _, err := os.Stat(ConfigPath); os.IsNotExist(err) {
 		if err := SaveConfig(); err != nil {
 			return err
@@ -72,6 +78,7 @@ func ResetConfig() {
 	Config = ParetoConfig{
 		TeamID:        "",
 		AuthToken:     "",
+		SystemUUID:    "",
 		DisableChecks: []string{},
 	}
 	SaveConfig()
@@ -110,4 +117,29 @@ func IsCheckDisabled(checkUUID string) bool {
 		}
 	}
 	return false
+}
+
+// GetDeviceUUID returns the system UUID from the configuration
+func GetDeviceUUID() string {
+	if Config.SystemUUID != "" {
+		return Config.SystemUUID
+	}
+
+	duid, err := systemUUID()
+	if err != nil || duid == "" {
+		log.Warn("Failed to get system UUID, using fallback")
+		duid, err := uuid.NewRandom()
+		if err != nil {
+			log.WithError(err).Fatal("Failed to generate fallback system UUID")
+		}
+		Config.SystemUUID = duid.String()
+	} else {
+		Config.SystemUUID = duid
+	}
+
+	if err := SaveConfig(); err != nil {
+		log.WithError(err).Fatal("Failed to save system UUID to config")
+	}
+
+	return Config.SystemUUID
 }
