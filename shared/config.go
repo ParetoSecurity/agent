@@ -13,10 +13,6 @@ import (
 var Config ParetoConfig
 var ConfigPath string
 
-// LoadConfig reads configuration from disk into the Config variable
-// Can only be called once during initialization
-var configLoaded bool
-
 type ParetoConfig struct {
 	TeamID        string
 	AuthToken     string
@@ -51,16 +47,11 @@ func SaveConfig() error {
 }
 
 func LoadConfig() error {
-	if configLoaded {
-		log.Fatal("LoadConfig can only be called once during initialization")
-		return nil
-	}
 
 	if _, err := os.Stat(ConfigPath); os.IsNotExist(err) {
 		if err := SaveConfig(); err != nil {
 			return err
 		}
-		configLoaded = true
 		return nil
 	}
 	file, err := os.Open(ConfigPath)
@@ -75,7 +66,6 @@ func LoadConfig() error {
 		return err
 	}
 
-	configLoaded = true
 	return nil
 }
 
