@@ -37,6 +37,10 @@ func init() {
 // SaveConfig writes the current configuration to the config file
 func SaveConfig() error {
 
+	if err := os.MkdirAll(filepath.Dir(ConfigPath), 0755); err != nil {
+		log.WithError(err).Error("failed to create config directory")
+	}
+
 	file, err := os.Create(ConfigPath)
 	if err != nil {
 		return err
