@@ -262,15 +262,11 @@ jobs:
 
       - name: Run Linux info
         run: |
-          PARETOSEC_INFO=$(sudo incus exec pareto -- /opt/paretosecurity info 2>&1)
-          echo "### ℹ️ Pareto Security Info" >> $GITHUB_STEP_SUMMARY
-          echo "${PARETOSEC_INFO}" >> $GITHUB_STEP_SUMMARY
+          sudo incus exec pareto -- /opt/paretosecurity info
 
       - name: Run Linux status
         run: |
-          PARETOSEC_STATUS=$(sudo incus exec pareto -- /opt/paretosecurity status 2>&1)
-          echo "### 🟢 Pareto Security Status" >> $GITHUB_STEP_SUMMARY
-          echo "${PARETOSEC_STATUS}" >> $GITHUB_STEP_SUMMARY
+          sudo incus exec pareto -- /opt/paretosecurity status
 
     
   build:
