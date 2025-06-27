@@ -55,7 +55,18 @@ func CurrentReportingDevice() ReportingDevice {
 				return "Unknown"
 			}
 
-			return Sanitize(serial)
+			// Handle common placeholder values
+			if serial == "To Be Filled By O.E.M." || serial == "To be filled by O.E.M." {
+				return "Unknown"
+			}
+
+			sanitized := Sanitize(serial)
+			// If sanitization results in empty string or just spaces, return Unknown
+			if sanitized == "" {
+				return "Unknown"
+			}
+
+			return sanitized
 		}(),
 	}
 }

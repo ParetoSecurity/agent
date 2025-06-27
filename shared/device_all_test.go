@@ -3,7 +3,6 @@ package shared
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"runtime"
 	"strings"
 	"testing"
@@ -14,10 +13,11 @@ func TestCurrentReportingDevice(t *testing.T) {
 	Config.AuthToken = ""
 
 	// determine expected OSVersion based on runtime
-	expectedOSVersion := fmt.Sprintf("%s %s", "test-os", "test-os-version")
+	// Note: Spaces are removed by Sanitize function to match API requirements
+	expectedOSVersion := "test-ostest-os-version"
 	if runtime.GOOS == "windows" {
 		// additional formatting on windows
-		expectedOSVersion = fmt.Sprintf("%s %s", expectedOSVersion, "test-os-version")
+		expectedOSVersion = "test-ostest-os-versiontest-os-version"
 	}
 
 	t.Run("successful device info with working SystemDevice and SystemSerial", func(t *testing.T) {

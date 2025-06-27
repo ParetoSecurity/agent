@@ -9,11 +9,14 @@ func TestSanitize(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"Hello, 世界!", "Hello, __!"},
-		{"123 ABC abc", "123 ABC abc"},
-		{"Special chars: @#$%^&*()", "Special chars "},
-		{"Mixed: 你好, 世界! 123", "Mixed __, __! 123"},
+		{"Hello, 世界!", "Hello__!"},
+		{"123 ABC abc", "123ABCabc"},
+		{"Special chars: @#$%^&*()", "Specialchars"},
+		{"Mixed: 你好, 世界! 123", "Mixed____!123"},
 		{"borxed\r\n", "borxed"},
+		{"To Be Filled By O.E.M.", "ToBeFilledByO.E.M."},
+		{"Valid-Serial_123", "Valid-Serial_123"},
+		{"Serial.with!quotes'\"", "Serial.with!quotes'\""},
 	}
 
 	for _, test := range tests {
