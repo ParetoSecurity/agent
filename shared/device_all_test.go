@@ -13,19 +13,25 @@ func TestCurrentReportingDevice(t *testing.T) {
 	Config.AuthToken = ""
 
 	// determine expected OSVersion based on runtime
-	// Note: Spaces are removed by Sanitize function to match API requirements
-	expectedOSVersion := "test-ostest-os-version"
-	if runtime.GOOS == "windows" {
-		// additional formatting on windows
-		expectedOSVersion = "test-ostest-os-versiontest-os-version"
+	var expectedOSVersion string
+	switch runtime.GOOS {
+	case "darwin":
+		// macOS version format: ^(\d+\.)?(\d+\.)?(\*|\d+)
+		expectedOSVersion = "0.0.0" // FormatMacOSVersion returns this for non-numeric versions
+	case "windows":
+		// Windows preserves spaces
+		expectedOSVersion = "test-os test-os-version test-os-version"
+	default:
+		// Linux preserves spaces
+		expectedOSVersion = "test-os test-os-version"
 	}
 
 	t.Run("successful device info with working SystemDevice and SystemSerial", func(t *testing.T) {
 
 		rd := CurrentReportingDevice()
 
-		if rd.MachineUUID != "test-uuid" {
-			t.Errorf("Expected MachineUUID %q, got %q", "test-uuid", rd.MachineUUID)
+		if rd.MachineUUID != "12345678-1234-1234-1234-123456789012" {
+			t.Errorf("Expected MachineUUID %q, got %q", "12345678-1234-1234-1234-123456789012", rd.MachineUUID)
 		}
 		if rd.MachineName != "test-hostname" {
 			t.Errorf("Expected MachineName %q, got %q", "test-hostname", rd.MachineName)

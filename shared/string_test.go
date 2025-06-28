@@ -28,3 +28,28 @@ func TestSanitize(t *testing.T) {
 		})
 	}
 }
+
+func TestSanitizeWithSpaces(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"Ubuntu 22.04 LTS", "Ubuntu 22.04 LTS"},
+		{"macOS 14.0 Sonoma", "macOS 14.0 Sonoma"},
+		{"Windows 11 Pro", "Windows 11 Pro"},
+		{"CentOS Linux 8 (Core)", "CentOS Linux 8 Core"},
+		{"Debian GNU/Linux 12", "Debian GNULinux 12"},
+		{"OS\r\nVersion\t2023", "OSVersion2023"},
+		{"Arch Linux 世界", "Arch Linux __"},
+		{"Red Hat Enterprise Linux 9.2", "Red Hat Enterprise Linux 9.2"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			result := SanitizeWithSpaces(test.input)
+			if result != test.expected {
+				t.Errorf("SanitizeWithSpaces(%q) = %q; want %q", test.input, result, test.expected)
+			}
+		})
+	}
+}

@@ -20,9 +20,13 @@ func CurrentReportingDevice() ReportingDevice {
 	}
 
 	osVersion := device.OS
-	osVersion = Sanitize(fmt.Sprintf("%s %s", osVersion, device.OSVersion))
 
-	if runtime.GOOS == "windows" {
+	// Format OS version based on platform requirements
+	switch runtime.GOOS {
+	case "darwin":
+		// macOS needs version in format: ^(\d+\.)?(\d+\.)?(\*|\d+)
+		osVersion = FormatMacOSVersion(device.OSVersion)
+	case "windows":
 		productName, err := RunCommand("powershell", "-Command", `(Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ProductName`)
 		if err != nil {
 			log.WithError(err).Warn("Failed to get Windows product name")
@@ -32,11 +36,16 @@ func CurrentReportingDevice() ReportingDevice {
 			log.WithError(err).Warn("Failed to get Windows version")
 		}
 		if lo.IsNotEmpty(productName) && lo.IsNotEmpty(displayVersion) {
-			osVersion = Sanitize(strings.TrimSpace(productName + " " + displayVersion))
+			osVersion = SanitizeWithSpaces(strings.TrimSpace(productName + " " + displayVersion))
+		} else {
+			osVersion = SanitizeWithSpaces(fmt.Sprintf("%s %s", device.OS, device.OSVersion))
 		}
+	default:
+		// Linux and others
+		osVersion = SanitizeWithSpaces(fmt.Sprintf("%s %s", device.OS, device.OSVersion))
 	}
 
-	return ReportingDevice{
+	rd := ReportingDevice{
 		MachineUUID: device.UUID,
 		MachineName: Sanitize(device.Hostname),
 		Auth:        Config.AuthToken,
@@ -86,6 +95,11 @@ func CurrentReportingDevice() ReportingDevice {
 			return sanitized
 		}(),
 	}
+
+	// Apply OpenAPI spec validation and constraints
+	ValidateAndPrepareDevice(&rd)
+
+	return rd
 }
 
 type LinkingDevice struct {
@@ -110,7 +124,7 @@ func NewLinkingDevice() (*LinkingDevice, error) {
 			OS:        "test-os",
 			OSVersion: "test-os-version",
 			Kernel:    "test-kernel",
-			UUID:      "test-uuid",
+			UUID:      "12345678-1234-1234-1234-123456789012",
 			Ticket:    "test-ticket",
 		}, nil
 	}
