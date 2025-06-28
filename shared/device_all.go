@@ -56,8 +56,25 @@ func CurrentReportingDevice() ReportingDevice {
 			}
 
 			// Handle common placeholder values
-			if serial == "To Be Filled By O.E.M." || serial == "To be filled by O.E.M." {
-				return "Unknown"
+			placeholders := []string{
+				"To Be Filled By O.E.M.",
+				"To be filled by O.E.M.",
+				"0123456789",
+				"Default string",
+				"System Serial Number",
+				"Not Specified",
+				"Not Available",
+				"N/A",
+				"None",
+				".",
+				"-",
+				"000000000000",
+			}
+
+			for _, placeholder := range placeholders {
+				if strings.EqualFold(serial, placeholder) || strings.TrimSpace(serial) == placeholder {
+					return "Unknown"
+				}
 			}
 
 			sanitized := Sanitize(serial)
