@@ -3,6 +3,8 @@
 
 package shared
 
+import "strings"
+
 type ReportingDevice struct {
 	MachineUUID string `json:"machineUUID"` // e.g. 123e4567-e89b-12d3-a456-426614174000
 	MachineName string `json:"machineName"` // e.g. MacBook-Pro.local
@@ -16,20 +18,22 @@ type ReportingDevice struct {
 // that queries hardware information on Darwin (macOS) systems. It returns the
 // serial number as a string, or an error if the command fails.
 func SystemSerial() (string, error) {
-	serial, err := RunCommand("system_profiler", "SPHardwareDataType", "|", "grep", "Serial", "|", "awk", "'{print $4}'")
+	// Use bash to properly handle pipes
+	serial, err := RunCommand("bash", "-c", "system_profiler SPHardwareDataType | grep 'Serial Number (system)' | awk '{print $4}'")
 	if err != nil {
 		return "", err
 	}
-	return serial, nil
+	return strings.TrimSpace(serial), nil
 }
 
 // SystemDevice retrieves the system's device model name by executing a shell command
 // that queries the hardware data using 'system_profiler' and processes the output.
 // It returns the device model name as a string, or an error if the command fails.
 func SystemDevice() (string, error) {
-	device, err := RunCommand("system_profiler", "SPHardwareDataType", "|", "grep", "Model Name", "|", "awk", "'{print $3}'")
+	// Use bash to properly handle pipes and get everything after "Model Name:"
+	device, err := RunCommand("bash", "-c", "system_profiler SPHardwareDataType | grep 'Model Name:' | sed 's/.*Model Name: //'")
 	if err != nil {
 		return "", err
 	}
-	return device, nil
+	return strings.TrimSpace(device), nil
 }

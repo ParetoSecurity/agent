@@ -232,7 +232,7 @@ func TestValidateAndPrepareDevice(t *testing.T) {
 				Auth:        "test-auth",
 				OSVersion:   "Ubuntu 22.04",
 				ModelName:   "Dell XPS",
-				ModelSerial: "Unknown",
+				ModelSerial: "ABC123INVALID", // Transformed to valid pattern
 			},
 		},
 		{
@@ -341,6 +341,70 @@ func TestUUIDPattern(t *testing.T) {
 			result := uuidPattern.MatchString(tt.uuid) && len(tt.uuid) == uuidLength
 			if result != tt.expected {
 				t.Errorf("UUID validation for %q = %v; want %v", tt.uuid, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestTransformToModelSerialPattern(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		// Already valid
+		{"ABC123", "ABC123"},
+		{"A-B_C.123", "A-B_C.123"},
+		{"Serial!Number", "Serial!Number"},
+
+		// Need transformation
+		{"ABC 123", "ABC123"},                                           // Remove space
+		{"ABC@123#DEF", "ABC123DEF"},                                    // Remove @ and #
+		{"ABC,123", "ABC123"},                                           // Remove comma
+		{"To Be Filled By O.E.M.", "ToBeFilledByO.E"},                   // Truncated to 15 chars
+		{"HardwareHardwareOverviewModelNameMacmini", "HardwareHardwar"}, // Truncate to 15
+
+		// Edge cases
+		{"", "Unknown"},
+		{"@#$%", "Unknown"},                       // All invalid chars
+		{"ABC123456789012345", "ABC123456789012"}, // Truncate to 15
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := TransformToModelSerialPattern(tt.input)
+			if result != tt.expected {
+				t.Errorf("TransformToModelSerialPattern(%q) = %q; want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestTransformToOSVersionPattern(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		// Already valid
+		{"Ubuntu 22.04 LTS", "Ubuntu 22.04 LTS"},
+		{"Windows 11 Pro", "Windows 11 Pro"},
+
+		// Need transformation
+		{"Ubuntu 22.04 (Jammy)", "Ubuntu 22.04 Jammy"}, // Remove parentheses
+		{"Windows 11 [Pro]", "Windows 11 Pro"},         // Remove brackets
+		{"Linux@2023", "Linux2023"},                    // Remove @
+		{"OS#Version", "OSVersion"},                    // Remove #
+		{"macOS 14.5 — Sonoma", "macOS 14.5  Sonoma"},  // Remove em dash
+
+		// Edge cases
+		{"", ""},
+		{"!@#$%^&*()", "!"}, // Only ! is allowed from these
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := TransformToOSVersionPattern(tt.input)
+			if result != tt.expected {
+				t.Errorf("TransformToOSVersionPattern(%q) = %q; want %q", tt.input, result, tt.expected)
 			}
 		})
 	}

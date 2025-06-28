@@ -2,6 +2,7 @@ package shared
 
 import (
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/caarlos0/log"
@@ -65,14 +66,17 @@ func ValidateAndPrepareDevice(device *ReportingDevice) {
 	if len(device.ModelSerial) > maxModelSerialLength {
 		device.ModelSerial = TruncateString(device.ModelSerial, maxModelSerialLength)
 	}
-	// Ensure it matches the pattern after truncation
+	// Transform to match pattern if it doesn't
 	if !modelSerialPattern.MatchString(device.ModelSerial) {
-		// If it doesn't match after sanitization, default to Unknown
-		device.ModelSerial = "Unknown"
+		device.ModelSerial = TransformToModelSerialPattern(device.ModelSerial)
 	}
 
 	// Validate OS version
 	device.OSVersion = TruncateString(device.OSVersion, maxOSVersionLength)
+	// Transform OS version to match pattern if needed (for Linux/Windows)
+	if runtime.GOOS != "darwin" && !osVersionPattern.MatchString(device.OSVersion) {
+		device.OSVersion = TransformToOSVersionPattern(device.OSVersion)
+	}
 
 	// Validate UUID length and pattern
 	if len(device.MachineUUID) != uuidLength || !uuidPattern.MatchString(device.MachineUUID) {
@@ -117,4 +121,55 @@ func FormatMacOSVersion(version string) string {
 
 	// Default to a valid version
 	return "0.0.0"
+}
+
+// TransformToModelSerialPattern transforms a string to match the modelSerial pattern
+// Pattern: ^[a-zA-Z0-9\.!\-'"_]+$
+func TransformToModelSerialPattern(s string) string {
+	if s == "" {
+		return "Unknown"
+	}
+
+	// Remove any characters not allowed by the pattern
+	var result []byte
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+			c == '.' || c == '!' || c == '-' || c == '\'' || c == '"' || c == '_' {
+			result = append(result, c)
+		}
+	}
+
+	// If nothing left after filtering, return Unknown
+	if len(result) == 0 {
+		return "Unknown"
+	}
+
+	// Ensure it doesn't exceed max length
+	transformed := string(result)
+	if len(transformed) > maxModelSerialLength {
+		transformed = transformed[:maxModelSerialLength]
+	}
+
+	return transformed
+}
+
+// TransformToOSVersionPattern transforms a string to match the OS version pattern
+// Pattern: ^[a-zA-Z0-9\.!\-'" _]+$
+func TransformToOSVersionPattern(s string) string {
+	if s == "" {
+		return ""
+	}
+
+	// Remove any characters not allowed by the pattern
+	var result []byte
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+			c == '.' || c == '!' || c == '-' || c == '\'' || c == '"' || c == '_' || c == ' ' {
+			result = append(result, c)
+		}
+	}
+
+	return string(result)
 }
