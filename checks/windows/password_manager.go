@@ -84,14 +84,14 @@ func checkForBrowserExtensions() bool {
 	}
 
 	// Check Firefox separately due to different extension structure
-	if checkFirefoxExtensions(home, browserExtensions) {
+	if checkFirefoxExtensions(home) {
 		return true
 	}
 
 	return false
 }
 
-func checkFirefoxExtensions(home string, extensionIDs []string) bool {
+func checkFirefoxExtensions(home string) bool {
 	profilesPath := filepath.Join(home, "AppData", "Roaming", "Mozilla", "Firefox", "Profiles")
 
 	if _, err := os.Stat(profilesPath); err != nil {
