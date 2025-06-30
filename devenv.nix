@@ -46,16 +46,20 @@ in {
 
   scripts.verify-package.description = "Verify package.nix hash";
   scripts.verify-package.exec = ''
-    output=$(nix run .# -- --help 2>&1)
-    specified=$(echo "$output" | grep "specified:" | awk '{print $2}')
-    got=$(echo "$output" | grep "got:" | awk '{print $2}')
+    output=$(nix build .# 2>&1 || true)
+    specified=$(echo "$output" | grep -o "specified: sha256-[A-Za-z0-9+/=]*" | cut -d' ' -f2)
+    got=$(echo "$output" | grep -o "got: *sha256-[A-Za-z0-9+/=]*" | cut -d' ' -f2)
     echo "Specified: $specified"
     echo "Got: $got"
-    if [ "$specified" != "$got" ]; then
+    if [ -n "$specified" ] && [ -n "$got" ] && [ "$specified" != "$got" ]; then
       echo "Mismatch detected, updating package.nix hash from $specified to $got"
       sed -i -e "s|$specified|$got|g" ./package.nix
     else
-      echo "Hashes match; no update required."
+      if [ -z "$specified" ] && [ -z "$got" ]; then
+        echo "No hash mismatch found in build output."
+      else
+        echo "Hashes match; no update required."
+      fi
     fi
   '';
 

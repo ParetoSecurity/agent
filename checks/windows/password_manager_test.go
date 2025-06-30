@@ -2,6 +2,7 @@ package checks
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,7 +18,7 @@ func TestPasswordManagerCheck_Run(t *testing.T) {
 		{
 			name: "1Password present",
 			mockFiles: map[string]bool{
-				"C:\\Users\\TestUser/AppData/Local/1Password/app/8/1Password.exe": true,
+				filepath.Join("C:\\Users\\TestUser", "AppData", "Local", "1Password", "app", "8", "1Password.exe"): true,
 			},
 			expectedPassed: true,
 			expectedStatus: "Password manager is present",
@@ -25,7 +26,7 @@ func TestPasswordManagerCheck_Run(t *testing.T) {
 		{
 			name: "Bitwarden present",
 			mockFiles: map[string]bool{
-				"C:\\Users\\TestUser/AppData/Local/Programs/Bitwarden/Bitwarden.exe": true,
+				filepath.Join("C:\\Users\\TestUser", "AppData", "Local", "Programs", "Bitwarden", "Bitwarden.exe"): true,
 			},
 			expectedPassed: true,
 			expectedStatus: "Password manager is present",
@@ -33,7 +34,7 @@ func TestPasswordManagerCheck_Run(t *testing.T) {
 		{
 			name: "KeePass present",
 			mockFiles: map[string]bool{
-				"C:\\Program Files (x86)/KeePass Password Safe 2/KeePass.exe": true,
+				filepath.Join("C:\\Program Files (x86)", "KeePass Password Safe 2", "KeePass.exe"): true,
 			},
 			expectedPassed: true,
 			expectedStatus: "Password manager is present",
@@ -41,7 +42,7 @@ func TestPasswordManagerCheck_Run(t *testing.T) {
 		{
 			name: "KeePassXC present",
 			mockFiles: map[string]bool{
-				"C:\\Program Files/KeePassXC/KeePassXC.exe": true,
+				filepath.Join("C:\\Program Files", "KeePassXC", "KeePassXC.exe"): true,
 			},
 			expectedPassed: true,
 			expectedStatus: "Password manager is present",
@@ -55,6 +56,7 @@ func TestPasswordManagerCheck_Run(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		os.Setenv("HOME", "C:\\Users\\TestUser")
 		os.Setenv("USERPROFILE", "C:\\Users\\TestUser")
 		os.Setenv("PROGRAMFILES", "C:\\Program Files")
 		os.Setenv("PROGRAMFILES(X86)", "C:\\Program Files (x86)")
@@ -66,6 +68,7 @@ func TestPasswordManagerCheck_Run(t *testing.T) {
 			assert.Equal(t, tt.expectedPassed, pmc.Passed())
 			assert.Equal(t, tt.expectedStatus, pmc.Status())
 		})
+		os.Unsetenv("HOME")
 		os.Unsetenv("USERPROFILE")
 		os.Unsetenv("PROGRAMFILES")
 		os.Unsetenv("PROGRAMFILES(X86)")
