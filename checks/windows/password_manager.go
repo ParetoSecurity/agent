@@ -15,11 +15,14 @@ func (pmc *PasswordManagerCheck) Name() string {
 }
 
 func (pmc *PasswordManagerCheck) Run() error {
-	// TODO; need real paths
-	userProfile := os.Getenv("USERPROFILE")
+	userHome, err := os.UserHomeDir()
+	if err != nil {
+		userHome = os.Getenv("USERPROFILE")
+	}
+
 	paths := []string{
-		filepath.Join(userProfile, "AppData", "Local", "1Password", "app", "8", "1Password.exe"),
-		filepath.Join(userProfile, "AppData", "Local", "Programs", "Bitwarden", "Bitwarden.exe"),
+		filepath.Join(userHome, "AppData", "Local", "1Password", "app", "8", "1Password.exe"),
+		filepath.Join(userHome, "AppData", "Local", "Programs", "Bitwarden", "Bitwarden.exe"),
 		filepath.Join(os.Getenv("PROGRAMFILES"), "KeePass Password Safe 2", "KeePass.exe"),
 		filepath.Join(os.Getenv("PROGRAMFILES(X86)"), "KeePass Password Safe 2", "KeePass.exe"),
 		filepath.Join(os.Getenv("PROGRAMFILES"), "KeePassXC", "KeePassXC.exe"),
@@ -38,7 +41,11 @@ func (pmc *PasswordManagerCheck) Run() error {
 }
 
 func checkForBrowserExtensions() bool {
-	home := os.Getenv("USERPROFILE")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = os.Getenv("USERPROFILE")
+	}
+
 	extensionPaths := map[string]string{
 		"Google Chrome":  filepath.Join(home, "AppData", "Local", "Google", "Chrome", "User Data", "Default", "Extensions"),
 		"Firefox":        filepath.Join(home, "AppData", "Roaming", "Mozilla", "Firefox", "Profiles"),
@@ -47,13 +54,12 @@ func checkForBrowserExtensions() bool {
 	}
 
 	browserExtensions := []string{
-		"LastPass",
-		"ProtonPass",
-		"NordPass",
-		"Bitwarden",
-		"1Password",
-		"KeePass",
-		"Dashlane",
+		"hdokiejnpimakedhajhdlcegeplioahd", // LastPass
+		"ghmbeldphafepmbegfdlkpapadhbakde", // ProtonPass
+		"eiaeiblijfjekdanodkjadfinkhbfgcd", // nordpass
+		"nngceckbapebfimnlniiiahkandclbl",  // bitwarden
+		"aeblfdkhhhdcdjpifhhbdiojplfjncoa", // 1password
+		"fdjamakpfbbddfjaooikfcpapjohcfmg", // dashlane
 	}
 
 	for _, extPath := range extensionPaths {

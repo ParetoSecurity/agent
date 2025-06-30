@@ -91,14 +91,14 @@ func TestCheckForBrowserExtensions(t *testing.T) {
 		{
 			name: "Found extension in Chrome",
 			setUpDirs: map[string][]string{
-				filepath.Join("Library", "Application Support", "Google", "Chrome", "Default", "Extensions"): {"My1PasswordExtension"},
+				filepath.Join("Library", "Application Support", "Google", "Chrome", "Default", "Extensions"): {"aeblfdkhhhdcdjpifhhbdiojplfjncoa"},
 			},
 			expectedBool: true,
 		},
 		{
 			name: "Found extension in Firefox",
 			setUpDirs: map[string][]string{
-				filepath.Join("Library", "Application Support", "Firefox", "Profiles"): {"nordpass_addon"},
+				filepath.Join("Library", "Application Support", "Firefox", "Profiles"): {"eiaeiblijfjekdanodkjadfinkhbfgcd"},
 			},
 			expectedBool: true,
 		},
