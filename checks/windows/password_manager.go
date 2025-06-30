@@ -48,9 +48,13 @@ func checkForBrowserExtensions() bool {
 
 	extensionPaths := map[string]string{
 		"Google Chrome":  filepath.Join(home, "AppData", "Local", "Google", "Chrome", "User Data", "Default", "Extensions"),
-		"Firefox":        filepath.Join(home, "AppData", "Roaming", "Mozilla", "Firefox", "Profiles"),
 		"Microsoft Edge": filepath.Join(home, "AppData", "Local", "Microsoft", "Edge", "User Data", "Default", "Extensions"),
+		"Edge Beta":      filepath.Join(home, "AppData", "Local", "Microsoft", "Edge Beta", "User Data", "Default", "Extensions"),
+		"Edge Dev":       filepath.Join(home, "AppData", "Local", "Microsoft", "Edge Dev", "User Data", "Default", "Extensions"),
 		"Brave Browser":  filepath.Join(home, "AppData", "Local", "BraveSoftware", "Brave-Browser", "User Data", "Default", "Extensions"),
+		"Opera":          filepath.Join(home, "AppData", "Roaming", "Opera Software", "Opera Stable", "Extensions"),
+		"Opera GX":       filepath.Join(home, "AppData", "Roaming", "Opera Software", "Opera GX Stable", "Extensions"),
+		"Vivaldi":        filepath.Join(home, "AppData", "Local", "Vivaldi", "User Data", "Default", "Extensions"),
 	}
 
 	browserExtensions := []string{
@@ -62,6 +66,7 @@ func checkForBrowserExtensions() bool {
 		"fdjamakpfbbddfjaooikfcpapjohcfmg", // dashlane
 	}
 
+	// Check Chromium-based browsers
 	for _, extPath := range extensionPaths {
 		if _, err := os.Stat(extPath); err == nil {
 			entries, err := os.ReadDir(extPath)
@@ -77,6 +82,56 @@ func checkForBrowserExtensions() bool {
 			}
 		}
 	}
+
+	// Check Firefox separately due to different extension structure
+	if checkFirefoxExtensions(home, browserExtensions) {
+		return true
+	}
+
+	return false
+}
+
+func checkFirefoxExtensions(home string, extensionIDs []string) bool {
+	profilesPath := filepath.Join(home, "AppData", "Roaming", "Mozilla", "Firefox", "Profiles")
+
+	if _, err := os.Stat(profilesPath); err != nil {
+		return false
+	}
+
+	profiles, err := os.ReadDir(profilesPath)
+	if err != nil {
+		return false
+	}
+
+	// Firefox addon IDs for password managers
+	firefoxAddonIDs := []string{
+		"@lastpass-password-manager",             // LastPass
+		"@proton-pass",                           // ProtonPass
+		"nordpass@nordpass.com",                  // NordPass
+		"{446900e4-71c2-419f-a6a7-df9c091e268b}", // Bitwarden
+		"{d634138d-c276-4fc8-924b-40a0ea21d284}", // 1Password
+		"extension@dashlane.com",                 // Dashlane
+	}
+
+	for _, profile := range profiles {
+		if profile.IsDir() {
+			extensionsPath := filepath.Join(profilesPath, profile.Name(), "extensions")
+			if _, err := os.Stat(extensionsPath); err == nil {
+				extensions, err := os.ReadDir(extensionsPath)
+				if err == nil {
+					for _, ext := range extensions {
+						extName := strings.ToLower(ext.Name())
+						for _, addonID := range firefoxAddonIDs {
+							if strings.Contains(extName, strings.ToLower(addonID)) {
+								return true
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	return false
 }
 
