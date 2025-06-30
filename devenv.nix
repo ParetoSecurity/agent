@@ -77,7 +77,7 @@ in {
   '';
 
   # https://devenv.sh/pre-commit-hooks/
-  pre-commit.hooks = {
+  git-hooks.hooks = {
     alejandra.enable = true;
     gofmt.enable = true;
     # golangci-lint.enable = true;
