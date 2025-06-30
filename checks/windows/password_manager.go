@@ -64,6 +64,10 @@ func checkForBrowserExtensions() bool {
 		"nngceckbapebfimnlniiiahkandclbl",  // bitwarden
 		"aeblfdkhhhdcdjpifhhbdiojplfjncoa", // 1password
 		"fdjamakpfbbddfjaooikfcpapjohcfmg", // dashlane
+		"dppgmdbiimibapkepcbdbmkaabgiofem", // 1Password on Edge
+		"gehmmocbbkpblljhkekmfhjpfbkclbph", // Dashlane on Edge
+		"jbkfoedolllekgbhcbcoahefnbanhhlh", // Bitwarden on Edge
+		"bbcinlkgjjkejfdpemiealijmmooekmp", // LastPass on Edge
 	}
 
 	// Check Chromium-based browsers
