@@ -193,7 +193,7 @@ func (d *WindowsDefender) checkService(serviceName string) bool {
 	if err != nil {
 		return false
 	}
-	return strings.Contains(string(out), "Running") || strings.Contains(string(out), "Stopped")
+	return strings.Contains(string(out), "Running")
 }
 
 func (d *WindowsDefender) checkRegistryKey(regKey string) bool {
