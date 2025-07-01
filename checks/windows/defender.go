@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/ParetoSecurity/agent/shared"
+	"github.com/caarlos0/log"
 )
 
 type WindowsDefender struct {
@@ -14,12 +15,12 @@ type WindowsDefender struct {
 }
 
 type AntivirusProduct struct {
-	DisplayName              string `json:"displayName"`
-	InstanceGuid             string `json:"instanceGuid"`
-	PathToSignedProductExe   string `json:"pathToSignedProductExe"`
-	PathToSignedReportingExe string `json:"pathToSignedReportingExe"`
-	ProductState             string `json:"productState"`
-	Timestamp                string `json:"timestamp"`
+	DisplayName              string      `json:"displayName"`
+	InstanceGuid             string      `json:"instanceGuid"`
+	PathToSignedProductExe   string      `json:"pathToSignedProductExe"`
+	PathToSignedReportingExe string      `json:"pathToSignedReportingExe"`
+	ProductState             json.Number `json:"productState"`
+	Timestamp                string      `json:"timestamp"`
 }
 
 type EDRProduct struct {
@@ -94,6 +95,7 @@ func (d *WindowsDefender) checkSecurityCenterAntivirus() bool {
 	// Use Get-CimInstance to query antivirus products from SecurityCenter2
 	out, err := shared.RunCommand("powershell", "-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json")
 	if err != nil {
+		log.WithError(err).Debug("Failed to run Get-CimInstance command for antivirus products")
 		return false
 	}
 
@@ -102,6 +104,7 @@ func (d *WindowsDefender) checkSecurityCenterAntivirus() bool {
 	outStr = strings.TrimSpace(outStr)
 
 	if outStr == "" {
+		log.Debug("Empty output from Get-CimInstance command for antivirus products")
 		return false
 	}
 
@@ -110,12 +113,14 @@ func (d *WindowsDefender) checkSecurityCenterAntivirus() bool {
 	if strings.HasPrefix(outStr, "[") {
 		// Multiple products
 		if err := json.Unmarshal([]byte(outStr), &products); err != nil {
+			log.WithError(err).Debug("Failed to unmarshal JSON array of antivirus products")
 			return false
 		}
 	} else {
 		// Single product
 		var product AntivirusProduct
 		if err := json.Unmarshal([]byte(outStr), &product); err != nil {
+			log.WithError(err).Debug("Failed to unmarshal JSON single antivirus product")
 			return false
 		}
 		products = []AntivirusProduct{product}
@@ -229,7 +234,7 @@ func (d *WindowsDefender) isAntivirusActive(product AntivirusProduct) bool {
 		// 262144 (0x40000): Up to date, Disabled, Real-time OFF, Definitions Current
 		// 393472 (0x60100): Up to date, Disabled, Real-time OFF, Definitions Current (Windows Defender disabled)
 		// 397568 (0x61100): Up to date, Enabled, Real-time ON, Definitions Current (Windows Defender enabled)
-		if state, err := strconv.ParseUint(product.ProductState, 10, 32); err == nil {
+		if state, err := strconv.ParseUint(string(product.ProductState), 10, 32); err == nil {
 			// Check if real-time protection is enabled (bit 13)
 			realTimeEnabled := (state & 0x1000) != 0
 
