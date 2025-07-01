@@ -11,81 +11,174 @@ import (
 func TestWindowsDefender_Run(t *testing.T) {
 	tests := []struct {
 		name           string
-		mockCommand    shared.RunCommandMock
+		mockCommands   []shared.RunCommandMock
 		expectedPassed bool
 		expectedStatus string
 	}{
 		{
-			name: "All protections enabled",
-			mockCommand: shared.RunCommandMock{
-				Command: "powershell",
-				Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
-				Out:     `{"RealTimeProtectionEnabled":true,"IoavProtectionEnabled":true,"AntispywareEnabled":true}`,
-				Err:     nil,
+			name: "Defender all protections enabled",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
+					Out:     `{"RealTimeProtectionEnabled":true,"IoavProtectionEnabled":true,"AntispywareEnabled":true}`,
+					Err:     nil,
+				},
 			},
 			expectedPassed: true,
-			expectedStatus: "Microsoft Defender is on",
+			expectedStatus: "Antivirus software is active",
 		},
 		{
-			name: "Real-time protection disabled",
-			mockCommand: shared.RunCommandMock{
-				Command: "powershell",
-				Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
-				Out:     `{"RealTimeProtectionEnabled":false,"IoavProtectionEnabled":true,"AntispywareEnabled":true}`,
-				Err:     nil,
+			name: "Defender real-time protection disabled",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
+					Out:     `{"RealTimeProtectionEnabled":false,"IoavProtectionEnabled":true,"AntispywareEnabled":true}`,
+					Err:     nil,
+				},
 			},
 			expectedPassed: false,
 			expectedStatus: "Defender has disabled real-time protection",
 		},
 		{
-			name: "Tamper protection disabled",
-			mockCommand: shared.RunCommandMock{
-				Command: "powershell",
-				Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
-				Out:     `{"RealTimeProtectionEnabled":true,"IoavProtectionEnabled":false,"AntispywareEnabled":true}`,
-				Err:     nil,
+			name: "Defender tamper protection disabled",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
+					Out:     `{"RealTimeProtectionEnabled":true,"IoavProtectionEnabled":false,"AntispywareEnabled":true}`,
+					Err:     nil,
+				},
 			},
 			expectedPassed: false,
 			expectedStatus: "Defender has disabled tamper protection",
 		},
 		{
-			name: "Antispyware disabled",
-			mockCommand: shared.RunCommandMock{
-				Command: "powershell",
-				Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
-				Out:     `{"RealTimeProtectionEnabled":true,"IoavProtectionEnabled":true,"AntispywareEnabled":false}`,
-				Err:     nil,
+			name: "Defender antispyware disabled",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
+					Out:     `{"RealTimeProtectionEnabled":true,"IoavProtectionEnabled":true,"AntispywareEnabled":false}`,
+					Err:     nil,
+				},
 			},
 			expectedPassed: false,
 			expectedStatus: "Defender is disabled",
 		},
 		{
-			name: "Command execution error",
-			mockCommand: shared.RunCommandMock{
-				Command: "powershell",
-				Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
-				Out:     "",
-				Err:     errors.New("command failed"),
+			name: "Fallback to wmic SecurityCenter2 with active antivirus",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
+					Out:     "",
+					Err:     errors.New("powershell failed"),
+				},
+				{
+					Command: "wmic",
+					Args:    []string{"/namespace:\\\\root\\SecurityCenter2", "path", "AntiVirusProduct", "get", "/value"},
+					Out:     "displayName=Norton Security\nproductState=266240\n\n",
+					Err:     nil,
+				},
 			},
-			expectedPassed: false,
-			expectedStatus: "Failed to query Defender status",
+			expectedPassed: true,
+			expectedStatus: "Antivirus software is active",
 		},
 		{
-			name: "Invalid JSON output",
-			mockCommand: shared.RunCommandMock{
-				Command: "powershell",
-				Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
-				Out:     `invalid-json`,
-				Err:     nil,
+			name: "Fallback to wmic SecurityCenter (older systems)",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
+					Out:     "",
+					Err:     errors.New("powershell failed"),
+				},
+				{
+					Command: "wmic",
+					Args:    []string{"/namespace:\\\\root\\SecurityCenter2", "path", "AntiVirusProduct", "get", "/value"},
+					Out:     "",
+					Err:     errors.New("SecurityCenter2 failed"),
+				},
+				{
+					Command: "wmic",
+					Args:    []string{"/namespace:\\\\root\\SecurityCenter", "path", "AntiVirusProduct", "get", "/value"},
+					Out:     "displayName=McAfee VirusScan\nonAccessScanningEnabled=TRUE\n\n",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true,
+			expectedStatus: "Antivirus software is active",
+		},
+		{
+			name: "No antivirus detected via wmic",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
+					Out:     "",
+					Err:     errors.New("powershell failed"),
+				},
+				{
+					Command: "wmic",
+					Args:    []string{"/namespace:\\\\root\\SecurityCenter2", "path", "AntiVirusProduct", "get", "/value"},
+					Out:     "",
+					Err:     nil,
+				},
 			},
 			expectedPassed: false,
-			expectedStatus: "Failed to parse Defender status",
+			expectedStatus: "No antivirus software detected",
+		},
+		{
+			name: "All methods fail",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
+					Out:     "",
+					Err:     errors.New("powershell failed"),
+				},
+				{
+					Command: "wmic",
+					Args:    []string{"/namespace:\\\\root\\SecurityCenter2", "path", "AntiVirusProduct", "get", "/value"},
+					Out:     "",
+					Err:     errors.New("SecurityCenter2 failed"),
+				},
+				{
+					Command: "wmic",
+					Args:    []string{"/namespace:\\\\root\\SecurityCenter", "path", "AntiVirusProduct", "get", "/value"},
+					Out:     "",
+					Err:     errors.New("SecurityCenter failed"),
+				},
+			},
+			expectedPassed: false,
+			expectedStatus: "Failed to query antivirus status",
+		},
+		{
+			name: "PowerShell invalid JSON, fallback to wmic success",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
+					Out:     `invalid-json`,
+					Err:     nil,
+				},
+				{
+					Command: "wmic",
+					Args:    []string{"/namespace:\\\\root\\SecurityCenter2", "path", "AntiVirusProduct", "get", "/value"},
+					Out:     "displayName=Kaspersky Internet Security\nproductState=397312\n\n",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true,
+			expectedStatus: "Antivirus software is active",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			shared.RunCommandMocks = []shared.RunCommandMock{tt.mockCommand}
+			shared.RunCommandMocks = tt.mockCommands
 
 			check := &WindowsDefender{}
 			err := check.Run()
