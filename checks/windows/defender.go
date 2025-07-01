@@ -68,12 +68,33 @@ func (d *WindowsDefender) getEDRProducts() []EDRProduct {
 }
 
 func (d *WindowsDefender) Run() error {
+	// First check traditional antivirus via Security Center
+	avFound := d.checkSecurityCenterAntivirus()
+
+	// If no traditional AV found, check for Enterprise EDR solutions
+	if !avFound {
+		edrFound := d.checkEnterpriseEDR()
+		if edrFound {
+			d.passed = true
+			d.status = ""
+			return nil
+		}
+	} else {
+		d.passed = true
+		d.status = ""
+		return nil
+	}
+
+	d.passed = false
+	d.status = "No active antivirus or EDR software detected"
+	return nil
+}
+
+func (d *WindowsDefender) checkSecurityCenterAntivirus() bool {
 	// Use Get-CimInstance to query antivirus products from SecurityCenter2
 	out, err := shared.RunCommand("powershell", "-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json")
 	if err != nil {
-		d.passed = false
-		d.status = "Failed to query antivirus status"
-		return nil
+		return false
 	}
 
 	// Remove BOM if present
@@ -81,9 +102,7 @@ func (d *WindowsDefender) Run() error {
 	outStr = strings.TrimSpace(outStr)
 
 	if outStr == "" {
-		d.passed = false
-		d.status = "No antivirus software detected"
-		return nil
+		return false
 	}
 
 	// Parse JSON output - could be single object or array
@@ -91,17 +110,13 @@ func (d *WindowsDefender) Run() error {
 	if strings.HasPrefix(outStr, "[") {
 		// Multiple products
 		if err := json.Unmarshal([]byte(outStr), &products); err != nil {
-			d.passed = false
-			d.status = "Failed to parse antivirus data"
-			return nil
+			return false
 		}
 	} else {
 		// Single product
 		var product AntivirusProduct
 		if err := json.Unmarshal([]byte(outStr), &product); err != nil {
-			d.passed = false
-			d.status = "Failed to parse antivirus data"
-			return nil
+			return false
 		}
 		products = []AntivirusProduct{product}
 	}
@@ -109,15 +124,91 @@ func (d *WindowsDefender) Run() error {
 	// Check if any antivirus product is active
 	for _, product := range products {
 		if d.isAntivirusActive(product) {
-			d.passed = true
-			d.status = ""
-			return nil
+			return true
 		}
 	}
 
-	d.passed = false
-	d.status = "No active antivirus software detected"
-	return nil
+	return false
+}
+
+func (d *WindowsDefender) checkEnterpriseEDR() bool {
+	edrProducts := d.getEDRProducts()
+
+	for _, edr := range edrProducts {
+		if d.isEDRActive(edr) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (d *WindowsDefender) isEDRActive(edr EDRProduct) bool {
+	// Check processes
+	for _, process := range edr.Processes {
+		if d.checkProcess(process) {
+			return true
+		}
+	}
+
+	// Check services
+	for _, service := range edr.Services {
+		if d.checkService(service) {
+			return true
+		}
+	}
+
+	// Check registry keys
+	for _, regKey := range edr.RegistryKeys {
+		if d.checkRegistryKey(regKey) {
+			return true
+		}
+	}
+
+	// Check installation paths
+	for _, path := range edr.InstallPaths {
+		if d.checkInstallPath(path) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (d *WindowsDefender) checkProcess(processName string) bool {
+	out, err := shared.RunCommand("powershell", "-Command", "Get-Process -Name "+processName+" -ErrorAction SilentlyContinue | Select-Object Name")
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(out), processName)
+}
+
+func (d *WindowsDefender) checkService(serviceName string) bool {
+	out, err := shared.RunCommand("powershell", "-Command", "Get-Service -Name '"+serviceName+"' -ErrorAction SilentlyContinue | Select-Object Status")
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(out), "Running") || strings.Contains(string(out), "Stopped")
+}
+
+func (d *WindowsDefender) checkRegistryKey(regKey string) bool {
+	out, err := shared.RunCommand("powershell", "-Command", "Test-Path '"+regKey+"'")
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(out)) == "True"
+}
+
+func (d *WindowsDefender) checkInstallPath(path string) bool {
+	// Expand environment variables in path
+	expandedPath := strings.ReplaceAll(path, "%ProgramFiles%", "$env:ProgramFiles")
+	expandedPath = strings.ReplaceAll(expandedPath, "%ProgramData%", "$env:ProgramData")
+
+	out, err := shared.RunCommand("powershell", "-Command", "Test-Path '"+expandedPath+"'")
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(out)) == "True"
 }
 
 func (d *WindowsDefender) isAntivirusActive(product AntivirusProduct) bool {
@@ -164,10 +255,10 @@ func (d *WindowsDefender) UUID() string {
 	return "2be03cd7-5cb5-4778-a01a-7ba2fb22750a"
 }
 func (d *WindowsDefender) PassedMessage() string {
-	return "Antivirus software is active"
+	return "Antivirus or EDR software is active"
 }
 func (d *WindowsDefender) FailedMessage() string {
-	return "No antivirus software detected"
+	return "No antivirus or EDR software detected"
 }
 func (d *WindowsDefender) RequiresRoot() bool {
 	return false

@@ -26,7 +26,7 @@ func TestWindowsDefender_Run(t *testing.T) {
 				},
 			},
 			expectedPassed: true,
-			expectedStatus: "Antivirus software is active",
+			expectedStatus: "Antivirus or EDR software is active",
 		},
 		{
 			name: "Third-party antivirus active (Norton Security)",
@@ -39,7 +39,7 @@ func TestWindowsDefender_Run(t *testing.T) {
 				},
 			},
 			expectedPassed: true,
-			expectedStatus: "Antivirus software is active",
+			expectedStatus: "Antivirus or EDR software is active",
 		},
 		{
 			name: "Antivirus disabled (real-time protection off - productState 262144)",
@@ -52,7 +52,7 @@ func TestWindowsDefender_Run(t *testing.T) {
 				},
 			},
 			expectedPassed: false,
-			expectedStatus: "No active antivirus software detected",
+			expectedStatus: "No active antivirus or EDR software detected",
 		},
 		{
 			name: "Antivirus enabled but definitions outdated (productState 266256)",
@@ -65,7 +65,7 @@ func TestWindowsDefender_Run(t *testing.T) {
 				},
 			},
 			expectedPassed: true,
-			expectedStatus: "Antivirus software is active",
+			expectedStatus: "Antivirus or EDR software is active",
 		},
 		{
 			name: "Multiple antivirus products with one disabled (array output)",
@@ -78,7 +78,7 @@ func TestWindowsDefender_Run(t *testing.T) {
 				},
 			},
 			expectedPassed: true,
-			expectedStatus: "Antivirus software is active",
+			expectedStatus: "Antivirus or EDR software is active",
 		},
 		{
 			name: "Empty output (no antivirus detected)",
@@ -91,7 +91,7 @@ func TestWindowsDefender_Run(t *testing.T) {
 				},
 			},
 			expectedPassed: false,
-			expectedStatus: "No antivirus software detected",
+			expectedStatus: "No active antivirus or EDR software detected",
 		},
 		{
 			name: "PowerShell command fails",
@@ -104,7 +104,7 @@ func TestWindowsDefender_Run(t *testing.T) {
 				},
 			},
 			expectedPassed: false,
-			expectedStatus: "Failed to query antivirus status",
+			expectedStatus: "No active antivirus or EDR software detected",
 		},
 		{
 			name: "Invalid JSON output",
@@ -117,7 +117,7 @@ func TestWindowsDefender_Run(t *testing.T) {
 				},
 			},
 			expectedPassed: false,
-			expectedStatus: "Failed to parse antivirus data",
+			expectedStatus: "No active antivirus or EDR software detected",
 		},
 		{
 			name: "AVG Antivirus active (real-world example - productState 266240)",
@@ -130,7 +130,7 @@ func TestWindowsDefender_Run(t *testing.T) {
 				},
 			},
 			expectedPassed: true,
-			expectedStatus: "Antivirus software is active",
+			expectedStatus: "Antivirus or EDR software is active",
 		},
 		{
 			name: "Windows Defender disabled (real-world example - productState 393472)",
@@ -143,7 +143,7 @@ func TestWindowsDefender_Run(t *testing.T) {
 				},
 			},
 			expectedPassed: false,
-			expectedStatus: "No active antivirus software detected",
+			expectedStatus: "No active antivirus or EDR software detected",
 		},
 		{
 			name: "Real-world multiple products (AVG active, Defender disabled)",
@@ -156,7 +156,119 @@ func TestWindowsDefender_Run(t *testing.T) {
 				},
 			},
 			expectedPassed: true,
-			expectedStatus: "Antivirus software is active",
+			expectedStatus: "Antivirus or EDR software is active",
+		},
+		{
+			name: "CrowdStrike Falcon EDR detected (no traditional AV)",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     "",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Process -Name CSFalconService -ErrorAction SilentlyContinue | Select-Object Name"},
+					Out:     "Name\n----\nCSFalconService",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true,
+			expectedStatus: "Antivirus or EDR software is active",
+		},
+		{
+			name: "SentinelOne EDR detected via service",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     "",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Process -Name SentinelAgent -ErrorAction SilentlyContinue | Select-Object Name"},
+					Out:     "",
+					Err:     errors.New("process not found"),
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Service -Name 'SentinelAgent' -ErrorAction SilentlyContinue | Select-Object Status"},
+					Out:     "Status\n------\nRunning",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true,
+			expectedStatus: "Antivirus or EDR software is active",
+		},
+		{
+			name: "Carbon Black EDR detected via registry",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     "",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Process -Name cb -ErrorAction SilentlyContinue | Select-Object Name"},
+					Out:     "",
+					Err:     errors.New("process not found"),
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Service -Name 'CbDefense' -ErrorAction SilentlyContinue | Select-Object Status"},
+					Out:     "",
+					Err:     errors.New("service not found"),
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Test-Path 'HKLM:\\SOFTWARE\\CarbonBlack'"},
+					Out:     "True",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true,
+			expectedStatus: "Antivirus or EDR software is active",
+		},
+		{
+			name: "No antivirus or EDR detected (comprehensive check)",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     "",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Process -Name CSFalconService -ErrorAction SilentlyContinue | Select-Object Name"},
+					Out:     "",
+					Err:     errors.New("process not found"),
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Service -Name 'CSAgent' -ErrorAction SilentlyContinue | Select-Object Status"},
+					Out:     "",
+					Err:     errors.New("service not found"),
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Test-Path 'HKLM:\\SYSTEM\\CrowdStrike'"},
+					Out:     "False",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Test-Path '$env:ProgramFiles\\CrowdStrike'"},
+					Out:     "False",
+					Err:     nil,
+				},
+			},
+			expectedPassed: false,
+			expectedStatus: "No active antivirus or EDR software detected",
 		},
 	}
 
