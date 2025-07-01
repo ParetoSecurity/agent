@@ -16,12 +16,12 @@ func TestWindowsDefender_Run(t *testing.T) {
 		expectedStatus string
 	}{
 		{
-			name: "Defender all protections enabled",
+			name: "Windows Defender active (productState 397568)",
 			mockCommands: []shared.RunCommandMock{
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
-					Out:     `{"RealTimeProtectionEnabled":true,"IoavProtectionEnabled":true,"AntispywareEnabled":true}`,
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     `{"displayName":"Windows Defender","instanceGuid":"{D68DDC3A-831F-4fae-9E44-DA132C1ACF46}","pathToSignedProductExe":"windowsdefender://","pathToSignedReportingExe":"%ProgramFiles%\\Windows Defender\\MsMpeng.exe","productState":"397568","timestamp":"Tue, 01 Jul 2025 08:16:52 GMT"}`,
 					Err:     nil,
 				},
 			},
@@ -29,57 +29,12 @@ func TestWindowsDefender_Run(t *testing.T) {
 			expectedStatus: "Antivirus software is active",
 		},
 		{
-			name: "Defender real-time protection disabled",
+			name: "Third-party antivirus active (Norton Security)",
 			mockCommands: []shared.RunCommandMock{
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
-					Out:     `{"RealTimeProtectionEnabled":false,"IoavProtectionEnabled":true,"AntispywareEnabled":true}`,
-					Err:     nil,
-				},
-			},
-			expectedPassed: false,
-			expectedStatus: "Defender has disabled real-time protection",
-		},
-		{
-			name: "Defender tamper protection disabled",
-			mockCommands: []shared.RunCommandMock{
-				{
-					Command: "powershell",
-					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
-					Out:     `{"RealTimeProtectionEnabled":true,"IoavProtectionEnabled":false,"AntispywareEnabled":true}`,
-					Err:     nil,
-				},
-			},
-			expectedPassed: false,
-			expectedStatus: "Defender has disabled tamper protection",
-		},
-		{
-			name: "Defender antispyware disabled",
-			mockCommands: []shared.RunCommandMock{
-				{
-					Command: "powershell",
-					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
-					Out:     `{"RealTimeProtectionEnabled":true,"IoavProtectionEnabled":true,"AntispywareEnabled":false}`,
-					Err:     nil,
-				},
-			},
-			expectedPassed: false,
-			expectedStatus: "Defender is disabled",
-		},
-		{
-			name: "Fallback to wmic SecurityCenter2 with active antivirus",
-			mockCommands: []shared.RunCommandMock{
-				{
-					Command: "powershell",
-					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
-					Out:     "",
-					Err:     errors.New("powershell failed"),
-				},
-				{
-					Command: "wmic",
-					Args:    []string{"/namespace:\\\\root\\SecurityCenter2", "path", "AntiVirusProduct", "get", "/value"},
-					Out:     "displayName=Norton Security\nproductState=266240\n\n",
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     `{"displayName":"Norton Security","instanceGuid":"{12345678-1234-1234-1234-123456789012}","pathToSignedProductExe":"C:\\Program Files\\Norton Security\\Engine\\norton.exe","pathToSignedReportingExe":"C:\\Program Files\\Norton Security\\Engine\\norton.exe","productState":"266256","timestamp":"Tue, 01 Jul 2025 08:16:52 GMT"}`,
 					Err:     nil,
 				},
 			},
@@ -87,24 +42,25 @@ func TestWindowsDefender_Run(t *testing.T) {
 			expectedStatus: "Antivirus software is active",
 		},
 		{
-			name: "Fallback to wmic SecurityCenter (older systems)",
+			name: "Antivirus disabled (real-time protection off - productState 262144)",
 			mockCommands: []shared.RunCommandMock{
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
-					Out:     "",
-					Err:     errors.New("powershell failed"),
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     `{"displayName":"Windows Defender","instanceGuid":"{D68DDC3A-831F-4fae-9E44-DA132C1ACF46}","pathToSignedProductExe":"windowsdefender://","pathToSignedReportingExe":"%ProgramFiles%\\Windows Defender\\MsMpeng.exe","productState":"262144","timestamp":"Tue, 01 Jul 2025 08:16:52 GMT"}`,
+					Err:     nil,
 				},
+			},
+			expectedPassed: false,
+			expectedStatus: "No active antivirus software detected",
+		},
+		{
+			name: "Antivirus enabled but definitions outdated (productState 266256)",
+			mockCommands: []shared.RunCommandMock{
 				{
-					Command: "wmic",
-					Args:    []string{"/namespace:\\\\root\\SecurityCenter2", "path", "AntiVirusProduct", "get", "/value"},
-					Out:     "",
-					Err:     errors.New("SecurityCenter2 failed"),
-				},
-				{
-					Command: "wmic",
-					Args:    []string{"/namespace:\\\\root\\SecurityCenter", "path", "AntiVirusProduct", "get", "/value"},
-					Out:     "displayName=McAfee VirusScan\nonAccessScanningEnabled=TRUE\n\n",
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     `{"displayName":"Norton Security","instanceGuid":"{12345678-1234-1234-1234-123456789012}","pathToSignedProductExe":"C:\\Program Files\\Norton Security\\Engine\\norton.exe","pathToSignedReportingExe":"C:\\Program Files\\Norton Security\\Engine\\norton.exe","productState":"266256","timestamp":"Tue, 01 Jul 2025 08:16:52 GMT"}`,
 					Err:     nil,
 				},
 			},
@@ -112,17 +68,24 @@ func TestWindowsDefender_Run(t *testing.T) {
 			expectedStatus: "Antivirus software is active",
 		},
 		{
-			name: "No antivirus detected via wmic",
+			name: "Multiple antivirus products with one disabled (array output)",
 			mockCommands: []shared.RunCommandMock{
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
-					Out:     "",
-					Err:     errors.New("powershell failed"),
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     `[{"displayName":"Windows Defender","instanceGuid":"{D68DDC3A-831F-4fae-9E44-DA132C1ACF46}","pathToSignedProductExe":"windowsdefender://","pathToSignedReportingExe":"%ProgramFiles%\\Windows Defender\\MsMpeng.exe","productState":"262144","timestamp":"Tue, 01 Jul 2025 08:16:52 GMT"},{"displayName":"Kaspersky Internet Security","instanceGuid":"{12345678-1234-1234-1234-123456789012}","pathToSignedProductExe":"C:\\Program Files\\Kaspersky\\kaspersky.exe","pathToSignedReportingExe":"C:\\Program Files\\Kaspersky\\kaspersky.exe","productState":"266240","timestamp":"Tue, 01 Jul 2025 08:16:52 GMT"}]`,
+					Err:     nil,
 				},
+			},
+			expectedPassed: true,
+			expectedStatus: "Antivirus software is active",
+		},
+		{
+			name: "Empty output (no antivirus detected)",
+			mockCommands: []shared.RunCommandMock{
 				{
-					Command: "wmic",
-					Args:    []string{"/namespace:\\\\root\\SecurityCenter2", "path", "AntiVirusProduct", "get", "/value"},
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
 					Out:     "",
 					Err:     nil,
 				},
@@ -131,43 +94,64 @@ func TestWindowsDefender_Run(t *testing.T) {
 			expectedStatus: "No antivirus software detected",
 		},
 		{
-			name: "All methods fail",
+			name: "PowerShell command fails",
 			mockCommands: []shared.RunCommandMock{
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
 					Out:     "",
 					Err:     errors.New("powershell failed"),
-				},
-				{
-					Command: "wmic",
-					Args:    []string{"/namespace:\\\\root\\SecurityCenter2", "path", "AntiVirusProduct", "get", "/value"},
-					Out:     "",
-					Err:     errors.New("SecurityCenter2 failed"),
-				},
-				{
-					Command: "wmic",
-					Args:    []string{"/namespace:\\\\root\\SecurityCenter", "path", "AntiVirusProduct", "get", "/value"},
-					Out:     "",
-					Err:     errors.New("SecurityCenter failed"),
 				},
 			},
 			expectedPassed: false,
 			expectedStatus: "Failed to query antivirus status",
 		},
 		{
-			name: "PowerShell invalid JSON, fallback to wmic success",
+			name: "Invalid JSON output",
 			mockCommands: []shared.RunCommandMock{
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json"},
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
 					Out:     `invalid-json`,
 					Err:     nil,
 				},
+			},
+			expectedPassed: false,
+			expectedStatus: "Failed to parse antivirus data",
+		},
+		{
+			name: "AVG Antivirus active (real-world example - productState 266240)",
+			mockCommands: []shared.RunCommandMock{
 				{
-					Command: "wmic",
-					Args:    []string{"/namespace:\\\\root\\SecurityCenter2", "path", "AntiVirusProduct", "get", "/value"},
-					Out:     "displayName=Kaspersky Internet Security\nproductState=397312\n\n",
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     `{"displayName":"AVG Antivirus","instanceGuid":"{9CA89623-EDDE-E3D8-41CD-9C8961430EF3}","pathToSignedProductExe":"C:\\Program Files\\AVG\\Antivirus\\wsc_proxy.exe","pathToSignedReportingExe":"C:\\Program Files\\AVG\\Antivirus\\wsc_proxy.exe","productState":"266240","timestamp":"Tue, 01 Jul 2025 08:52:21 GMT"}`,
+					Err:     nil,
+				},
+			},
+			expectedPassed: true,
+			expectedStatus: "Antivirus software is active",
+		},
+		{
+			name: "Windows Defender disabled (real-world example - productState 393472)",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     `{"displayName":"Windows Defender","instanceGuid":"{D68DDC3A-831F-4fae-9E44-DA132C1ACF46}","pathToSignedProductExe":"windowsdefender://","pathToSignedReportingExe":"%ProgramFiles%\\Windows Defender\\MsMpeng.exe","productState":"393472","timestamp":"Tue, 01 Jul 2025 08:52:33 GMT"}`,
+					Err:     nil,
+				},
+			},
+			expectedPassed: false,
+			expectedStatus: "No active antivirus software detected",
+		},
+		{
+			name: "Real-world multiple products (AVG active, Defender disabled)",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     `[{"displayName":"AVG Antivirus","instanceGuid":"{9CA89623-EDDE-E3D8-41CD-9C8961430EF3}","pathToSignedProductExe":"C:\\Program Files\\AVG\\Antivirus\\wsc_proxy.exe","pathToSignedReportingExe":"C:\\Program Files\\AVG\\Antivirus\\wsc_proxy.exe","productState":"266240","timestamp":"Tue, 01 Jul 2025 08:52:21 GMT"},{"displayName":"Windows Defender","instanceGuid":"{D68DDC3A-831F-4fae-9E44-DA132C1ACF46}","pathToSignedProductExe":"windowsdefender://","pathToSignedReportingExe":"%ProgramFiles%\\Windows Defender\\MsMpeng.exe","productState":"393472","timestamp":"Tue, 01 Jul 2025 08:52:33 GMT"}]`,
 					Err:     nil,
 				},
 			},

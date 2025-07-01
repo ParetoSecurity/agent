@@ -2,7 +2,7 @@ package checks
 
 import (
 	"encoding/json"
-	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/ParetoSecurity/agent/shared"
@@ -13,134 +13,143 @@ type WindowsDefender struct {
 	status string
 }
 
-type mpStatus struct {
-	RealTimeProtectionEnabled bool
-	IoavProtectionEnabled     bool
-	AntispywareEnabled        bool
+type AntivirusProduct struct {
+	DisplayName              string `json:"displayName"`
+	InstanceGuid             string `json:"instanceGuid"`
+	PathToSignedProductExe   string `json:"pathToSignedProductExe"`
+	PathToSignedReportingExe string `json:"pathToSignedReportingExe"`
+	ProductState             string `json:"productState"`
+	Timestamp                string `json:"timestamp"`
+}
+
+type EDRProduct struct {
+	Name         string
+	Processes    []string
+	Services     []string
+	RegistryKeys []string
+	InstallPaths []string
 }
 
 func (d *WindowsDefender) Name() string {
 	return "Antivirus software is enabled"
 }
 
+func (d *WindowsDefender) getEDRProducts() []EDRProduct {
+	return []EDRProduct{
+		{
+			Name:         "CrowdStrike Falcon",
+			Processes:    []string{"CSFalconService", "CSFalconContainer"},
+			Services:     []string{"CSAgent", "CSFalconService"},
+			RegistryKeys: []string{"HKLM:\\SYSTEM\\CrowdStrike"},
+			InstallPaths: []string{"%ProgramFiles%\\CrowdStrike"},
+		},
+		{
+			Name:         "SentinelOne",
+			Processes:    []string{"SentinelAgent", "SentinelServiceHost", "SentinelUI"},
+			Services:     []string{"SentinelAgent", "LogProcessorService", "SentinelStaticEngine"},
+			RegistryKeys: []string{"HKLM:\\SOFTWARE\\SentinelOne"},
+			InstallPaths: []string{"%ProgramFiles%\\SentinelOne", "%ProgramData%\\Sentinel"},
+		},
+		{
+			Name:         "Carbon Black",
+			Processes:    []string{"cb", "cbcomms", "cbstream", "RepMgr"},
+			Services:     []string{"CbDefense", "CarbonBlack", "RepMgr"},
+			RegistryKeys: []string{"HKLM:\\SOFTWARE\\CarbonBlack"},
+			InstallPaths: []string{"%ProgramFiles%\\Confer"},
+		},
+		{
+			Name:         "Symantec Endpoint Protection",
+			Processes:    []string{"Smc", "SmcGui", "ccSvcHst", "Rtvscan"},
+			Services:     []string{"Symantec Endpoint Protection", "SepMasterService", "ccSetMgr"},
+			RegistryKeys: []string{"HKLM:\\SOFTWARE\\Symantec\\Symantec Endpoint Protection"},
+			InstallPaths: []string{"%ProgramFiles%\\Symantec\\Symantec Endpoint Protection"},
+		},
+	}
+}
+
 func (d *WindowsDefender) Run() error {
-	// First try PowerShell method for detailed Defender status
-	out, err := shared.RunCommand("powershell", "-Command", "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled, IoavProtectionEnabled, AntispywareEnabled | ConvertTo-Json")
-	if err == nil {
-		// Remove BOM if present
-		outStr := strings.TrimPrefix(string(out), "\xef\xbb\xbf")
-		var status mpStatus
-		if err := json.Unmarshal([]byte(outStr), &status); err == nil {
-			if status.RealTimeProtectionEnabled && status.IoavProtectionEnabled && status.AntispywareEnabled {
-				d.passed = true
-				d.status = ""
-				return nil
-			} else {
-				d.passed = false
-				// Compose a status message with details
-				if !status.RealTimeProtectionEnabled {
-					d.status = "Defender has disabled real-time protection"
-					return nil
-				}
-				if !status.IoavProtectionEnabled {
-					d.status = "Defender has disabled tamper protection"
-					return nil
-				}
-				if !status.AntispywareEnabled {
-					d.status = "Defender is disabled"
-					return nil
-				}
-			}
-		}
+	// Use Get-CimInstance to query antivirus products from SecurityCenter2
+	out, err := shared.RunCommand("powershell", "-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json")
+	if err != nil {
+		d.passed = false
+		d.status = "Failed to query antivirus status"
+		return nil
 	}
 
-	// Fallback to wmic SecurityCenter method to detect any antivirus
-	avOut, avErr := shared.RunCommand("wmic", "/namespace:\\\\root\\SecurityCenter2", "path", "AntiVirusProduct", "get", "/value")
-	if avErr != nil {
-		// Try SecurityCenter (older systems)
-		avOut, avErr = shared.RunCommand("wmic", "/namespace:\\\\root\\SecurityCenter", "path", "AntiVirusProduct", "get", "/value")
-		if avErr != nil {
+	// Remove BOM if present
+	outStr := strings.TrimPrefix(string(out), "\xef\xbb\xbf")
+	outStr = strings.TrimSpace(outStr)
+
+	if outStr == "" {
+		d.passed = false
+		d.status = "No antivirus software detected"
+		return nil
+	}
+
+	// Parse JSON output - could be single object or array
+	var products []AntivirusProduct
+	if strings.HasPrefix(outStr, "[") {
+		// Multiple products
+		if err := json.Unmarshal([]byte(outStr), &products); err != nil {
 			d.passed = false
-			d.status = "Failed to query antivirus status"
+			d.status = "Failed to parse antivirus data"
+			return nil
+		}
+	} else {
+		// Single product
+		var product AntivirusProduct
+		if err := json.Unmarshal([]byte(outStr), &product); err != nil {
+			d.passed = false
+			d.status = "Failed to parse antivirus data"
+			return nil
+		}
+		products = []AntivirusProduct{product}
+	}
+
+	// Check if any antivirus product is active
+	for _, product := range products {
+		if d.isAntivirusActive(product) {
+			d.passed = true
+			d.status = ""
 			return nil
 		}
 	}
 
-	// Parse wmic output for antivirus products
-	if d.parseAntivirusOutput(string(avOut)) {
-		d.passed = true
-		d.status = ""
-	} else {
-		d.passed = false
-		d.status = "No antivirus software detected"
-	}
+	d.passed = false
+	d.status = "No active antivirus software detected"
 	return nil
 }
 
-func (d *WindowsDefender) parseAntivirusOutput(output string) bool {
-	// Look for active antivirus products in wmic output
-	lines := strings.Split(output, "\n")
-	var currentProduct map[string]string
-
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			// Empty line indicates end of product block
-			if currentProduct != nil && d.isAntivirusActive(currentProduct) {
-				return true
-			}
-			currentProduct = nil
-			continue
-		}
-
-		// Parse key=value pairs
-		if strings.Contains(line, "=") {
-			parts := strings.SplitN(line, "=", 2)
-			if len(parts) == 2 {
-				if currentProduct == nil {
-					currentProduct = make(map[string]string)
-				}
-				key := strings.TrimSpace(parts[0])
-				value := strings.TrimSpace(parts[1])
-				currentProduct[key] = value
-			}
-		}
-	}
-
-	// Check final product if exists
-	if currentProduct != nil && d.isAntivirusActive(currentProduct) {
-		return true
-	}
-
-	return false
-}
-
-func (d *WindowsDefender) isAntivirusActive(product map[string]string) bool {
+func (d *WindowsDefender) isAntivirusActive(product AntivirusProduct) bool {
 	// Check if product has a display name (indicates it exists)
-	displayName, hasName := product["displayName"]
-	if !hasName || displayName == "" {
+	if product.DisplayName == "" {
 		return false
 	}
 
-	// Check product state - varies by Windows version
-	// For SecurityCenter2: productState is a hex value where certain bits indicate status
-	if productState, hasState := product["productState"]; hasState && productState != "" {
-		// Parse hex productState to check if antivirus is enabled
-		// Bit patterns for enabled/updated antivirus typically have specific values
-		// This catches most third-party antivirus and Windows Defender
-		re := regexp.MustCompile(`^[0-9]+$`)
-		if re.MatchString(productState) {
-			// Simple heuristic: non-zero state usually indicates active antivirus
-			return productState != "0"
+	// Check product state - SecurityCenter2 productState is a decimal value where bits indicate status
+	if product.ProductState != "" {
+		// Parse decimal productState to check if antivirus is enabled
+		// ProductState bit analysis:
+		// Bit 13 (0x1000): Real-time protection enabled when set
+		// Bit 5 (0x10): Virus definitions outdated when set
+		// Common values:
+		// 266240 (0x41000): Up to date, Enabled, Real-time ON, Definitions Current (AVG Antivirus)
+		// 266256 (0x41010): Out of date, Enabled, Real-time ON, Definitions Outdated
+		// 262144 (0x40000): Up to date, Disabled, Real-time OFF, Definitions Current
+		// 393472 (0x60100): Up to date, Disabled, Real-time OFF, Definitions Current (Windows Defender disabled)
+		// 397568 (0x61100): Up to date, Enabled, Real-time ON, Definitions Current (Windows Defender enabled)
+		if state, err := strconv.ParseUint(product.ProductState, 10, 32); err == nil {
+			// Check if real-time protection is enabled (bit 13)
+			realTimeEnabled := (state & 0x1000) != 0
+
+			// Antivirus is considered active if real-time protection is enabled
+			// Note: Bit 5 (0x10) indicates if definitions are outdated, but we don't fail
+			// the check for outdated definitions as real-time protection can still work
+			return realTimeEnabled
 		}
 	}
 
-	// For older SecurityCenter: check if onAccessScanningEnabled exists and is true
-	if onAccess, hasOnAccess := product["onAccessScanningEnabled"]; hasOnAccess {
-		return strings.ToLower(onAccess) == "true"
-	}
-
-	// If we have a display name but no clear state info, assume active
+	// If we have a display name but can't parse state, assume active
 	// This is conservative but prevents false negatives
 	return true
 }
