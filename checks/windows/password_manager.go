@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/caarlos0/log"
 )
 
 type PasswordManagerCheck struct {
@@ -17,6 +19,7 @@ func (pmc *PasswordManagerCheck) Name() string {
 func (pmc *PasswordManagerCheck) Run() error {
 	userHome, err := os.UserHomeDir()
 	if err != nil {
+		log.WithError(err).Debug("Failed to get user home directory, falling back to USERPROFILE")
 		userHome = os.Getenv("USERPROFILE")
 	}
 
@@ -29,13 +32,18 @@ func (pmc *PasswordManagerCheck) Run() error {
 		filepath.Join(os.Getenv("PROGRAMFILES(X86)"), "KeePassXC", "KeePassXC.exe"),
 	}
 
+	log.WithField("paths", paths).Debug("Checking for installed password managers")
+
 	for _, path := range paths {
+		log.WithField("path", path).Debug("Checking password manager path")
 		if _, err := osStat(path); err == nil {
+			log.WithField("path", path).Debug("Found password manager")
 			pmc.passed = true
 			return nil
 		}
 	}
 
+	log.Debug("No installed password managers found, checking browser extensions")
 	pmc.passed = checkForBrowserExtensions()
 	return nil
 }
@@ -43,6 +51,7 @@ func (pmc *PasswordManagerCheck) Run() error {
 func checkForBrowserExtensions() bool {
 	home, err := os.UserHomeDir()
 	if err != nil {
+		log.WithError(err).Debug("Failed to get user home directory for browser extensions, falling back to USERPROFILE")
 		home = os.Getenv("USERPROFILE")
 	}
 
@@ -71,18 +80,23 @@ func checkForBrowserExtensions() bool {
 	}
 
 	// Check Chromium-based browsers
-	for _, extPath := range extensionPaths {
+	for browser, extPath := range extensionPaths {
+		log.WithField("browser", browser).WithField("path", extPath).Debug("Checking browser extensions path")
 		if _, err := os.Stat(extPath); err == nil {
 			entries, err := os.ReadDir(extPath)
 			if err == nil {
+				log.WithField("browser", browser).WithField("extensionCount", len(entries)).Debug("Found browser extensions directory")
 				for _, entry := range entries {
 					name := strings.ToLower(entry.Name())
 					for _, ext := range browserExtensions {
 						if strings.Contains(name, strings.ToLower(ext)) {
+							log.WithField("browser", browser).WithField("extension", ext).Debug("Found password manager browser extension")
 							return true
 						}
 					}
 				}
+			} else {
+				log.WithField("browser", browser).WithError(err).Debug("Failed to read browser extensions directory")
 			}
 		}
 	}
@@ -98,14 +112,19 @@ func checkForBrowserExtensions() bool {
 func checkFirefoxExtensions(home string) bool {
 	profilesPath := filepath.Join(home, "AppData", "Roaming", "Mozilla", "Firefox", "Profiles")
 
+	log.WithField("path", profilesPath).Debug("Checking Firefox profiles path")
 	if _, err := os.Stat(profilesPath); err != nil {
+		log.WithError(err).Debug("Firefox profiles directory not found")
 		return false
 	}
 
 	profiles, err := os.ReadDir(profilesPath)
 	if err != nil {
+		log.WithError(err).Debug("Failed to read Firefox profiles directory")
 		return false
 	}
+
+	log.WithField("profileCount", len(profiles)).Debug("Found Firefox profiles")
 
 	// Firefox addon IDs for password managers
 	firefoxAddonIDs := []string{
@@ -120,17 +139,22 @@ func checkFirefoxExtensions(home string) bool {
 	for _, profile := range profiles {
 		if profile.IsDir() {
 			extensionsPath := filepath.Join(profilesPath, profile.Name(), "extensions")
+			log.WithField("profile", profile.Name()).WithField("path", extensionsPath).Debug("Checking Firefox profile extensions")
 			if _, err := os.Stat(extensionsPath); err == nil {
 				extensions, err := os.ReadDir(extensionsPath)
 				if err == nil {
+					log.WithField("profile", profile.Name()).WithField("extensionCount", len(extensions)).Debug("Found Firefox extensions directory")
 					for _, ext := range extensions {
 						extName := strings.ToLower(ext.Name())
 						for _, addonID := range firefoxAddonIDs {
 							if strings.Contains(extName, strings.ToLower(addonID)) {
+								log.WithField("profile", profile.Name()).WithField("addon", addonID).Debug("Found password manager Firefox extension")
 								return true
 							}
 						}
 					}
+				} else {
+					log.WithField("profile", profile.Name()).WithError(err).Debug("Failed to read Firefox extensions directory")
 				}
 			}
 		}
