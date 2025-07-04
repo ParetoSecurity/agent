@@ -19,7 +19,7 @@ var updateCmd = &cobra.Command{
 
 // UpdateConfig holds the configuration for the update command
 type UpdateConfig struct {
-	UpdateApp func()
+	UpdateApp func() error
 }
 
 // DefaultUpdateConfig returns the default configuration

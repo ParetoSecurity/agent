@@ -72,46 +72,6 @@ func TestInstallerApp_Run_SilentInstall(t *testing.T) {
 	}
 }
 
-func TestInstallerApp_Run_GUIMode(t *testing.T) {
-	var (
-		newAppCalled bool
-		appRunCalled bool
-	)
-
-	mockApp := &MockApp{
-		RunFunc: func() {
-			appRunCalled = true
-		},
-		NewWebviewWindowWithOptionsFunc: func(opts application.WebviewWindowOptions) *application.WebviewWindow {
-			return nil
-		},
-	}
-
-	config := &InstallerConfig{
-		Args: []string{"/help"}, // Non-silent args
-		InstallApp: func(silent bool) error {
-			t.Error("InstallApp should not be called for GUI mode")
-			return nil
-		},
-		Exit: func(code int) {
-			t.Error("Exit should not be called for GUI mode")
-		},
-		NewApp: func(opts application.Options) *application.App {
-			newAppCalled = true
-			return &application.App{} // Return a mock app
-		},
-		Assets: embed.FS{},
-	}
-
-	app := NewInstallerApp(config)
-	// Note: This test can't fully test GUI mode due to the complexities of mocking the Wails app
-	// but we can test the silent install detection
-	isSilent := app.shouldInstallSilently()
-	if isSilent {
-		t.Error("Expected GUI mode, not silent install")
-	}
-}
-
 func TestInstallerApp_ShouldInstallSilently(t *testing.T) {
 	tests := []struct {
 		name     string

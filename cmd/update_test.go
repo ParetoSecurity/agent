@@ -12,8 +12,9 @@ func Test_runUpdateCommand(t *testing.T) {
 	var updateAppCalled bool
 
 	config := &UpdateConfig{
-		UpdateApp: func() {
+		UpdateApp: func() error {
 			updateAppCalled = true
+			return nil
 		},
 	}
 

@@ -5,9 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Pareto Security Agent Development Guide
 
 ## Build & Test Commands
-- Build main agent: `go build ./cmd/paretosecurity`
-- Build tray app: `go build ./cmd/paretosecurity-tray`
-- Build installer: `go build ./cmd/paretosecurity-installer`
+- Build main agent: `goreleaser release --snapshot --clean`
+- Build tray app: `goreleaser release --snapshot --clean`
+- Build installer: `goreleaser release --snapshot --clean`
 - Test all: `go test ./...`
 - Test specific package: `go test github.com/ParetoSecurity/agent/checks/linux`
 - Test single test: `go test -run TestApplicationUpdates_Run ./checks/linux`
