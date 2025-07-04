@@ -19,7 +19,8 @@ var trayiconCmd = &cobra.Command{
 			log.Info("Exiting...")
 		}
 
-		systray.Run(trayapp.OnReady, onExit)
+		trayApp := trayapp.NewTrayApp()
+		systray.Run(trayApp.OnReady, onExit)
 	},
 }
 

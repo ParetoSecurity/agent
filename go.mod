@@ -66,6 +66,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tc-hib/go-winres v0.3.3 // indirect
 	github.com/tc-hib/winres v0.3.1 // indirect
 	github.com/urfave/cli/v2 v2.25.7 // indirect

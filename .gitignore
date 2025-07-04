@@ -30,3 +30,6 @@ devenv.local.nix
 *.syso
 **/.claude/settings.local.json
 *.txt
+
+# bins
+paretosecurity
