@@ -148,6 +148,9 @@ type MockFileWatcher struct {
 
 func (m *MockFileWatcher) NewWatcher() (Watcher, error) {
 	arguments := m.Called()
+	if arguments.Get(0) == nil {
+		return nil, arguments.Error(1)
+	}
 	return arguments.Get(0).(Watcher), arguments.Error(1)
 }
 
@@ -440,6 +443,72 @@ func TestMockCommandRunner_RunCommand(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "no args output", result)
 		mockCommandRunner.AssertExpectations(t)
+	})
+}
+
+func TestTrayApp_watch_ErrorHandling(t *testing.T) {
+	t.Run("watcher creation fails", func(t *testing.T) {
+		// Mock dependencies
+		mockFileWatcher := &MockFileWatcher{}
+		mockBroadcaster := shared.NewBroadcaster()
+
+		trayApp := NewTrayAppWithDependencies(
+			nil, nil, nil, nil, mockFileWatcher, nil, nil, nil, nil, mockBroadcaster,
+		)
+
+		// Mock NewWatcher to return an error
+		mockFileWatcher.On("NewWatcher").Return(nil, assert.AnError)
+
+		// This should not panic even though NewWatcher returns an error
+		trayApp.watch()
+
+		// Give the goroutine a moment to execute
+		// In a real scenario, we'd use more sophisticated synchronization
+		// but for this test, a small sleep is sufficient
+		time.Sleep(10 * time.Millisecond)
+
+		mockFileWatcher.AssertExpectations(t)
+	})
+
+	t.Run("watcher creation succeeds", func(t *testing.T) {
+		// Mock dependencies
+		mockFileWatcher := &MockFileWatcher{}
+		mockWatcher := &MockWatcher{}
+		mockStateManager := &MockStateManager{}
+		mockBroadcaster := shared.NewBroadcaster()
+
+		trayApp := NewTrayAppWithDependencies(
+			nil, mockStateManager, nil, nil, mockFileWatcher, nil, nil, nil, nil, mockBroadcaster,
+		)
+
+		// Mock successful watcher creation
+		mockFileWatcher.On("NewWatcher").Return(mockWatcher, nil)
+		mockStateManager.On("StatePath").Return("/test/path")
+		mockWatcher.On("Add", "/test/path").Return(nil)
+		mockWatcher.On("Close").Return(nil)
+
+		// Create channels for events and errors
+		eventCh := make(chan fsnotify.Event)
+		errorCh := make(chan error)
+		mockWatcher.events = eventCh
+		mockWatcher.errors = errorCh
+
+		// Start watching
+		trayApp.watch()
+
+		// Give the goroutine a moment to set up
+		time.Sleep(10 * time.Millisecond)
+
+		// Close the channels to simulate watcher shutdown
+		close(eventCh)
+		close(errorCh)
+
+		// Give the goroutine a moment to clean up
+		time.Sleep(10 * time.Millisecond)
+
+		mockFileWatcher.AssertExpectations(t)
+		mockStateManager.AssertExpectations(t)
+		mockWatcher.AssertExpectations(t)
 	})
 }
 

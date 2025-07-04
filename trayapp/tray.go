@@ -335,6 +335,7 @@ func (t *TrayApp) watch() {
 			log.WithError(err).Error("Failed to create file watcher")
 			return
 		}
+		// Now that we know watcher isn't nil, it's safe to defer Close()
 		defer watcher.Close()
 
 		err = watcher.Add(t.stateManager.StatePath())
