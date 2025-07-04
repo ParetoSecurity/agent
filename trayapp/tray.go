@@ -5,28 +5,82 @@ import (
 	"net/url"
 	"runtime"
 
-	"fyne.io/systray"
 	"github.com/ParetoSecurity/agent/check"
 	"github.com/ParetoSecurity/agent/claims"
-	"github.com/ParetoSecurity/agent/notify"
 	"github.com/ParetoSecurity/agent/shared"
-	"github.com/ParetoSecurity/agent/systemd"
 	"github.com/caarlos0/log"
-	"github.com/pkg/browser"
+	"github.com/fsnotify/fsnotify"
 )
 
-// addQuitItem adds a "Quit" menu item to the system tray.
-func addQuitItem() {
-	mQuit := systray.AddMenuItem("Quit", "Quit the Pareto Security")
+// TrayApp represents the system tray application with testable dependencies
+type TrayApp struct {
+	commandRunner   CommandRunner
+	stateManager    StateManager
+	browserOpener   BrowserOpener
+	systemTray      SystemTray
+	fileWatcher     FileWatcher
+	systemdManager  SystemdManager
+	notifier        Notifier
+	themeSubscriber ThemeSubscriber
+	iconProvider    IconProvider
+	broadcaster     *shared.Broadcaster
+}
+
+// NewTrayApp creates a new TrayApp with production dependencies
+func NewTrayApp() *TrayApp {
+	return &TrayApp{
+		commandRunner:   &RealCommandRunner{},
+		stateManager:    &RealStateManager{},
+		browserOpener:   &RealBrowserOpener{},
+		systemTray:      &RealSystemTray{},
+		fileWatcher:     &RealFileWatcher{},
+		systemdManager:  &RealSystemdManager{},
+		notifier:        &RealNotifier{},
+		themeSubscriber: &RealThemeSubscriber{},
+		iconProvider:    &RealIconProvider{},
+		broadcaster:     shared.NewBroadcaster(),
+	}
+}
+
+// NewTrayAppWithDependencies creates a new TrayApp with custom dependencies for testing
+func NewTrayAppWithDependencies(
+	commandRunner CommandRunner,
+	stateManager StateManager,
+	browserOpener BrowserOpener,
+	systemTray SystemTray,
+	fileWatcher FileWatcher,
+	systemdManager SystemdManager,
+	notifier Notifier,
+	themeSubscriber ThemeSubscriber,
+	iconProvider IconProvider,
+	broadcaster *shared.Broadcaster,
+) *TrayApp {
+	return &TrayApp{
+		commandRunner:   commandRunner,
+		stateManager:    stateManager,
+		browserOpener:   browserOpener,
+		systemTray:      systemTray,
+		fileWatcher:     fileWatcher,
+		systemdManager:  systemdManager,
+		notifier:        notifier,
+		themeSubscriber: themeSubscriber,
+		iconProvider:    iconProvider,
+		broadcaster:     broadcaster,
+	}
+}
+
+// addQuitItem adds a "Quit" menu item to the system tray
+func (t *TrayApp) addQuitItem() {
+	mQuit := t.systemTray.AddMenuItem("Quit", "Quit the Pareto Security")
 	mQuit.Enable()
 	go func() {
-		<-mQuit.ClickedCh
-		systray.Quit()
+		<-mQuit.ClickedCh()
+		t.systemTray.Quit()
 	}()
 }
 
-// checkStatusToIcon converts a boolean status to an icon string.
-func checkStatusToIcon(status, withError bool) string {
+// checkStatusToIcon converts a boolean status to an icon string
+func (t *TrayApp) checkStatusToIcon(status, withError bool) string {
 	if withError {
 		return "⚠️"
 	}
@@ -36,9 +90,9 @@ func checkStatusToIcon(status, withError bool) string {
 	return "❌"
 }
 
-// updateCheck updates the status of a specific check in the menu.
-func updateCheck(chk check.Check, mCheck *systray.MenuItem) {
-	checkStatus, found, _ := shared.GetLastState(chk.UUID())
+// updateCheck updates the status of a specific check in the menu
+func (t *TrayApp) updateCheck(chk check.Check, mCheck MenuItem) {
+	checkStatus, found, _ := t.stateManager.GetLastState(chk.UUID())
 	if !chk.IsRunnable() || !found {
 		mCheck.Disable()
 		mCheck.SetTitle(fmt.Sprintf("🚫 %s", chk.Name()))
@@ -46,41 +100,53 @@ func updateCheck(chk check.Check, mCheck *systray.MenuItem) {
 	}
 	if found {
 		mCheck.Enable()
-		mCheck.SetTitle(fmt.Sprintf("%s %s", checkStatusToIcon(checkStatus.Passed, checkStatus.HasError), chk.Name()))
+		mCheck.SetTitle(fmt.Sprintf("%s %s", t.checkStatusToIcon(checkStatus.Passed, checkStatus.HasError), chk.Name()))
 	}
 }
 
-// updateClaim updates the status of a claim in the menu.
-func updateClaim(claim claims.Claim, mClaim *systray.MenuItem) {
-	mClaim.SetTitle(fmt.Sprintf("❌ %s", claim.Title))
+// updateClaim updates the status of a claim in the menu
+func (t *TrayApp) updateClaim(claim claims.Claim, mClaim MenuItem) {
+	hasValidData := false
+
 	for _, chk := range claim.Checks {
-		checkStatus, found, _ := shared.GetLastState(chk.UUID())
-		if found && !checkStatus.Passed && chk.IsRunnable() {
-			return
+		checkStatus, found, _ := t.stateManager.GetLastState(chk.UUID())
+		if found && chk.IsRunnable() {
+			hasValidData = true
+			if !checkStatus.Passed {
+				mClaim.Enable()
+				mClaim.SetTitle(fmt.Sprintf("❌ %s", claim.Title))
+				return
+			}
 		}
 	}
-	mClaim.SetTitle(fmt.Sprintf("✅ %s", claim.Title))
+
+	if hasValidData {
+		mClaim.Enable()
+		mClaim.SetTitle(fmt.Sprintf("✅ %s", claim.Title))
+	} else {
+		mClaim.SetTitle(claim.Title)
+	}
 }
 
-// addOptions adds various options to the system tray menu.
-func addOptions() {
-	mOptions := systray.AddMenuItem("Options", "Settings")
-	mlink := mOptions.AddSubMenuItemCheckbox("Send reports to the dashboard", "Configure sending device reports to the team", shared.IsLinked())
+// addOptions adds various options to the system tray menu
+func (t *TrayApp) addOptions() {
+	mOptions := t.systemTray.AddMenuItem("Options", "Settings")
+	mlink := mOptions.AddSubMenuItemCheckbox("Send reports to the dashboard", "Configure sending device reports to the team", t.stateManager.IsLinked())
 	go func() {
-		for range mlink.ClickedCh {
-			if !shared.IsLinked() {
-				//open browser with help link
-				if err := browser.OpenURL("https://paretosecurity.com/docs/" + runtime.GOOS + "/link"); err != nil {
+		for range mlink.ClickedCh() {
+			if !t.stateManager.IsLinked() {
+				// open browser with help link
+				if err := t.browserOpener.OpenURL("https://paretosecurity.com/docs/" + runtime.GOOS + "/link"); err != nil {
 					log.WithError(err).Error("failed to open help URL")
 				}
 			} else {
 				// execute the command in the system terminal
-				_, err := shared.RunCommand(shared.SelfExe(), "unlink")
+				_, err := t.commandRunner.RunCommand(t.stateManager.SelfExe(), "unlink")
 				if err != nil {
 					log.WithError(err).Error("failed to run unlink command")
 				}
 			}
-			if shared.IsLinked() {
+			if t.stateManager.IsLinked() {
 				mlink.Check()
 			} else {
 				mlink.Uncheck()
@@ -88,44 +154,42 @@ func addOptions() {
 		}
 	}()
 	if runtime.GOOS != "windows" {
-		mrun := mOptions.AddSubMenuItemCheckbox("Run checks in the background", "Run checks periodically in the background while the user is logged in.", systemd.IsTimerEnabled())
+		mrun := mOptions.AddSubMenuItemCheckbox("Run checks in the background", "Run checks periodically in the background while the user is logged in.", t.systemdManager.IsTimerEnabled())
 		go func() {
-			for range mrun.ClickedCh {
-				if !systemd.IsTimerEnabled() {
-					if err := systemd.EnableTimer(); err != nil {
+			for range mrun.ClickedCh() {
+				if !t.systemdManager.IsTimerEnabled() {
+					if err := t.systemdManager.EnableTimer(); err != nil {
 						log.WithError(err).Error("failed to enable timer")
-						notify.Toast("Failed to enable timer, please check the logs for more information.")
+						t.notifier.Toast("Failed to enable timer, please check the logs for more information.")
 					}
-
 				} else {
-					if err := systemd.DisableTimer(); err != nil {
-						log.WithError(err).Error("failed to enable timer")
-						notify.Toast("Failed to enable timer, please check the logs for more information.")
+					if err := t.systemdManager.DisableTimer(); err != nil {
+						log.WithError(err).Error("failed to disable timer")
+						t.notifier.Toast("Failed to disable timer, please check the logs for more information.")
 					}
 				}
-				if systemd.IsTimerEnabled() {
+				if t.systemdManager.IsTimerEnabled() {
 					mrun.Check()
 				} else {
 					mrun.Uncheck()
 				}
 			}
 		}()
-		mshow := mOptions.AddSubMenuItemCheckbox("Run the tray icon at startup", "Show tray icon", systemd.IsTrayIconEnabled())
+		mshow := mOptions.AddSubMenuItemCheckbox("Run the tray icon at startup", "Show tray icon", t.systemdManager.IsTrayIconEnabled())
 		go func() {
-			for range mshow.ClickedCh {
-				if !systemd.IsTrayIconEnabled() {
-					if err := systemd.EnableTrayIcon(); err != nil {
+			for range mshow.ClickedCh() {
+				if !t.systemdManager.IsTrayIconEnabled() {
+					if err := t.systemdManager.EnableTrayIcon(); err != nil {
 						log.WithError(err).Error("failed to enable tray icon")
-						notify.Toast("Failed to enable tray icon, please check the logs for more information.")
+						t.notifier.Toast("Failed to enable tray icon, please check the logs for more information.")
 					}
-
 				} else {
-					if err := systemd.DisableTrayIcon(); err != nil {
+					if err := t.systemdManager.DisableTrayIcon(); err != nil {
 						log.WithError(err).Error("failed to disable tray icon")
-						notify.Toast("Failed to disable tray icon, please check the logs for more information.")
+						t.notifier.Toast("Failed to disable tray icon, please check the logs for more information.")
 					}
 				}
-				if systemd.IsTrayIconEnabled() {
+				if t.systemdManager.IsTrayIconEnabled() {
 					mshow.Check()
 				} else {
 					mshow.Uncheck()
@@ -135,95 +199,85 @@ func addOptions() {
 	}
 }
 
-// OnReady initializes the system tray and its menu items.
-func OnReady() {
-	systray.SetTitle("Pareto Security")
+// lastUpdated returns the last updated time as a formatted string
+func (t *TrayApp) lastUpdated() string {
+	return lastUpdated()
+}
+
+// OnReady initializes the system tray and its menu items
+func (t *TrayApp) OnReady() {
+	t.systemTray.SetTitle("Pareto Security")
 	log.Info("Starting Pareto Security tray application")
 
-	broadcaster := shared.NewBroadcaster()
 	log.Info("Setting up system tray icon")
-	setIcon()
+	t.iconProvider.SetIcon()
 	if runtime.GOOS == "windows" {
 		themeCh := make(chan bool)
-		go SubscribeToThemeChanges(themeCh)
+		go t.themeSubscriber.SubscribeToThemeChanges(themeCh)
 		go func() {
 			for isDark := range themeCh {
-				icon := shared.IconBlack
+				icon := t.iconProvider.IconBlack()
 				if isDark {
-					icon = shared.IconWhite
+					icon = t.iconProvider.IconWhite()
 				}
-				systray.SetTemplateIcon(icon, icon)
+				t.systemTray.SetTemplateIcon(icon, icon)
 			}
 		}()
 	}
 	log.Info("Setting up system tray")
-	systray.AddMenuItem(fmt.Sprintf("Pareto Security - %s", shared.Version), "").Disable()
+	t.systemTray.AddMenuItem(fmt.Sprintf("Pareto Security - %s", shared.Version), "").Disable()
 
-	addOptions()
-	systray.AddSeparator()
-	rcheck := systray.AddMenuItem("Run Checks", "")
-	go func(rcheck *systray.MenuItem) {
-		for range rcheck.ClickedCh {
-			rcheck.Disable()
-			rcheck.SetTitle("Checking...")
-			log.Info("Running checks...")
-			workingIcon()
-			_, err := shared.RunCommand(shared.SelfExe(), "check")
-			if err != nil {
-				log.WithError(err).Error("failed to run check command")
-				setIcon()
-			}
-			log.Info("Checks completed")
-			rcheck.SetTitle("Run Checks")
-			rcheck.Enable()
-			setIcon()
-			broadcaster.Send()
-		}
-	}(rcheck)
+	t.addOptions()
+	t.systemTray.AddSeparator()
+	rcheck := t.systemTray.AddMenuItem("Run Checks", "")
 
-	lCheck := systray.AddMenuItem(fmt.Sprintf("Last check: %s", lastUpdated()), "")
+	lCheck := t.systemTray.AddMenuItem(fmt.Sprintf("Last check: %s", t.lastUpdated()), "")
 	lCheck.Disable()
 	go func() {
-		for range broadcaster.Register() {
-
-			lCheck.SetTitle(fmt.Sprintf("Last check: %s", lastUpdated()))
+		for range t.broadcaster.Register() {
+			lCheck.SetTitle(fmt.Sprintf("Last check: %s", t.lastUpdated()))
 		}
 	}()
 	go func() {
-		for range systray.TrayOpenedCh {
-			setIcon()
+		for range t.systemTray.TrayOpenedCh() {
+			t.iconProvider.SetIcon()
 		}
 	}()
-	systray.AddSeparator()
-	for _, claim := range claims.All {
-		mClaim := systray.AddMenuItem(claim.Title, "")
-		updateClaim(claim, mClaim)
+	// Store claim menu items for disabling during checks
+	var claimMenuItems []MenuItem
 
-		go func(mClaim *systray.MenuItem) {
-			for range broadcaster.Register() {
+	t.systemTray.AddSeparator()
+	for _, claim := range claims.All {
+		mClaim := t.systemTray.AddMenuItem(claim.Title, "")
+		mClaim.Disable()
+		claimMenuItems = append(claimMenuItems, mClaim)
+		t.updateClaim(claim, mClaim)
+
+		go func(mClaim MenuItem) {
+			for range t.broadcaster.Register() {
 				log.WithField("claim", claim.Title).Info("Updating claim status")
-				updateClaim(claim, mClaim)
+				t.updateClaim(claim, mClaim)
 			}
 		}(mClaim)
 
 		for _, chk := range claim.Checks {
 			mCheck := mClaim.AddSubMenuItem(chk.Name(), "")
-			updateCheck(chk, mCheck)
-			go func(chk check.Check, mCheck *systray.MenuItem) {
-				for range broadcaster.Register() {
+			t.updateCheck(chk, mCheck)
+			go func(chk check.Check, mCheck MenuItem) {
+				for range t.broadcaster.Register() {
 					log.WithField("check", chk.Name()).Info("Updating check status")
-					updateCheck(chk, mCheck)
+					t.updateCheck(chk, mCheck)
 				}
 			}(chk, mCheck)
-			go func(chk check.Check, mCheck *systray.MenuItem) {
-				for range mCheck.ClickedCh {
+			go func(chk check.Check, mCheck MenuItem) {
+				for range mCheck.ClickedCh() {
 					log.WithField("check", chk.Name()).Info("Opening check URL")
 					arch := "check-linux"
 					if runtime.GOOS == "windows" {
 						arch = "check-windows"
 					}
 
-					checkStatus, found, _ := shared.GetLastState(chk.UUID())
+					checkStatus, found, _ := t.stateManager.GetLastState(chk.UUID())
 
 					var targetURL string
 					if found && checkStatus.HasError {
@@ -232,16 +286,79 @@ func OnReady() {
 						targetURL = fmt.Sprintf("https://paretosecurity.com/%s/%s?details=%s", arch, chk.UUID(), url.QueryEscape(chk.Status()))
 					}
 
-					if err := browser.OpenURL(targetURL); err != nil {
+					if err := t.browserOpener.OpenURL(targetURL); err != nil {
 						log.WithError(err).Error("failed to open check URL")
 					}
 				}
 			}(chk, mCheck)
 		}
 	}
-	systray.AddSeparator()
-	addQuitItem()
+
+	// Set up "Run Checks" functionality after claims are created
+	go func(rcheck MenuItem) {
+		for range rcheck.ClickedCh() {
+			rcheck.Disable()
+			rcheck.SetTitle("Checking...")
+			log.Info("Running checks...")
+			t.iconProvider.WorkingIcon()
+
+			// Disable all claim menu items and remove icons during check execution
+			for i, claimMenuItem := range claimMenuItems {
+				claimMenuItem.Disable()
+				claimMenuItem.SetTitle(claims.All[i].Title) // Set plain title without icon
+			}
+
+			_, err := t.commandRunner.RunCommand(t.stateManager.SelfExe(), "check")
+			if err != nil {
+				log.WithError(err).Error("failed to run check command")
+				t.iconProvider.SetIcon()
+			}
+			log.Info("Checks completed")
+			rcheck.SetTitle("Run Checks")
+			rcheck.Enable()
+			t.iconProvider.SetIcon()
+			t.broadcaster.Send()
+		}
+	}(rcheck)
+	t.systemTray.AddSeparator()
+	t.addQuitItem()
 	log.Info("System tray setup complete")
 	// watch for changes in the state file
-	go watch(broadcaster)
+	go t.watch()
+}
+
+// watch monitors the state file for changes
+func (t *TrayApp) watch() {
+	go func() {
+		watcher, err := t.fileWatcher.NewWatcher()
+		if err != nil {
+			log.WithError(err).Error("Failed to create file watcher")
+			return
+		}
+		defer watcher.Close()
+
+		err = watcher.Add(t.stateManager.StatePath())
+		if err != nil {
+			log.WithError(err).WithField("path", t.stateManager.StatePath()).Error("Failed to add state file to watcher")
+			return
+		}
+
+		for {
+			select {
+			case event, ok := <-watcher.Events():
+				if !ok {
+					return
+				}
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					log.Info("State file modified, updating...")
+					t.broadcaster.Send()
+				}
+			case err, ok := <-watcher.Errors():
+				if !ok {
+					return
+				}
+				log.WithError(err).Error("File watcher error")
+			}
+		}
+	}()
 }

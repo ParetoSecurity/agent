@@ -65,5 +65,6 @@ func main() {
 		os.Exit(0)
 	}
 	log.Info("Starting system tray application...")
-	systray.Run(trayapp.OnReady, onExit)
+	trayApp := trayapp.NewTrayApp()
+	systray.Run(trayApp.OnReady, onExit)
 }
