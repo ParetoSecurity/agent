@@ -99,8 +99,8 @@ func addOptions() {
 
 				} else {
 					if err := systemd.DisableTimer(); err != nil {
-						log.WithError(err).Error("failed to enable timer")
-						notify.Toast("Failed to enable timer, please check the logs for more information.")
+						log.WithError(err).Error("failed to disable timer")
+						notify.Toast("Failed to disable timer, please check the logs for more information.")
 					}
 				}
 				if systemd.IsTimerEnabled() {
