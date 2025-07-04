@@ -29,6 +29,7 @@ devenv.local.nix
 .pre-commit-config.yaml
 *.syso
 **/.claude/settings.local.json
+*.txt
 
 # bins
 paretosecurity
