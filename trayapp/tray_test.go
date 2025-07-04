@@ -19,7 +19,13 @@ type MockCommandRunner struct {
 }
 
 func (m *MockCommandRunner) RunCommand(cmd string, args ...string) (string, error) {
-	arguments := m.Called(cmd, args)
+	// Convert variadic args to interface{} slice for mock.Called
+	callArgs := make([]interface{}, len(args)+1)
+	callArgs[0] = cmd
+	for i, arg := range args {
+		callArgs[i+1] = arg
+	}
+	arguments := m.Called(callArgs...)
 	return arguments.String(0), arguments.Error(1)
 }
 
@@ -393,6 +399,47 @@ func TestTrayApp_updateClaim(t *testing.T) {
 		mockStateManager.AssertExpectations(t)
 		mockMenuItem.AssertExpectations(t)
 		mockCheck.AssertExpectations(t)
+	})
+}
+
+func TestMockCommandRunner_RunCommand(t *testing.T) {
+	t.Run("single argument", func(t *testing.T) {
+		mockCommandRunner := &MockCommandRunner{}
+
+		// Test with single argument (like the actual usage in tray app)
+		mockCommandRunner.On("RunCommand", "/path/to/paretosecurity", "check").Return("check output", nil)
+
+		result, err := mockCommandRunner.RunCommand("/path/to/paretosecurity", "check")
+
+		assert.NoError(t, err)
+		assert.Equal(t, "check output", result)
+		mockCommandRunner.AssertExpectations(t)
+	})
+
+	t.Run("multiple arguments", func(t *testing.T) {
+		mockCommandRunner := &MockCommandRunner{}
+
+		// Test with multiple arguments
+		mockCommandRunner.On("RunCommand", "/path/to/exe", "arg1", "arg2", "arg3").Return("multi output", nil)
+
+		result, err := mockCommandRunner.RunCommand("/path/to/exe", "arg1", "arg2", "arg3")
+
+		assert.NoError(t, err)
+		assert.Equal(t, "multi output", result)
+		mockCommandRunner.AssertExpectations(t)
+	})
+
+	t.Run("no arguments", func(t *testing.T) {
+		mockCommandRunner := &MockCommandRunner{}
+
+		// Test with no arguments
+		mockCommandRunner.On("RunCommand", "/path/to/exe").Return("no args output", nil)
+
+		result, err := mockCommandRunner.RunCommand("/path/to/exe")
+
+		assert.NoError(t, err)
+		assert.Equal(t, "no args output", result)
+		mockCommandRunner.AssertExpectations(t)
 	})
 }
 
