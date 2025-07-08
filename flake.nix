@@ -22,7 +22,7 @@
         system,
         ...
       }: let
-        flakePackage = import ./package.nix {inherit pkgs lib;};
+        flakePackage = pkgs.callPackage ./package.nix {};
         testPackage = {
           distro,
           version,
