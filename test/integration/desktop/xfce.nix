@@ -52,6 +52,8 @@ in {
     xfce.wait_for_text("Run Checks")
 
     # Test: Desktop entry
+    # TODO: python function find_icon, that returns x,y position of icon so I know where
+    # to move the mouse to
     xfce.succeed("xdotool mousemove 10 10")
     xfce.succeed("xdotool click 1")  # hide the tray icon window
     xfce.succeed("xdotool click 1")  # show the Applications menu

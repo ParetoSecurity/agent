@@ -1,4 +1,5 @@
 let
+  # TODO: do this with overlays in root and then you don't have to do it again here
   # Use local Pareto codebase
   paretoLocalPkg = {
     pkgs,

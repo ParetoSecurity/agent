@@ -30,10 +30,10 @@
         }:
           (inputs.nix-vm-test.lib.x86_64-linux.${distro}.${version} {
             sharedDirs.packageDir = {
-              source = "${toString ./.}/pkg";
+              source =  ./. + "/pkg";
               target = "/mnt/package";
             };
-            testScript = builtins.readFile "${toString ./.}/test/integration/${script}";
+            testScript = builtins.readFile (./. + "/test/integration/${script}");
           })
           .driver;
         testRelease = {
@@ -43,29 +43,25 @@
         }:
           (inputs.nix-vm-test.lib.x86_64-linux.${distro}.${version} {
             sharedDirs = {};
-            testScript = builtins.readFile "${toString ./.}/test/integration/${script}";
+            testScript = builtins.readFile (./. + "/test/integration/${script}");
           })
           .driver;
       in {
+        _module.args.pkgs = import inputs.nixpkgs {
+          inherit system;
+          config = {allowUnsupportedSystem = true; };
+  };
         packages.default = flakePackage;
 
-        checks = let
-          # Create a custom version of pkgs with allowUnsupportedSystem = true, so
-          # that we can run tests on Macs too:
-          # $ nix build .#checks.aarch64-darwin.firewall
-          pkgsAllowUnsupported = import nixpkgs {
-            inherit system;
-            config = {allowUnsupportedSystem = true;};
-          };
-        in {
-          cli = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/cli.nix;
-          firewall = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/firewall.nix;
-          help = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/help.nix;
-          luks = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/luks.nix;
-          pwd-manager = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/pwd-manager.nix;
-          screenlock = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/screenlock.nix;
-          secureboot = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/secureboot.nix;
-          xfce = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/desktop/xfce.nix;
+        checks = {
+          cli = pkgs.testers.runNixOSTest ./test/integration/cli.nix;
+          firewall = pkgs.testers.runNixOSTest ./test/integration/firewall.nix;
+          help = pkgs.testers.runNixOSTest ./test/integration/help.nix;
+          luks = pkgs.testers.runNixOSTest ./test/integration/luks.nix;
+          pwd-manager = pkgs.testers.runNixOSTest ./test/integration/pwd-manager.nix;
+          screenlock = pkgs.testers.runNixOSTest ./test/integration/screenlock.nix;
+          secureboot = pkgs.testers.runNixOSTest ./test/integration/secureboot.nix;
+          xfce = pkgs.testers.runNixOSTest ./test/integration/desktop/xfce.nix;
         };
       };
     };

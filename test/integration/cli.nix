@@ -17,7 +17,7 @@ in {
     };
   };
 
-  interactive.nodes.vanilla = {...}:
+  interactive.nodes.agent = {...}:
     ssh {port = 2221;} {};
 
   testScript = ''

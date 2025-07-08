@@ -23,10 +23,13 @@ in {
       ...
     }: {
       imports = [
-        (pareto {inherit pkgs lib;})
-        (nginx {inherit pkgs;})
+        # TODO: after we have overlays next line can be ../pareto.nix 
+        pareto
+        nginx
       ];
       networking.firewall.enable = false;
+
+      # TODO: if you don't use nginx nowhere else, just put it here
     };
 
     iptables = {
@@ -35,6 +38,7 @@ in {
       ...
     }: {
       imports = [
+        # TODO: remove brackets/parens
         (pareto {inherit pkgs lib;})
         (nginx {inherit pkgs;})
       ];
@@ -60,6 +64,7 @@ in {
   interactive.nodes.iptables = {...}:
     ssh {port = 2222;} {};
 
+  # TODO: use the new testdriver backdoor
   interactive.nodes.nftables = {...}:
     ssh {port = 2222;} {};
 
@@ -69,6 +74,7 @@ in {
       m.systemctl("start network-online.target")
       m.wait_for_unit("network-online.target")
       m.wait_for_unit("nginx")
+      # TODO: wait for port_open
 
     # Test 0: assert firewall is actually configured
     wideopen.fail("curl --fail --connect-timeout 2 http://iptables")

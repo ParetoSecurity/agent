@@ -16,7 +16,7 @@ in
     version = "${builtins.hashFile "sha256" "${toString ./go.sum}"}";
 
     # Updated with pre-commit, don't change manually
-    vendorHash = "sha256-GMbP34qjn/4ffTW5fxTMdzommcpHf9t3yZJ/jm4Tuzg=";
+    vendorHash = "sha256-YoztEDfflo4sFa7MjB5yoKdXwlAPVb+5rNQ8iv+y3d8=";
 
     # Uncomment this while developing to skip Go tests
     # doCheck = false;
