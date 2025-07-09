@@ -1,13 +1,11 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    nix-vm-test.url = "github:numtide/nix-vm-test";
   };
 
   outputs = inputs @ {
     flake-parts,
     nixpkgs,
-    nix-vm-test,
     self,
     ...
   }:
@@ -22,30 +20,7 @@
         system,
         ...
       }: let
-        flakePackage = import ./package.nix {inherit pkgs lib;};
-        testPackage = {
-          distro,
-          version,
-          script,
-        }:
-          (inputs.nix-vm-test.lib.x86_64-linux.${distro}.${version} {
-            sharedDirs.packageDir = {
-              source = "${toString ./.}/pkg";
-              target = "/mnt/package";
-            };
-            testScript = builtins.readFile "${toString ./.}/test/integration/${script}";
-          })
-          .driver;
-        testRelease = {
-          distro,
-          version,
-          script,
-        }:
-          (inputs.nix-vm-test.lib.x86_64-linux.${distro}.${version} {
-            sharedDirs = {};
-            testScript = builtins.readFile "${toString ./.}/test/integration/${script}";
-          })
-          .driver;
+        flakePackage = pkgs.callPackage ./package.nix {};
       in {
         packages.default = flakePackage;
 
