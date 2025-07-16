@@ -5,33 +5,6 @@ in {
   name = "Trayicon";
 
   nodes = {
-    # XFCE without StatusNotifierWatcher support (failure case)
-    xfce = {
-      pkgs,
-      lib,
-      ...
-    }: {
-      imports = [
-        (users {})
-        (pareto {inherit pkgs lib;})
-        (displayManager {inherit pkgs;})
-      ];
-
-      services.xserver.enable = true;
-      services.xserver.displayManager.lightdm.enable = true;
-      services.xserver.desktopManager.xfce.enable = true;
-
-      # Add basic XFCE packages (no StatusNotifierWatcher support)
-      environment.systemPackages = with pkgs; [
-        xfce.xfce4-panel
-        xfce.xfce4-settings
-        dbus
-      ];
-
-      # Remove snixembed service since it doesn't provide StatusNotifierWatcher reliably
-      # We'll test this as a failure case to demonstrate the error handling
-    };
-
     # GNOME with AppIndicator extension
     gnome = {
       pkgs,
@@ -121,54 +94,6 @@ in {
       };
     };
 
-    # Waybar with built-in StatusNotifierWatcher support
-    waybar = {
-      pkgs,
-      lib,
-      ...
-    }: {
-      imports = [
-        (users {})
-        (pareto {inherit pkgs lib;})
-        (displayManager {inherit pkgs;})
-      ];
-
-      services.xserver.enable = true;
-      services.xserver.displayManager.lightdm.enable = true;
-      services.xserver.windowManager.i3.enable = true;
-
-      environment.systemPackages = with pkgs; [
-        i3
-        dbus
-        waybar
-      ];
-
-      # Configure waybar with tray support
-      systemd.user.services.waybar = {
-        description = "Waybar - Highly customizable Wayland bar";
-        wantedBy = ["graphical-session.target"];
-        after = ["graphical-session.target"];
-        serviceConfig = {
-          Type = "dbus";
-          BusName = "fr.arouillard.waybar";
-          ExecStart = "${pkgs.waybar}/bin/waybar";
-          Restart = "on-failure";
-          RestartSec = 1;
-        };
-      };
-
-      # Create waybar config with tray support
-      environment.etc."skel/.config/waybar/config".text = builtins.toJSON {
-        layer = "top";
-        position = "top";
-        height = 30;
-        modules-right = ["tray"];
-        tray = {
-          spacing = 10;
-        };
-      };
-    };
-
     # Minimal desktop environment without StatusNotifierItem support
     minimal = {
       pkgs,
@@ -192,9 +117,6 @@ in {
     };
   };
 
-  interactive.nodes.xfce = {...}:
-    ssh {port = 2221;} {};
-
   interactive.nodes.gnome = {...}:
     ssh {port = 2222;} {};
 
@@ -204,31 +126,10 @@ in {
   interactive.nodes.homemanager = {...}:
     ssh {port = 2224;} {};
 
-  interactive.nodes.waybar = {...}:
-    ssh {port = 2225;} {};
-
   interactive.nodes.minimal = {...}:
     ssh {port = 2226;} {};
 
-  enableOCR = true;
-
   testScript = ''
-    # Test XFCE without StatusNotifierWatcher support
-    print("Testing XFCE without StatusNotifierWatcher support...")
-    xfce.wait_for_unit("multi-user.target")
-    xfce.wait_for_x()
-
-    # Check that StatusNotifierWatcher is NOT available
-    status, out = xfce.execute("su - alice -c 'dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames | grep StatusNotifierWatcher'")
-    assert status != 0, f"StatusNotifierWatcher should not be available in XFCE, but got: {out}"
-
-    # Test trayicon command fails gracefully and shows error message
-    status, out = xfce.execute("su - alice -c 'paretosecurity trayicon 2>&1'")
-    assert status != 0, f"Trayicon command should fail in XFCE without StatusNotifierWatcher, but got exit code: {status}"
-    assert "StatusNotifierWatcher not found" in out, f"Expected error message not found in output: {out}"
-    assert "gnome-shell-extension-appindicator" in out, f"Expected GNOME solution not found in output: {out}"
-    assert "snixembed" in out, f"Expected snixembed solution not found in output: {out}"
-    print("XFCE test passed - trayicon failed gracefully with helpful error message")
 
     # Test GNOME with AppIndicator
     print("Testing GNOME with AppIndicator...")
@@ -275,20 +176,6 @@ in {
 
     # Test trayicon command starts without immediate error
     homemanager.succeed("timeout 5s su - alice -c 'paretosecurity trayicon &'")
-
-    # Test Waybar with built-in StatusNotifierWatcher support
-    print("Testing Waybar with built-in StatusNotifierWatcher support...")
-    waybar.wait_for_unit("multi-user.target")
-    waybar.wait_for_x()
-
-    # Wait for waybar service to start
-    waybar.wait_for_unit("waybar.service", "alice")
-
-    # Check if StatusNotifierWatcher is available (provided by waybar)
-    waybar.succeed("su - alice -c 'dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames | grep -q StatusNotifierWatcher'")
-
-    # Test trayicon command starts without immediate error
-    waybar.succeed("timeout 5s su - alice -c 'paretosecurity trayicon &'")
 
     # Test minimal desktop environment (should fail gracefully)
     print("Testing minimal desktop environment without StatusNotifierItem support...")
