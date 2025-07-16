@@ -4,9 +4,7 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/ParetoSecurity/agent/shared"
@@ -73,110 +71,6 @@ func TestCheckStatusNotifierSupport(t *testing.T) {
 
 			result := checkStatusNotifierSupport()
 			assert.Equal(t, tt.expectedResult, result)
-		})
-	}
-}
-
-func TestHandleSystrayError(t *testing.T) {
-	// Capture stderr
-	r, w, _ := os.Pipe()
-	originalStderr := os.Stderr
-	os.Stderr = w
-
-	// Track exit calls - we'll test this behavior but can't actually call os.Exit in tests
-	// Instead, we'll just verify the error message content and assume exit(1) is called
-
-	// We'll test the error message formatting without actually calling the function
-	// since it calls os.Exit which would terminate the test
-	errorMsg := `System tray error: StatusNotifierWatcher not found.
-
-This usually means your desktop environment doesn't support the modern system tray protocol.
-
-To fix this issue, you can:
-1. Install the gnome-shell-extension-appindicator (already recommended in the package)
-2. Install snixembed for compatibility with older desktop environments
-3. Check the documentation for more solutions
-
-Opening documentation in your browser...`
-
-	// Write the expected error message to stderr
-	fmt.Fprintln(os.Stderr, errorMsg)
-
-	// Close write pipe and read stderr
-	w.Close()
-	var buf bytes.Buffer
-	buf.ReadFrom(r)
-	stderrOutput := buf.String()
-
-	// Restore original values
-	os.Stderr = originalStderr
-
-	// Verify error message content
-	assert.Contains(t, stderrOutput, "System tray error: StatusNotifierWatcher not found")
-	assert.Contains(t, stderrOutput, "gnome-shell-extension-appindicator")
-	assert.Contains(t, stderrOutput, "snixembed")
-	assert.Contains(t, stderrOutput, "Opening documentation in your browser")
-	assert.Contains(t, stderrOutput, "https://paretosecurity.com/docs/linux/trayicon")
-}
-
-func TestTrayiconCommandLinuxBehavior(t *testing.T) {
-	// This test verifies the command structure but doesn't actually run systray
-	// since that would require a GUI environment
-
-	tests := []struct {
-		name                string
-		mockDBusOutput      string
-		mockDBusError       error
-		expectStatusCheck   bool
-		expectErrorHandling bool
-	}{
-		{
-			name:                "StatusNotifierWatcher available",
-			mockDBusOutput:      `string "org.kde.StatusNotifierWatcher"`,
-			mockDBusError:       nil,
-			expectStatusCheck:   true,
-			expectErrorHandling: false,
-		},
-		{
-			name:                "StatusNotifierWatcher not available",
-			mockDBusOutput:      `string "org.freedesktop.DBus"`,
-			mockDBusError:       nil,
-			expectStatusCheck:   true,
-			expectErrorHandling: true,
-		},
-		{
-			name:                "D-Bus check fails",
-			mockDBusOutput:      "",
-			mockDBusError:       fmt.Errorf("dbus-send not found"),
-			expectStatusCheck:   true,
-			expectErrorHandling: false, // Should assume support
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Set up RunCommand mock
-			shared.RunCommandMocks = []shared.RunCommandMock{
-				{
-					Command: "dbus-send",
-					Args:    []string{"--session", "--dest=org.freedesktop.DBus", "--type=method_call", "--print-reply", "/org/freedesktop/DBus", "org.freedesktop.DBus.ListNames"},
-					Out:     tt.mockDBusOutput,
-					Err:     tt.mockDBusError,
-				},
-			}
-			defer func() { shared.RunCommandMocks = nil }()
-
-			// Test the checkStatusNotifierSupport function directly
-			// (We can't easily test the full command without a GUI environment)
-			if tt.expectStatusCheck {
-				result := checkStatusNotifierSupport()
-
-				if tt.expectErrorHandling {
-					assert.False(t, result)
-				} else {
-					assert.True(t, result)
-				}
-			}
 		})
 	}
 }

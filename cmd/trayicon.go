@@ -97,7 +97,9 @@ This usually means your desktop environment doesn't support the modern system tr
 To fix this issue, you can:
 1. Install the gnome-shell-extension-appindicator (already recommended in the package)
 2. Install snixembed for compatibility with older desktop environments
-3. Check the documentation for more solutions
+3. For NixOS users: Enable services.status-notifier-watcher in Home Manager
+4. For Wayland users: Use waybar with tray support enabled
+5. Check the documentation for more solutions
 
 Opening documentation in your browser...`
 
