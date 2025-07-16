@@ -61,7 +61,7 @@ in {
 
       # Add AppIndicator extension for system tray support
       environment.systemPackages = with pkgs; [
-        gnome.gnome-shell-extensions
+        gnome-shell-extensions
         gnomeExtensions.appindicator
         dbus
       ];
