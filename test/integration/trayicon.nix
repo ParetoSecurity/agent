@@ -2,7 +2,7 @@ let
   common = import ./common.nix;
   inherit (common) users pareto displayManager ssh;
 in {
-  name = "Trayicon Desktop Environment Support";
+  name = "Trayicon";
 
   nodes = {
     # XFCE with snixembed for StatusNotifierItem support
