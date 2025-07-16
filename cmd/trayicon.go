@@ -37,14 +37,17 @@ var trayiconCmd = &cobra.Command{
 				return
 			}
 
-			// Set up a channel to capture potential panic or error
+			// Set up channels to capture potential errors or completion
 			done := make(chan bool, 1)
+			errorChan := make(chan error, 1)
 
 			go func() {
 				defer func() {
 					if r := recover(); r != nil {
 						if err, ok := r.(error); ok && strings.Contains(err.Error(), "StatusNotifierWatcher") {
-							handleSystrayError()
+							errorChan <- fmt.Errorf("systray error: %v", err)
+						} else {
+							errorChan <- fmt.Errorf("unexpected panic: %v", r)
 						}
 					}
 					done <- true
@@ -53,15 +56,17 @@ var trayiconCmd = &cobra.Command{
 				systray.Run(trayApp.OnReady, onExit)
 			}()
 
-			// Wait for a short time to see if systray starts successfully
+			// Wait for either an error or successful startup
 			select {
-			case <-done:
-				// If we get here quickly, it might be due to an error
-				time.Sleep(100 * time.Millisecond)
+			case err := <-errorChan:
+				log.WithError(err).Error("Systray startup failed")
+				handleSystrayError()
+				return
 			case <-time.After(2 * time.Second):
 				// Systray seems to have started successfully
-				<-done
+				// Continue execution and wait for completion
 			}
+			<-done
 		} else {
 			systray.Run(trayApp.OnReady, onExit)
 		}
