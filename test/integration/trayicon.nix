@@ -247,10 +247,6 @@ in {
     # Test trayicon command starts without immediate error
     gnome.succeed("timeout 5s su - alice -c 'paretosecurity trayicon &'")
 
-    # Give it time to start
-    import time
-    time.sleep(2)
-
     # Test KDE with native StatusNotifierItem support
     print("Testing KDE with native StatusNotifierItem support...")
     kde.wait_for_unit("multi-user.target")
@@ -264,10 +260,6 @@ in {
 
     # Test trayicon command starts without immediate error
     kde.succeed("timeout 5s su - alice -c 'paretosecurity trayicon &'")
-
-    # Give it time to start
-    import time
-    time.sleep(2)
 
     # Test Home Manager with status-notifier-watcher service
     print("Testing Home Manager with status-notifier-watcher service...")
@@ -284,10 +276,6 @@ in {
     # Test trayicon command starts without immediate error
     homemanager.succeed("timeout 5s su - alice -c 'paretosecurity trayicon &'")
 
-    # Give it time to start
-    import time
-    time.sleep(2)
-
     # Test Waybar with built-in StatusNotifierWatcher support
     print("Testing Waybar with built-in StatusNotifierWatcher support...")
     waybar.wait_for_unit("multi-user.target")
@@ -301,10 +289,6 @@ in {
 
     # Test trayicon command starts without immediate error
     waybar.succeed("timeout 5s su - alice -c 'paretosecurity trayicon &'")
-
-    # Give it time to start
-    import time
-    time.sleep(2)
 
     # Test minimal desktop environment (should fail gracefully)
     print("Testing minimal desktop environment without StatusNotifierItem support...")
