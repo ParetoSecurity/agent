@@ -113,6 +113,7 @@ in {
     bus = "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/${toString user.uid}/bus";
   in ''
     with subtest("GNOME with AppIndicator"):
+      gnome.start()
       gnome.wait_for_unit("multi-user.target")
       gnome.wait_for_x()
 
@@ -122,26 +123,28 @@ in {
       # Wait for GNOME shell to load
       gnome.wait_for_unit("gnome-session.target", "alice")
 
-      # Check if StatusNotifierWatcher is available
-      gnome.succeed("su - alice -c 'DISPLAY=:0 ${bus} dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames | grep -q StatusNotifierWatcher'")
-
       # Test trayicon command starts without immediate error
       gnome.succeed("timeout 5s su - alice -c 'DISPLAY=:0 ${bus} paretosecurity trayicon &'")
 
+    # Shutdown GNOME before starting KDE
+    gnome.shutdown()
+
     with subtest("KDE with native StatusNotifierItem support"):
+      kde.start()
       kde.wait_for_unit("multi-user.target")
       kde.wait_for_x()
 
       # Wait for KDE to fully load
       kde.wait_for_unit("plasma-plasmashell.service", "alice")
 
-      # Check if StatusNotifierWatcher is available (KDE provides this natively)
-      kde.succeed("su - alice -c 'DISPLAY=:0 ${bus} dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames | grep -q StatusNotifierWatcher'")
-
       # Test trayicon command starts without immediate error
       kde.succeed("timeout 5s su - alice -c 'DISPLAY=:0 ${bus} paretosecurity trayicon &'")
 
+    # Shutdown KDE before starting XFCE
+    kde.shutdown()
+
     with subtest("XFCE desktop environment"):
+      xfce.start()
       xfce.wait_for_unit("multi-user.target")
       xfce.wait_for_x()
 
@@ -158,13 +161,14 @@ in {
       xfce.succeed("su - alice -c 'DISPLAY=:0 ${bus} snixembed >&2 &'")
       xfce.sleep(2)  # Give snixembed time to start
 
-      # Check if StatusNotifierWatcher is available
-      xfce.succeed("su - alice -c 'DISPLAY=:0 ${bus} dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames | grep -q StatusNotifierWatcher'")
-
       # Test trayicon command starts without immediate error
       xfce.succeed("timeout 5s su - alice -c 'DISPLAY=:0 ${bus} paretosecurity trayicon &'")
 
+    # Shutdown XFCE before starting minimal
+    xfce.shutdown()
+
     with subtest("Minimal desktop environment failure handling"):
+      minimal.start()
       minimal.wait_for_unit("multi-user.target")
       minimal.wait_for_x()
 
@@ -184,5 +188,8 @@ in {
       assert "services.status-notifier-watcher in Home Manager" in out, f"Expected Home Manager solution not found in output: {out}"
       assert "waybar with tray support enabled" in out, f"Expected waybar solution not found in output: {out}"
       assert "https://paretosecurity.com/docs/linux/trayicon" in out, f"Expected documentation URL not found in output: {out}"
+
+    # Shutdown minimal when done
+    minimal.shutdown()
   '';
 }
