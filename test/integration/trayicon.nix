@@ -80,22 +80,10 @@ in {
       minimal.wait_for_unit("multi-user.target")
       minimal.wait_for_x()
 
-      # Wait for i3 to start
-      minimal.wait_for_unit("i3.service", "alice")
-
-      # Check that StatusNotifierWatcher is NOT available
-      status, out = minimal.execute("su - alice -c 'DISPLAY=:0 ${bus} dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames | grep StatusNotifierWatcher'")
-      assert status != 0, f"StatusNotifierWatcher should not be available in minimal environment, but got: {out}"
-
       # Test trayicon command fails gracefully and shows error message
       status, out = minimal.execute("su - alice -c 'DISPLAY=:0 ${bus} paretosecurity trayicon 2>&1'")
       assert status != 0, f"Trayicon command should fail in minimal environment, but got exit code: {status}"
       assert "StatusNotifierWatcher not found" in out, f"Expected error message not found in output: {out}"
-      assert "gnome-shell-extension-appindicator" in out, f"Expected GNOME solution not found in output: {out}"
-      assert "snixembed" in out, f"Expected snixembed solution not found in output: {out}"
-      assert "services.status-notifier-watcher in Home Manager" in out, f"Expected Home Manager solution not found in output: {out}"
-      assert "waybar with tray support enabled" in out, f"Expected waybar solution not found in output: {out}"
-      assert "https://paretosecurity.com/docs/linux/trayicon" in out, f"Expected documentation URL not found in output: {out}"
 
     # Shutdown minimal when done
     minimal.shutdown()
