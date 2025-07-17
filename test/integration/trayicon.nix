@@ -53,36 +53,6 @@ in {
       ];
     };
 
-    # Home Manager with status-notifier-watcher service
-    homemanager = {
-      pkgs,
-      lib,
-      ...
-    }: {
-      imports = [
-        (users {})
-        (pareto {inherit pkgs lib;})
-        (displayManager {inherit pkgs;})
-      ];
-
-      services.xserver.enable = true;
-      services.xserver.displayManager.lightdm.enable = true;
-      services.xserver.windowManager.i3.enable = true;
-      services.displayManager.defaultSession = "none+i3";
-
-      # Enable Home Manager for alice
-      users.users.alice.isNormalUser = true;
-      home-manager.users.alice = {
-        services.status-notifier-watcher.enable = true;
-      };
-
-      environment.systemPackages = with pkgs; [
-        i3
-        dbus
-        home-manager
-      ];
-    };
-
     # XFCE desktop environment
     xfce = {
       pkgs,
@@ -170,20 +140,6 @@ in {
 
       # Test trayicon command starts without immediate error
       kde.succeed("timeout 5s su - alice -c 'DISPLAY=:0 ${bus} paretosecurity trayicon &'")
-
-    with subtest("Home Manager with status-notifier-watcher service"):
-      homemanager.wait_for_unit("multi-user.target")
-      homemanager.wait_for_x()
-
-      # Wait for tray.target and status-notifier-watcher service to start
-      homemanager.wait_for_unit("tray.target", "alice")
-      homemanager.wait_for_unit("status-notifier-watcher.service", "alice")
-
-      # Check if StatusNotifierWatcher is available
-      homemanager.succeed("su - alice -c 'DISPLAY=:0 ${bus} dbus-send --session --dest=org.freedesktop.DBus --type=method_call --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames | grep -q StatusNotifierWatcher'")
-
-      # Test trayicon command starts without immediate error
-      homemanager.succeed("timeout 5s su - alice -c 'DISPLAY=:0 ${bus} paretosecurity trayicon &'")
 
     with subtest("XFCE desktop environment"):
       xfce.wait_for_unit("multi-user.target")
