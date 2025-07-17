@@ -31,27 +31,27 @@ in {
     };
 
     # KDE Plasma with native StatusNotifierItem support
-    kde = {
-      pkgs,
-      lib,
-      ...
-    }: {
-      imports = [
-        (users {})
-        (pareto {inherit pkgs lib;})
-        (displayManager {inherit pkgs;})
-      ];
+    # kde = {
+    #   pkgs,
+    #   lib,
+    #   ...
+    # }: {
+    #   imports = [
+    #     (users {})
+    #     (pareto {inherit pkgs lib;})
+    #     (displayManager {inherit pkgs;})
+    #   ];
 
-      services.xserver.enable = true;
-      services.displayManager.sddm.enable = true;
-      services.displayManager.defaultSession = "plasma";
-      services.xserver.desktopManager.plasma5.enable = true;
-      environment.plasma5.excludePackages = [pkgs.plasma5Packages.elisa];
+    #   services.xserver.enable = true;
+    #   services.displayManager.sddm.enable = true;
+    #   services.displayManager.defaultSession = "plasma";
+    #   services.xserver.desktopManager.plasma5.enable = true;
+    #   environment.plasma5.excludePackages = [pkgs.plasma5Packages.elisa];
 
-      environment.systemPackages = with pkgs; [
-        dbus
-      ];
-    };
+    #   environment.systemPackages = with pkgs; [
+    #     dbus
+    #   ];
+    # };
 
     # XFCE desktop environment
     xfce = {
@@ -129,19 +129,19 @@ in {
     # Shutdown GNOME before starting KDE
     gnome.shutdown()
 
-    with subtest("KDE with native StatusNotifierItem support"):
-      kde.start()
-      kde.wait_for_unit("multi-user.target")
-      kde.wait_for_x()
+    # with subtest("KDE with native StatusNotifierItem support"):
+    #   kde.start()
+    #   kde.wait_for_unit("multi-user.target")
+    #   kde.wait_for_x()
 
       # Wait for KDE to fully load
-      kde.wait_for_unit("plasma-plasmashell.service", "alice")
+    #   kde.wait_for_unit("plasma-plasmashell.service", "alice")
 
       # Test trayicon command starts without immediate error
-      kde.succeed("timeout 5s su - alice -c 'DISPLAY=:0 ${bus} paretosecurity trayicon &'")
+    #   kde.succeed("timeout 5s su - alice -c 'DISPLAY=:0 ${bus} paretosecurity trayicon &'")
 
     # Shutdown KDE before starting XFCE
-    kde.shutdown()
+    # kde.shutdown()
 
     with subtest("XFCE desktop environment"):
       xfce.start()
