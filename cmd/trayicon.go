@@ -13,6 +13,7 @@ import (
 	"fyne.io/systray"
 	"github.com/ParetoSecurity/agent/shared"
 	"github.com/ParetoSecurity/agent/trayapp"
+	"github.com/allan-simon/go-singleinstance"
 	"github.com/caarlos0/log"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -22,6 +23,13 @@ var trayiconCmd = &cobra.Command{
 	Use:   "trayicon",
 	Short: "Display the status of the checks in the system tray",
 	Run: func(cc *cobra.Command, args []string) {
+
+		lockFile, err := singleinstance.CreateLockFile("paretosecurity-tray.lock")
+		if err != nil {
+			log.WithError(err).Fatal("An instance of ParetoSecurity tray application is already running.")
+			return
+		}
+		defer lockFile.Close()
 
 		onExit := func() {
 			log.Info("Exiting...")
