@@ -43,10 +43,10 @@ in {
       ];
 
       services.xserver.enable = true;
-      services.xserver.displayManager.sddm.enable = true;
-      services.xserver.desktopManager.plasma5.enable = true;
+      services.displayManager.sddm.enable = true;
       services.displayManager.defaultSession = "plasma";
-      services.colord.enable = false;
+      services.xserver.desktopManager.plasma5.enable = true;
+      environment.plasma5.excludePackages = [pkgs.plasma5Packages.elisa];
 
       environment.systemPackages = with pkgs; [
         dbus
