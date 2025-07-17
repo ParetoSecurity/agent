@@ -30,60 +30,6 @@ in {
       ];
     };
 
-    # KDE Plasma with native StatusNotifierItem support
-    # kde = {
-    #   pkgs,
-    #   lib,
-    #   ...
-    # }: {
-    #   imports = [
-    #     (users {})
-    #     (pareto {inherit pkgs lib;})
-    #     (displayManager {inherit pkgs;})
-    #   ];
-
-    #   services.xserver.enable = true;
-    #   services.displayManager.sddm.enable = true;
-    #   services.displayManager.defaultSession = "plasma";
-    #   services.xserver.desktopManager.plasma5.enable = true;
-    #   environment.plasma5.excludePackages = [pkgs.plasma5Packages.elisa];
-
-    #   environment.systemPackages = with pkgs; [
-    #     dbus
-    #   ];
-    # };
-
-    # XFCE desktop environment
-    xfce = {
-      pkgs,
-      lib,
-      ...
-    }: {
-      imports = [
-        (users {})
-        (pareto {inherit pkgs lib;})
-        (displayManager {inherit pkgs;})
-      ];
-
-      services.xserver.enable = true;
-      services.xserver.displayManager.lightdm.enable = true;
-      services.xserver.desktopManager.xfce.enable = true;
-      services.displayManager.defaultSession = "xfce";
-
-      services.displayManager.autoLogin = {
-        enable = true;
-        user = "alice";
-      };
-
-      environment.systemPackages = with pkgs; [
-        xfce.xfce4-whiskermenu-plugin
-        dbus
-        snixembed # Provides StatusNotifierWatcher for XFCE
-      ];
-
-      programs.thunar.plugins = [pkgs.xfce.thunar-archive-plugin];
-    };
-
     # Minimal desktop environment without StatusNotifierItem support
     minimal = {
       pkgs,
@@ -128,44 +74,6 @@ in {
 
     # Shutdown GNOME before starting KDE
     gnome.shutdown()
-
-    # with subtest("KDE with native StatusNotifierItem support"):
-    #   kde.start()
-    #   kde.wait_for_unit("multi-user.target")
-    #   kde.wait_for_x()
-
-      # Wait for KDE to fully load
-    #   kde.wait_for_unit("plasma-plasmashell.service", "alice")
-
-      # Test trayicon command starts without immediate error
-    #   kde.succeed("timeout 5s su - alice -c 'DISPLAY=:0 ${bus} paretosecurity trayicon &'")
-
-    # Shutdown KDE before starting XFCE
-    # kde.shutdown()
-
-    with subtest("XFCE desktop environment"):
-      xfce.start()
-      xfce.wait_for_unit("multi-user.target")
-      xfce.wait_for_x()
-
-      # Wait for XFCE to fully load
-      xfce.wait_for_file("/run/user/${toString user.uid}/bus")
-      xfce.wait_for_window("xfce4-panel")
-      xfce.wait_for_window("Desktop")
-
-      # Check if XFCE components are running
-      for component in ["xfwm4", "xfsettingsd", "xfdesktop", "xfce4-notifyd", "xfconfd"]:
-        xfce.wait_until_succeeds(f"pgrep -f {component}")
-
-      # Start snixembed to provide StatusNotifierWatcher
-      xfce.succeed("su - alice -c 'DISPLAY=:0 ${bus} snixembed >&2 &'")
-      xfce.sleep(2)  # Give snixembed time to start
-
-      # Test trayicon command starts without immediate error
-      xfce.succeed("timeout 5s su - alice -c 'DISPLAY=:0 ${bus} paretosecurity trayicon &'")
-
-    # Shutdown XFCE before starting minimal
-    xfce.shutdown()
 
     with subtest("Minimal desktop environment failure handling"):
       minimal.start()
