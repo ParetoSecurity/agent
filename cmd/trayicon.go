@@ -49,11 +49,13 @@ var trayiconCmd = &cobra.Command{
 						} else {
 							errorChan <- fmt.Errorf("unexpected panic: %v", r)
 						}
+						return
 					}
-					done <- true
 				}()
 
 				systray.Run(trayApp.OnReady, onExit)
+				// Only send done if no panic occurred
+				done <- true
 			}()
 
 			// Wait for either an error or successful startup
