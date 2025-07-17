@@ -126,6 +126,8 @@ nfpms:
   file_name_template: "{{ .ProjectName }}_{{ .Arch }}.{{ .Format }}"
   dependencies:
   - curl
+  recommends:
+  - gnome-shell-extension-appindicator
   scripts:
     postinstall: "apt/postinstall.sh"
   contents:

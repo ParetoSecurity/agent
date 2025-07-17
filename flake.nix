@@ -40,6 +40,7 @@
           pwd-manager = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/pwd-manager.nix;
           screenlock = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/screenlock.nix;
           secureboot = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/secureboot.nix;
+          trayicon = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/trayicon.nix;
           xfce = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/desktop/xfce.nix;
         };
       };
