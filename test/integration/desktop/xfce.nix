@@ -3,6 +3,7 @@ let
   inherit (common) users paretoPatchedDash dashboard displayManager ssh;
 in {
   name = "XFCE";
+  interactive.sshBackdoor.enable = true;
 
   nodes.dashboard = {
     imports = [
@@ -25,9 +26,6 @@ in {
     services.xserver.displayManager.lightdm.enable = true;
     services.xserver.desktopManager.xfce.enable = true;
   };
-
-  interactive.nodes.xfce = {...}:
-    ssh {port = 2221;} {};
 
   enableOCR = true;
 
