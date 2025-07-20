@@ -33,7 +33,7 @@ For a nicer shell, you can SSH into the test VM via a testing backdoor. This is 
 ```
 $ ssh -o User=root vsock/3
 $ ssh -o User=root vsock/4
-$ ssh -o User=root vsock/4
+$ ssh -o User=root vsock/5
 ...
 ```
 
