@@ -3,6 +3,7 @@ let
   inherit (common) pareto ssh;
 in {
   name = "FS Encryption";
+  interactive.sshBackdoor.enable = true;
 
   nodes = {
     plaindisk = {
@@ -78,12 +79,6 @@ in {
       };
     };
   };
-
-  interactive.nodes.plaindisk = {...}:
-    ssh {port = 2221;} {};
-
-  interactive.nodes.luks = {...}:
-    ssh {port = 2222;} {};
 
   enableOCR = true;
 

@@ -3,6 +3,7 @@ let
   inherit (common) pareto ssh;
 in {
   name = "Screen Lock";
+  interactive.sshBackdoor.enable = true;
 
   nodes = {
     gnome = {
@@ -33,12 +34,6 @@ in {
       services.colord.enable = false;
     };
   };
-
-  interactive.nodes.gnome = {...}:
-    ssh {port = 2221;} {};
-
-  interactive.nodes.kde = {...}:
-    ssh {port = 2222;} {};
 
   testScript = ''
     # Test GNOME

@@ -15,6 +15,7 @@ let
   };
 in {
   name = "Firewall";
+  interactive.sshBackdoor.enable = true;
 
   nodes = {
     wideopen = {
@@ -53,15 +54,6 @@ in {
       networking.nftables.enable = true;
     };
   };
-
-  interactive.nodes.wideopen = {...}:
-    ssh {port = 2221;} {};
-
-  interactive.nodes.iptables = {...}:
-    ssh {port = 2222;} {};
-
-  interactive.nodes.nftables = {...}:
-    ssh {port = 2222;} {};
 
   testScript = ''
     # Test Setup

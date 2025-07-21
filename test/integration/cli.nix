@@ -3,6 +3,7 @@ let
   inherit (common) users pareto ssh;
 in {
   name = "CLI";
+  interactive.sshBackdoor.enable = true;
 
   nodes = {
     agent = {
@@ -16,9 +17,6 @@ in {
       ];
     };
   };
-
-  interactive.nodes.vanilla = {...}:
-    ssh {port = 2221;} {};
 
   testScript = ''
     # Test setup

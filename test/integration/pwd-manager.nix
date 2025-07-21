@@ -3,6 +3,7 @@ let
   inherit (common) pareto ssh;
 in {
   name = "Password Manager";
+  interactive.sshBackdoor.enable = true;
 
   nodes = {
     withPwdManager = {
@@ -29,12 +30,6 @@ in {
       # No password manager installed
     };
   };
-
-  interactive.nodes.withPwdManager = {...}:
-    ssh {port = 2221;} {};
-
-  interactive.nodes.noPwdManager = {...}:
-    ssh {port = 2222;} {};
 
   testScript = ''
     # Test 1: Check passes with password managers installed

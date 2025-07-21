@@ -28,24 +28,18 @@ $ nix build .#checks.aarch64-darwin.firewall.driverInteractive
 >>> machine.shell_interact()
 ```
 
-For a nicer shell, add the following to `firewall.nix`, rebuild the test and run
-`start_all()`. Now you can SSH into the test VM with `ssh root@localhost -p2222`.
+For a nicer shell, you can SSH into the test VM via a testing backdoor. This is useful for debugging or interacting with the test environment. The first testing node will be accessible via `vsock/3`, the second via `vsock/4`, and so on:
 
-```nix
-  interactive.nodes.machine = { ... }: {
-    services.openssh = {
-      enable = true;
-      settings = {
-        PermitRootLogin = "yes";
-        PermitEmptyPasswords = "yes";
-      };
-    };
-    security.pam.services.sshd.allowNullPassword = true;
-    virtualisation.forwardPorts = [
-      { from = "host"; host.port = 2222; guest.port = 22; }
-    ];
-  };
 ```
+$ ssh -o User=root vsock/3
+$ ssh -o User=root vsock/4
+$ ssh -o User=root vsock/5
+...
+```
+
+This assumes your test file has the `interactive.sshBackdoor.enable = true;` line.
+Read more about the SSH backdoor in the [NixOS manual](https://nixos.org/manual/nixos/stable/#sec-nixos-test-ssh-access).
+
 
 ## Seeing UI changes
 

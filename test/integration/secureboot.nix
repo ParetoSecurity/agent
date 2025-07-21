@@ -3,6 +3,7 @@ let
   inherit (common) pareto ssh;
 in {
   name = "SecureBoot";
+  interactive.sshBackdoor.enable = true;
 
   nodes = {
     regularboot = {
@@ -35,12 +36,6 @@ in {
       system.switch.enable = true;
     };
   };
-
-  interactive.nodes.regularboot = {...}:
-    ssh {port = 2221;} {};
-
-  interactive.nodes.secureboot = {...}:
-    ssh {port = 2222;} {};
 
   testScript = {nodes, ...}: ''
     # Test 1: check fails with SecureBoot disabled

@@ -3,6 +3,7 @@ let
   inherit (common) pareto ssh;
 in {
   name = "Help";
+  interactive.sshBackdoor.enable = true;
 
   nodes = {
     vanilla = {
@@ -13,9 +14,6 @@ in {
       imports = [(pareto {inherit pkgs lib;})];
     };
   };
-
-  interactive.nodes.vanilla = {...}:
-    ssh {port = 2221;} {};
 
   testScript = ''
     from textwrap import dedent
