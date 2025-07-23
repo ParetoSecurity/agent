@@ -8,29 +8,39 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseJWT(t *testing.T) {
-	validToken := "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJqdEBuaXRlby5jbyIsInRlYW1JRCI6IjI0MjljNDllLTM3YmItNDFiYi05MDc3LTZiYjYyMDJlMjU1YiIsInJvbGUiOiJ0ZWFtIiwiaWF0IjoxNzM2NDE3NDEwLCJ0b2tlbiI6ImV5SmhiR2NpT2lKSVV6VXhNaUlzSW5SNWNDSTZJa3BYVkNKOS5leUp5YjJ4bGN5STZXeUpzYVc1clgyUmxkbWxqWlNJc0luVndaR0YwWlY5a1pYWnBZMlVpWFN3aWRHVmhiVjlwWkNJNklqSTBNamxqTkRsbExUTTNZbUl0TkRGaVlpMDVNRGMzTFRaaVlqWXlNREpsTWpVMVlpSXNJbWx1ZG1sMFpWOXBaQ0k2SWpSaFpqZzFNVFJoTFdObE5qTXRORGMwTnkwNE1EZG1MVFZqTXpnek9XUTNPRE0wTVNJc0luTjFZaUk2SW1wMFFHNXBkR1Z2TG1Odklpd2lhV0YwSWpveE56TTJOREUzTkRFd2ZRLnZTSFU0Nm5yZWo2aVRvZHdIaEJLRUxTREUxN3dxQzJoc0VRX1RYUmN4Z0ZaN3dsSHptUkNnTFlEOGtwenpSTzdvME85dTdnYXppTXJQTF9vUHVPdXJRIn0.kZqUzuRO7R9Bd6U8krlRj18CmmRMX1uwUNToYwVn-OYsCViP0ae--Mbo4E4brWrtXUm0PXVQLhR0Ml0xeTNLJx7JNVPFPCCOugNLAvL42g3RL7nk3kjYZ2ugbvK_uGrQTtFZojRTkYpDv3YgKpeNpoMpmT3GTK9PRG3YXkfXkPgZyrIrLwaXn57Tr88MOcFbyq1VD5M1UPizGHJDfkmldP4ROmKSEfc8iNcIrYV7uIcqBWoTzqKnLxjG6FQ9Ylsrw_-kpfzfa-8tbaWrhY-UgjSllY4WUUG95tkLVxlKHcKDZHsYWXWZO-nMdZF7JlFN8MpPEJDCq_E9tOVqbWcEh1DCWrXa33Sm5ZfvdSBBkhzUnvTwDTDjCDCMhA9gNcdMfEoKCh11lDD8r3FRvIlioBVKZ3GNm25AtfbcypH8jobdnUIBrgtrPxyadv63o0IEshtTX4kswUkGqvwMlDD-r-J2oPrEkN_JRJshTpYezUagIEvYvXAPjNU2kVWOJFnS9MCLuJa4Di99omEnS9oRemgJP0tR6Z84sbTiXJJIsa1sEY8MZDAqXD1U1OHtfAo7vL5z5SyPjQPnaKMacttNx0gfHFA1rP2Vdsj5m6nYQtBqZpFUVvOgKa3bZQRYOWho1IF22dhdqOBgjUG2CPe8fZ0mpAaQMJ5SHUh613ShOyI"
-	invalidToken := "invalid.token.string"
+func TestGetInviteIDFromURL(t *testing.T) {
+	validURL := "paretosecurity://linkDevice/?invite_id=4af8514a-ce63-4747-807f-5c3839d78341"
+	invalidURL := "paretosecurity://linkDevice/?token=invalid"
 
-	t.Run("valid token", func(t *testing.T) {
-		claims, err := parseJWT(validToken)
+	t.Run("valid URL with invite_id", func(t *testing.T) {
+		inviteID, err := getInviteIDFromURL(validURL)
 		assert.NoError(t, err)
-		assert.Equal(t, "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJyb2xlcyI6WyJsaW5rX2RldmljZSIsInVwZGF0ZV9kZXZpY2UiXSwidGVhbV9pZCI6IjI0MjljNDllLTM3YmItNDFiYi05MDc3LTZiYjYyMDJlMjU1YiIsImludml0ZV9pZCI6IjRhZjg1MTRhLWNlNjMtNDc0Ny04MDdmLTVjMzgzOWQ3ODM0MSIsInN1YiI6Imp0QG5pdGVvLmNvIiwiaWF0IjoxNzM2NDE3NDEwfQ.vSHU46nrej6iTodwHhBKELSDE17wqC2hsEQ_TXRcxgFZ7wlHzmRCgLYD8kpzzRO7o0O9u7gaziMrPL_oPuOurQ", claims.TeamAuth)
-		assert.Equal(t, "2429c49e-37bb-41bb-9077-6bb6202e255b", claims.TeamUUID)
+		assert.Equal(t, "4af8514a-ce63-4747-807f-5c3839d78341", inviteID)
 	})
 
-	t.Run("invalid token", func(t *testing.T) {
-		_, err := parseJWT(invalidToken)
+	t.Run("invalid URL without invite_id", func(t *testing.T) {
+		_, err := getInviteIDFromURL(invalidURL)
 		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invite_id not found in URL")
 	})
 }
 
 func TestRunLinkCommand_Success(t *testing.T) {
 	defer gock.Off()
 
-	gock.New("https://dash.paretosecurity.com").
+	// Mock the enrollment endpoint
+	gock.New("https://cloud.paretosecurity.com").
+		Post("/api/v1/team/enroll").
 		Reply(200).
-		JSON([]map[string]string{{"status": "ok"}})
+		JSON(map[string]string{
+			"auth": "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJ0ZWFtX2lkIjoiMjQyOWM0OWUtMzdiYi00MWJiLTkwNzctNmJiNjIwMmUyNTViIn0.test",
+		})
+
+	// Mock the reporting endpoint
+	gock.New("https://cloud.paretosecurity.com").
+		Patch("/api/v1/team/2429c49e-37bb-41bb-9077-6bb6202e255b/device").
+		Reply(200).
+		JSON(map[string]string{"status": "ok"})
 
 	// Reset config
 	shared.Config.TeamID = ""
@@ -42,18 +52,14 @@ func TestRunLinkCommand_Success(t *testing.T) {
 		shared.SaveConfig()
 	}()
 
-	// Use the same valid token as in TestParseJWT.
-	validToken := "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJqdEBuaXRlby5jbyIsInRlYW1JRCI6IjI0MjljNDllLTM3YmItNDFiYi05MDc3LTZiYjYyMDJlMjU1YiIsInJvbGUiOiJ0ZWFtIiwiaWF0IjoxNzM2NDE3NDEwLCJ0b2tlbiI6ImV5SmhiR2NpT2lKSVV6VXhNaUlzSW5SNWNDSTZJa3BYVkNKOS5leUp5YjJ4bGN5STZXeUpzYVc1clgyUmxkbWxqWlNJc0luVndaR0YwWlY5a1pYWnBZMlVpWFN3aWRHVmhiVjlwWkNJNklqSTBNamxqTkRsbExUTTNZbUl0TkRGaVlpMDVNRGMzTFRaaVlqWXlNREpsTWpVMVlpSXNJbWx1ZG1sMFpWOXBaQ0k2SWpSaFpqZzFNVFJoTFdObE5qTXRORGMwTnkwNE1EZG1MVFZqTXpnek9XUTNPRE0wTVNJc0luTjFZaUk2SW1wMFFHNXBkR1Z2TG1Odklpd2lhV0YwSWpveE56TTJOREUzTkRFd2ZRLnZTSFU0Nm5yZWo2aVRvZHdIaEJLRUxTREUxN3dxQzJoc0VRX1RYUmN4Z0ZaN3dsSHptUkNnTFlEOGtwenpSTzdvME85dTdnYXppTXJQTF9vUHVPdXJRIn0.kZqUzuRO7R9Bd6U8krlRj18CmmRMX1uwUNToYwVn-OYsCViP0ae--Mbo4E4brWrtXUm0PXVQLhR0Ml0xeTNLJx7JNVPFPCCOugNLAvL42g3RL7nk3kjYZ2ugbvK_uGrQTtFZojRTkYpDv3YgKpeNpoMpmT3GTK9PRG3YXkfXkPgZyrIrLwaXn57Tr88MOcFbyq1VD5M1UPizGHJDfkmldP4ROmKSEfc8iNcIrYV7uIcqBWoTzqKnLxjG6FQ9Ylsrw_-kpfzfa-8tbaWrhY-UgjSllY4WUUG95tkLVxlKHcKDZHsYWXWZO-nMdZF7JlFN8MpPEJDCq_E9tOVqbWcEh1DCWrXa33Sm5ZfvdSBBkhzUnvTwDTDjCDCMhA9gNcdMfEoKCh11lDD8r3FRvIlioBVKZ3GNm25AtfbcypH8jobdnUIBrgtrPxyadv63o0IEshtTX4kswUkGqvwMlDD-r-J2oPrEkN_JRJshTpYezUagIEvYvXAPjNU2kVWOJFnS9MCLuJa4Di99omEnS9oRemgJP0tR6Z84sbTiXJJIsa1sEY8MZDAqXD1U1OHtfAo7vL5z5SyPjQPnaKMacttNx0gfHFA1rP2Vdsj5m6nYQtBqZpFUVvOgKa3bZQRYOWho1IF22dhdqOBgjUG2CPe8fZ0mpAaQMJ5SHUh613ShOyI"
-	expectedTeamUUID := "2429c49e-37bb-41bb-9077-6bb6202e255b"
-	expectedTeamAuth := "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJyb2xlcyI6WyJsaW5rX2RldmljZSIsInVwZGF0ZV9kZXZpY2UiXSwidGVhbV9pZCI6IjI0MjljNDllLTM3YmItNDFiYi05MDc3LTZiYjYyMDJlMjU1YiIsImludml0ZV9pZCI6IjRhZjg1MTRhLWNlNjMtNDc0Ny04MDdmLTVjMzgzOWQ3ODM0MSIsInN1YiI6Imp0QG5pdGVvLmNvIiwiaWF0IjoxNzM2NDE3NDEwfQ.vSHU46nrej6iTodwHhBKELSDE17wqC2hsEQ_TXRcxgFZ7wlHzmRCgLYD8kpzzRO7o0O9u7gaziMrPL_oPuOurQ"
+	// Construct the URL with a valid invite_id
+	url := "paretosecurity://linkDevice/?invite_id=4af8514a-ce63-4747-807f-5c3839d78341"
 
-	// Construct the URL with the valid token.
-	url := "http://example.com?token=" + validToken
+	// Call the function under test
+	err := runLinkCommand(url)
+	assert.NoError(t, err)
 
-	// Call the function under test.
-	runLinkCommand(url)
-
-	// Assert that shared.Config was updated.
-	assert.Equal(t, expectedTeamUUID, shared.Config.TeamID)
-	assert.Equal(t, expectedTeamAuth, shared.Config.AuthToken)
+	// Assert that shared.Config was updated
+	assert.Equal(t, "2429c49e-37bb-41bb-9077-6bb6202e255b", shared.Config.TeamID)
+	assert.NotEmpty(t, shared.Config.AuthToken)
 }

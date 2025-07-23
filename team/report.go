@@ -4,12 +4,14 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/caarlos0/log"
 	"github.com/carlmjohnson/requests"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/ParetoSecurity/agent/check"
 	"github.com/ParetoSecurity/agent/claims"
@@ -17,6 +19,14 @@ import (
 )
 
 const reportURL = "https://cloud.paretosecurity.com"
+
+type DeviceEnrollmentRequest struct {
+	InviteID string `json:"invite_id"`
+}
+
+type DeviceEnrollmentResponse struct {
+	Auth string `json:"auth"`
+}
 
 type Report struct {
 	PassedCount       int                         `json:"passedCount"`
@@ -123,4 +133,72 @@ func ReportToTeam(initial bool) error {
 	}
 	log.WithField("response", res).Debug("API Response")
 	return nil
+}
+
+func EnrollDevice(inviteID string) (string, string, error) {
+	request := DeviceEnrollmentRequest{
+		InviteID: inviteID,
+	}
+
+	var response DeviceEnrollmentResponse
+	errRes := ""
+
+	// Create a context with a timeout for the request
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	log.WithField("inviteID", inviteID).Debug("Enrolling device")
+
+	err := requests.URL(reportURL).
+		Path("/api/v1/team/enroll").
+		Method(http.MethodPost).
+		Header("User-Agent", shared.UserAgent()).
+		BodyJSON(&request).
+		ToJSON(&response).
+		AddValidator(
+			requests.ValidatorHandler(
+				requests.DefaultValidator,
+				requests.ToString(&errRes),
+			)).
+		Fetch(ctx)
+
+	if err != nil {
+		log.WithField("response", errRes).
+			WithError(err).
+			Warn("Failed to enroll device")
+		return "", "", err
+	}
+
+	log.WithField("response", response).Debug("Device enrollment successful")
+
+	// Extract team ID from the JWT token
+	teamID, err := extractTeamIDFromToken(response.Auth)
+	if err != nil {
+		log.WithError(err).Warn("Failed to extract team ID from auth token")
+		return "", "", fmt.Errorf("failed to extract team ID from auth token: %w", err)
+	}
+
+	return response.Auth, teamID, nil
+}
+
+func extractTeamIDFromToken(token string) (string, error) {
+	// Parse JWT token without verification to extract claims
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
+	parsedToken, _, err := parser.ParseUnverified(token, jwt.MapClaims{})
+	if err != nil {
+		return "", fmt.Errorf("failed to parse JWT token: %w", err)
+	}
+
+	claims, ok := parsedToken.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", fmt.Errorf("failed to extract claims from JWT token")
+	}
+
+	// Extract team_id from claims
+	teamID, ok := claims["team_id"].(string)
+	if !ok {
+		return "", fmt.Errorf("team_id not found in JWT claims")
+	}
+
+	return teamID, nil
 }
