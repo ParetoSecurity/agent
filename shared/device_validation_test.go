@@ -145,7 +145,6 @@ func TestValidateAndPrepareDevice(t *testing.T) {
 			device: ReportingDevice{
 				MachineUUID: "123e4567-e89b-12d3-a456-426614174000",
 				MachineName: "test-machine",
-				Auth:        "test-auth",
 				OSVersion:   "Ubuntu 22.04",
 				ModelName:   "Dell XPS",
 				ModelSerial: "ABC123",
@@ -153,7 +152,6 @@ func TestValidateAndPrepareDevice(t *testing.T) {
 			expected: ReportingDevice{
 				MachineUUID: "123e4567-e89b-12d3-a456-426614174000",
 				MachineName: "test-machine",
-				Auth:        "test-auth",
 				OSVersion:   "Ubuntu 22.04",
 				ModelName:   "Dell XPS",
 				ModelSerial: "ABC123",
@@ -164,7 +162,6 @@ func TestValidateAndPrepareDevice(t *testing.T) {
 			device: ReportingDevice{
 				MachineUUID: "123e4567-e89b-12d3-a456-426614174000",
 				MachineName: strings.Repeat("a", 300),
-				Auth:        "test-auth",
 				OSVersion:   "Ubuntu 22.04",
 				ModelName:   "Dell XPS",
 				ModelSerial: "ABC123",
@@ -172,7 +169,6 @@ func TestValidateAndPrepareDevice(t *testing.T) {
 			expected: ReportingDevice{
 				MachineUUID: "123e4567-e89b-12d3-a456-426614174000",
 				MachineName: strings.Repeat("a", 255),
-				Auth:        "test-auth",
 				OSVersion:   "Ubuntu 22.04",
 				ModelName:   "Dell XPS",
 				ModelSerial: "ABC123",
@@ -183,7 +179,6 @@ func TestValidateAndPrepareDevice(t *testing.T) {
 			device: ReportingDevice{
 				MachineUUID: "123e4567-e89b-12d3-a456-426614174000",
 				MachineName: "test-machine",
-				Auth:        "test-auth",
 				OSVersion:   "Ubuntu 22.04",
 				ModelName:   strings.Repeat("b", 100),
 				ModelSerial: "ABC123",
@@ -191,7 +186,6 @@ func TestValidateAndPrepareDevice(t *testing.T) {
 			expected: ReportingDevice{
 				MachineUUID: "123e4567-e89b-12d3-a456-426614174000",
 				MachineName: "test-machine",
-				Auth:        "test-auth",
 				OSVersion:   "Ubuntu 22.04",
 				ModelName:   strings.Repeat("b", 60),
 				ModelSerial: "ABC123",
@@ -202,7 +196,6 @@ func TestValidateAndPrepareDevice(t *testing.T) {
 			device: ReportingDevice{
 				MachineUUID: "123e4567-e89b-12d3-a456-426614174000",
 				MachineName: "test-machine",
-				Auth:        "test-auth",
 				OSVersion:   "Ubuntu 22.04",
 				ModelName:   "Dell XPS",
 				ModelSerial: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
@@ -210,7 +203,6 @@ func TestValidateAndPrepareDevice(t *testing.T) {
 			expected: ReportingDevice{
 				MachineUUID: "123e4567-e89b-12d3-a456-426614174000",
 				MachineName: "test-machine",
-				Auth:        "test-auth",
 				OSVersion:   "Ubuntu 22.04",
 				ModelName:   "Dell XPS",
 				ModelSerial: "ABCDEFGHIJKLMNO",
@@ -221,7 +213,6 @@ func TestValidateAndPrepareDevice(t *testing.T) {
 			device: ReportingDevice{
 				MachineUUID: "123e4567-e89b-12d3-a456-426614174000",
 				MachineName: "test-machine",
-				Auth:        "test-auth",
 				OSVersion:   "Ubuntu 22.04",
 				ModelName:   "Dell XPS",
 				ModelSerial: "ABC@123#INVALID",
@@ -229,7 +220,6 @@ func TestValidateAndPrepareDevice(t *testing.T) {
 			expected: ReportingDevice{
 				MachineUUID: "123e4567-e89b-12d3-a456-426614174000",
 				MachineName: "test-machine",
-				Auth:        "test-auth",
 				OSVersion:   "Ubuntu 22.04",
 				ModelName:   "Dell XPS",
 				ModelSerial: "ABC123INVALID", // Transformed to valid pattern
@@ -240,7 +230,6 @@ func TestValidateAndPrepareDevice(t *testing.T) {
 			device: ReportingDevice{
 				MachineUUID: "123e4567-e89b-12d3-a456-426614174000",
 				MachineName: "test-machine",
-				Auth:        "test-auth",
 				OSVersion:   strings.Repeat("Ubuntu 22.04 LTS ", 20),
 				ModelName:   "Dell XPS",
 				ModelSerial: "ABC123",
@@ -248,7 +237,6 @@ func TestValidateAndPrepareDevice(t *testing.T) {
 			expected: ReportingDevice{
 				MachineUUID: "123e4567-e89b-12d3-a456-426614174000",
 				MachineName: "test-machine",
-				Auth:        "test-auth",
 				OSVersion:   strings.Repeat("Ubuntu 22.04 LTS ", 20)[:255],
 				ModelName:   "Dell XPS",
 				ModelSerial: "ABC123",
@@ -266,9 +254,6 @@ func TestValidateAndPrepareDevice(t *testing.T) {
 			}
 			if device.MachineName != tt.expected.MachineName {
 				t.Errorf("MachineName = %q; want %q", device.MachineName, tt.expected.MachineName)
-			}
-			if device.Auth != tt.expected.Auth {
-				t.Errorf("Auth = %q; want %q", device.Auth, tt.expected.Auth)
 			}
 			if device.OSVersion != tt.expected.OSVersion {
 				t.Errorf("OSVersion = %q; want %q", device.OSVersion, tt.expected.OSVersion)

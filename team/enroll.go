@@ -80,7 +80,7 @@ func EnrollDevice(inviteID string, host string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	enrollPath := "/api/v1/enroll"
+	enrollPath := "/api/v1/team/enroll"
 	fullURL := enrollURL + enrollPath
 
 	log.WithField("inviteID", inviteID).

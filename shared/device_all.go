@@ -48,7 +48,6 @@ func CurrentReportingDevice() ReportingDevice {
 	rd := ReportingDevice{
 		MachineUUID: device.UUID,
 		MachineName: Sanitize(device.Hostname),
-		Auth:        Config.AuthToken,
 		OSVersion:   osVersion,
 		ModelName: func() string {
 			modelName, err := SystemDevice()

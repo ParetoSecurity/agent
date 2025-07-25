@@ -6,9 +6,8 @@ package shared
 import "strings"
 
 type ReportingDevice struct {
-	MachineUUID string `json:"machineUUID"` // e.g. 123e4567-e89b-12d3-a456-426614174000
-	MachineName string `json:"machineName"` // e.g. MacBook-Pro.local
-	Auth        string `json:"auth"`
+	MachineUUID string `json:"machineUUID"`  // e.g. 123e4567-e89b-12d3-a456-426614174000
+	MachineName string `json:"machineName"`  // e.g. MacBook-Pro.local
 	OSVersion   string `json:"macOSVersion"` // e.g. Ubuntu 20.04
 	ModelName   string `json:"modelName"`    // e.g. MacBook Pro
 	ModelSerial string `json:"modelSerial"`  // e.g. C02C1234
