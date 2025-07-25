@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 	shared "github.com/ParetoSecurity/agent/shared"
 )
 
-const reportURL = "https://cloud.paretosecurity.com"
+const defaultReportURL = "https://cloud.paretosecurity.com"
 
 type Report struct {
 	PassedCount       int                         `json:"passedCount"`
@@ -98,10 +99,22 @@ func ReportToTeam(initial bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// Use TeamAPI from config if available, otherwise use default
+	reportURL := defaultReportURL
+	if shared.Config.TeamAPI != "" {
+		reportURL = shared.Config.TeamAPI
+	}
+
 	log.WithField("report", spew.Sdump(report)).
 		WithField("method", method).
 		WithField("teamID", shared.Config.TeamID).
+		WithField("reportURL", reportURL).
 		Debug("Reporting to team")
+	requestURL := fmt.Sprintf("%s/api/v1/team/%s/device", reportURL, shared.Config.TeamID)
+	log.WithField("url", requestURL).
+		WithField("method", method).
+		Debug("Making API request")
+
 	err := requests.URL(reportURL).
 		Pathf("/api/v1/team/%s/device", shared.Config.TeamID).
 		Method(method).

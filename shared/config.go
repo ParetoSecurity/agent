@@ -16,6 +16,7 @@ var ConfigPath string
 type ParetoConfig struct {
 	TeamID        string
 	AuthToken     string
+	TeamAPI       string
 	SystemUUID    string
 	DisableChecks []string
 }
@@ -78,6 +79,7 @@ func ResetConfig() {
 	Config = ParetoConfig{
 		TeamID:        "",
 		AuthToken:     "",
+		TeamAPI:       "",
 		SystemUUID:    "",
 		DisableChecks: []string{},
 	}

@@ -169,7 +169,7 @@ func TestReportToTeam(t *testing.T) {
 	shared.Config.AuthToken = "testToken"
 
 	// Test initial report (PUT request).
-	gock.New(reportURL).
+	gock.New(defaultReportURL).
 		Put("/api/v1/team/" + shared.Config.TeamID + "/device").
 		Reply(200).
 		BodyString(`{"status": "ok"}`)
@@ -186,7 +186,7 @@ func TestReportToTeam(t *testing.T) {
 	gock.Clean()
 
 	// Test subsequent report (PATCH request).
-	gock.New(reportURL).
+	gock.New(defaultReportURL).
 		Patch("/api/v1/team/" + shared.Config.TeamID + "/device").
 		Reply(200).
 		BodyString(`{"status": "ok"}`)
@@ -203,7 +203,7 @@ func TestReportToTeam(t *testing.T) {
 	gock.Clean()
 
 	// Test API error handling.
-	gock.New(reportURL).
+	gock.New(defaultReportURL).
 		Patch("/api/v1/team/" + shared.Config.TeamID + "/device").
 		Reply(500).
 		BodyString(`{"error": "server error"}`)
@@ -219,7 +219,7 @@ func TestReportToTeam(t *testing.T) {
 	gock.Clean()
 
 	// Test request failure
-	gock.New(reportURL).
+	gock.New(defaultReportURL).
 		Patch("/api/v1/team/" + shared.Config.TeamID + "/device").
 		ReplyError(err)
 
