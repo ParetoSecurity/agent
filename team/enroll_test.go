@@ -1,8 +1,10 @@
 package team
 
 import (
+	"errors"
 	"testing"
 
+	"github.com/ParetoSecurity/agent/shared"
 	"github.com/h2non/gock"
 	"github.com/stretchr/testify/assert"
 )
@@ -35,9 +37,19 @@ func TestExtractTeamIDFromAuth(t *testing.T) {
 func TestEnrollDevice(t *testing.T) {
 	defer gock.Off()
 
+	// Save original config
+	originalTeamAPI := shared.Config.TeamAPI
+	originalTeamID := shared.Config.TeamID
+	originalAuthToken := shared.Config.AuthToken
+	defer func() {
+		shared.Config.TeamAPI = originalTeamAPI
+		shared.Config.TeamID = originalTeamID
+		shared.Config.AuthToken = originalAuthToken
+	}()
+
 	t.Run("successful enrollment", func(t *testing.T) {
 		gock.New("https://cloud.paretosecurity.com").
-			Post("/api/v1/enroll").
+			Post("/api/v1/team/enroll").
 			Reply(200).
 			JSON(map[string]string{
 				"auth": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZWFtX2lkIjoidGVzdC10ZWFtLTEyMyIsInN1YiI6InVzZXJAZXhhbXBsZS5jb20ifQ.signature",
@@ -49,7 +61,7 @@ func TestEnrollDevice(t *testing.T) {
 
 	t.Run("custom host", func(t *testing.T) {
 		gock.New("https://custom.api.com").
-			Post("/api/v1/enroll").
+			Post("/api/v1/team/enroll").
 			Reply(200).
 			JSON(map[string]string{
 				"auth": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZWFtX2lkIjoidGVzdC10ZWFtLTEyMyIsInN1YiI6InVzZXJAZXhhbXBsZS5jb20ifQ.signature",
@@ -67,13 +79,72 @@ func TestEnrollDevice(t *testing.T) {
 
 	t.Run("enrollment failure", func(t *testing.T) {
 		gock.New("https://cloud.paretosecurity.com").
-			Post("/api/v1/enroll").
+			Post("/api/v1/team/enroll").
 			Reply(400).
 			JSON(map[string]string{
 				"error": "Invalid invite ID",
 			})
 
 		err := EnrollDevice("invalid-invite", "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "enrollment failed")
+	})
+
+	t.Run("network timeout", func(t *testing.T) {
+		gock.New("https://cloud.paretosecurity.com").
+			Post("/api/v1/team/enroll").
+			ReplyError(errors.New("timeout"))
+
+		err := EnrollDevice("test-invite-123", "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "enrollment failed")
+	})
+
+	t.Run("invalid JSON response", func(t *testing.T) {
+		gock.New("https://cloud.paretosecurity.com").
+			Post("/api/v1/team/enroll").
+			Reply(200).
+			BodyString("invalid json")
+
+		err := EnrollDevice("test-invite-123", "")
+		assert.Error(t, err)
+	})
+
+	t.Run("missing auth in response", func(t *testing.T) {
+		gock.New("https://cloud.paretosecurity.com").
+			Post("/api/v1/team/enroll").
+			Reply(200).
+			JSON(map[string]string{
+				"auth": "",
+			})
+
+		err := EnrollDevice("test-invite-123", "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid auth token format")
+	})
+
+	t.Run("malformed auth token", func(t *testing.T) {
+		gock.New("https://cloud.paretosecurity.com").
+			Post("/api/v1/team/enroll").
+			Reply(200).
+			JSON(map[string]string{
+				"auth": "malformed.token",
+			})
+
+		err := EnrollDevice("test-invite-123", "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid auth token format")
+	})
+
+	t.Run("server error response", func(t *testing.T) {
+		gock.New("https://cloud.paretosecurity.com").
+			Post("/api/v1/team/enroll").
+			Reply(500).
+			JSON(map[string]string{
+				"error": "Internal server error",
+			})
+
+		err := EnrollDevice("test-invite-123", "")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "enrollment failed")
 	})

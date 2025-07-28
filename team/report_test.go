@@ -1,6 +1,7 @@
 package team
 
 import (
+	"errors"
 	"os"
 	"sync/atomic"
 	"testing"
@@ -165,8 +166,15 @@ func TestNowReportCounts(t *testing.T) {
 func TestReportToTeam(t *testing.T) {
 	defer gock.Off()
 
+	// Save original config
+	originalTeamAPI := shared.Config.TeamAPI
+	defer func() {
+		shared.Config.TeamAPI = originalTeamAPI
+	}()
+
 	shared.Config.TeamID = "testTeam"
 	shared.Config.AuthToken = "testToken"
+	shared.Config.TeamAPI = ""
 
 	// Test initial report (PUT request).
 	gock.New(defaultReportURL).
@@ -221,11 +229,11 @@ func TestReportToTeam(t *testing.T) {
 	// Test request failure
 	gock.New(defaultReportURL).
 		Patch("/api/v1/team/" + shared.Config.TeamID + "/device").
-		ReplyError(err)
+		ReplyError(errors.New("network error"))
 
 	err = ReportToTeam(false)
 	if err == nil {
-		t.Fatalf("ReportToTeam (Request  error) should have failed, but didn't")
+		t.Fatalf("ReportToTeam (Request error) should have failed, but didn't")
 	}
 
 	if !gock.IsDone() {

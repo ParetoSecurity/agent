@@ -39,9 +39,17 @@ func TestParseEnrollmentURL(t *testing.T) {
 func TestRunLinkCommand_Success(t *testing.T) {
 	defer gock.Off()
 
+	// Setup temporary config file
+	tempDir := t.TempDir()
+	originalConfigPath := shared.ConfigPath
+	shared.ConfigPath = tempDir + "/config.toml"
+	defer func() {
+		shared.ConfigPath = originalConfigPath
+	}()
+
 	// Mock the enrollment endpoint
 	gock.New("https://cloud.paretosecurity.com").
-		Post("/api/v1/enroll").
+		Post("/api/v1/team/enroll").
 		Reply(200).
 		JSON(map[string]string{
 			"auth": "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJ0ZWFtX2lkIjoiMjQyOWM0OWUtMzdiYi00MWJiLTkwNzctNmJiNjIwMmUyNTViIiwic3ViIjoianRAZXhhbXBsZS5jb20iLCJpYXQiOjE3MzY0MTc0MTB9.test",
@@ -62,7 +70,6 @@ func TestRunLinkCommand_Success(t *testing.T) {
 		shared.Config.TeamID = ""
 		shared.Config.AuthToken = ""
 		shared.Config.TeamAPI = ""
-		shared.SaveConfig()
 	}()
 
 	// Construct the URL with an invite_id
