@@ -38,10 +38,13 @@ func runLinkCommand(teamURL string) error {
 		return errors.New("no team URL provided")
 	}
 	if shared.IsLinked() {
-		log.Warn("Already linked to a team")
-		log.Warn("Unlink first with `paretosecurity unlink`")
-		log.Infof("Team ID: %s", shared.Config.TeamID)
-		return errors.New("already linked to a team")
+		log.Info("Device already linked to a team, unlinking first")
+		log.Infof("Previous Team ID: %s", shared.Config.TeamID)
+		// Automatically unlink the device
+		shared.Config.TeamID = ""
+		shared.Config.AuthToken = ""
+		shared.Config.TeamAPI = ""
+		log.Info("Device unlinked, proceeding with new team linking")
 	}
 
 	// Parse the URL to extract invite_id and host
