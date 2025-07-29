@@ -59,7 +59,7 @@ in {
 
     # Test: paretosecurity:// URL handler is registered
     xfce.succeed("su - alice -c 'xdg-open"
-    + " paretosecurity://enrollTeam/?token=xfce-integration-test-token"
+    + " paretosecurity://enrollTeam/?token=xfce-integration-test-token'"
     + " >/dev/null &")
 
     xfce.wait_for_text("invite_id not found", timeout=20)
