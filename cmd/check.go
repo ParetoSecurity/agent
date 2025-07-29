@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"time"
 
 	"github.com/ParetoSecurity/agent/claims"
 	"github.com/ParetoSecurity/agent/runner"
@@ -68,7 +67,7 @@ func runCheckCommand(config *CheckConfig, skipUUIDs []string, onlyUUID string) {
 		config.LogWarn("Please run this command as a normal user, as it won't report all checks correctly.")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), shared.CheckTimeout)
 	defer cancel()
 
 	done := make(chan struct{})

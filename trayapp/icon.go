@@ -7,7 +7,6 @@ import (
 	"image/draw"
 	"image/png"
 	"runtime"
-	"sync/atomic"
 
 	"fyne.io/systray"
 	"github.com/ParetoSecurity/agent/shared"
@@ -24,12 +23,6 @@ const (
 	BadgeGreen   IconBadge = "green"
 	BadgeRunning IconBadge = "running" // New badge type for running state
 )
-
-// blinkCancelChan is used to signal when to stop blinking
-var blinkCancelChan = make(chan struct{})
-
-// isBlinking tracks if the icon is currently blinking
-var isBlinking atomic.Bool
 
 // setIcon sets the system tray icon based on the OS and theme.
 // setIcon sets the system tray icon based on the OS and theme.

@@ -66,7 +66,7 @@ func (t *TrayApp) Run() {
 	go t.checkScheduler()
 
 	// Initialize the state file
-	if t.config.GetModifiedTime().IsZero() {
+	if t.config.GetModifiedTime().IsZero() || time.Since(t.config.GetModifiedTime()) > time.Hour {
 		log.Info("Initializing state file...")
 		go t.runInitialCheck()
 	}
@@ -77,13 +77,20 @@ func (t *TrayApp) Run() {
 	}
 
 	log.Info("Starting system tray application...")
-	t.config.SystrayRun(trayapp.OnReady, onExit)
+	trayApp := trayapp.NewTrayApp()
+	t.config.SystrayRun(trayApp.OnReady, onExit)
 }
 
 func (t *TrayApp) updateScheduler() {
 	log.Info("Starting update command scheduler...")
+	lastRun := time.Now()
 	for {
-		if time.Since(t.config.GetModifiedTime()) > time.Hour && !t.config.GetModifiedTime().IsZero() {
+		// Check every 5 minutes if we need to run a update
+		t.config.Sleep(5 * time.Minute)
+
+		if time.Since(lastRun) > time.Hour {
+			lastRun = time.Now()
+			log.Info("No update has run in the last hour, running update now...")
 			_, err := t.config.RunCommand(t.config.SelfExe(), "update")
 			if err != nil {
 				log.WithError(err).Error("Failed to run update command")
@@ -95,11 +102,21 @@ func (t *TrayApp) updateScheduler() {
 
 func (t *TrayApp) checkScheduler() {
 	log.Info("Starting check command scheduler...")
+	lastRun := time.Now()
 	for {
-		t.config.Sleep(time.Duration(45+t.config.Rand(15)) * time.Minute)
-		_, err := t.config.RunCommand(t.config.SelfExe(), "check")
-		if err != nil {
-			log.WithError(err).Error("Failed to run check command")
+		// Check every 5 minutes if we need to run a check
+		t.config.Sleep(5 * time.Minute)
+
+		// If no check has run in the last hour, run one now
+		if time.Since(lastRun) > time.Hour {
+			log.Info("No check has run in the last hour, running check now...")
+			lastRun = time.Now()
+			_, err := t.config.RunCommand(t.config.SelfExe(), "check")
+			if err != nil {
+				log.WithError(err).Error("Failed to run check command")
+			}
+			// Sleep for a random duration (45-60 minutes) after running a check
+			t.config.Sleep(time.Duration(45+t.config.Rand(15)) * time.Minute)
 		}
 	}
 }

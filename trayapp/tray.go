@@ -23,6 +23,7 @@ type TrayApp struct {
 	notifier        Notifier
 	themeSubscriber ThemeSubscriber
 	iconProvider    IconProvider
+	startupManager  StartupManager
 	broadcaster     *shared.Broadcaster
 }
 
@@ -38,6 +39,7 @@ func NewTrayApp() *TrayApp {
 		notifier:        &RealNotifier{},
 		themeSubscriber: &RealThemeSubscriber{},
 		iconProvider:    &RealIconProvider{},
+		startupManager:  &RealStartupManager{},
 		broadcaster:     shared.NewBroadcaster(),
 	}
 }
@@ -53,6 +55,7 @@ func NewTrayAppWithDependencies(
 	notifier Notifier,
 	themeSubscriber ThemeSubscriber,
 	iconProvider IconProvider,
+	startupManager StartupManager,
 	broadcaster *shared.Broadcaster,
 ) *TrayApp {
 	return &TrayApp{
@@ -65,6 +68,7 @@ func NewTrayAppWithDependencies(
 		notifier:        notifier,
 		themeSubscriber: themeSubscriber,
 		iconProvider:    iconProvider,
+		startupManager:  startupManager,
 		broadcaster:     broadcaster,
 	}
 }
@@ -153,7 +157,30 @@ func (t *TrayApp) addOptions() {
 			}
 		}
 	}()
-	if runtime.GOOS != "windows" {
+	if runtime.GOOS == "windows" {
+		mstartup := mOptions.AddSubMenuItemCheckbox("Run at Windows startup", "Launch Pareto Security when Windows starts", t.startupManager.IsStartupEnabled())
+		go func() {
+			for range mstartup.ClickedCh() {
+				if !t.startupManager.IsStartupEnabled() {
+					if err := t.startupManager.EnableStartup(); err != nil {
+						log.WithError(err).Error("failed to enable startup")
+						t.notifier.Toast("Failed to enable startup, please check the logs for more information.")
+					}
+				} else {
+					if err := t.startupManager.DisableStartup(); err != nil {
+						log.WithError(err).Error("failed to disable startup")
+						t.notifier.Toast("Failed to disable startup, please check the logs for more information.")
+					}
+				}
+				if t.startupManager.IsStartupEnabled() {
+					mstartup.Check()
+				} else {
+					mstartup.Uncheck()
+				}
+			}
+		}()
+	}
+	if runtime.GOOS == "linux" {
 		mrun := mOptions.AddSubMenuItemCheckbox("Run checks in the background", "Run checks periodically in the background while the user is logged in.", t.systemdManager.IsTimerEnabled())
 		go func() {
 			for range mrun.ClickedCh() {
@@ -175,24 +202,24 @@ func (t *TrayApp) addOptions() {
 				}
 			}
 		}()
-		mshow := mOptions.AddSubMenuItemCheckbox("Run the tray icon at startup", "Show tray icon", t.systemdManager.IsTrayIconEnabled())
+		mstartup := mOptions.AddSubMenuItemCheckbox("Run the tray icon at startup", "Launch tray icon at startup", t.startupManager.IsStartupEnabled())
 		go func() {
-			for range mshow.ClickedCh() {
-				if !t.systemdManager.IsTrayIconEnabled() {
-					if err := t.systemdManager.EnableTrayIcon(); err != nil {
-						log.WithError(err).Error("failed to enable tray icon")
-						t.notifier.Toast("Failed to enable tray icon, please check the logs for more information.")
+			for range mstartup.ClickedCh() {
+				if !t.startupManager.IsStartupEnabled() {
+					if err := t.startupManager.EnableStartup(); err != nil {
+						log.WithError(err).Error("failed to enable startup")
+						t.notifier.Toast("Failed to enable startup, please check the logs for more information.")
 					}
 				} else {
-					if err := t.systemdManager.DisableTrayIcon(); err != nil {
-						log.WithError(err).Error("failed to disable tray icon")
-						t.notifier.Toast("Failed to disable tray icon, please check the logs for more information.")
+					if err := t.startupManager.DisableStartup(); err != nil {
+						log.WithError(err).Error("failed to disable startup")
+						t.notifier.Toast("Failed to disable startup, please check the logs for more information.")
 					}
 				}
-				if t.systemdManager.IsTrayIconEnabled() {
-					mshow.Check()
+				if t.startupManager.IsStartupEnabled() {
+					mstartup.Check()
 				} else {
-					mshow.Uncheck()
+					mstartup.Uncheck()
 				}
 			}
 		}()
@@ -313,6 +340,7 @@ func (t *TrayApp) OnReady() {
 				log.WithError(err).Error("failed to run check command")
 				t.iconProvider.SetIcon()
 			}
+			shared.CommitLastState()
 			log.Info("Checks completed")
 			rcheck.SetTitle("Run Checks")
 			rcheck.Enable()

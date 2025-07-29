@@ -194,3 +194,17 @@ func (r *RealIconProvider) IconBlack() []byte {
 func (r *RealIconProvider) IconWhite() []byte {
 	return shared.IconWhite
 }
+
+type RealStartupManager struct{}
+
+func (r *RealStartupManager) IsStartupEnabled() bool {
+	return IsStartupEnabled()
+}
+
+func (r *RealStartupManager) EnableStartup() error {
+	return EnableStartup()
+}
+
+func (r *RealStartupManager) DisableStartup() error {
+	return DisableStartup()
+}

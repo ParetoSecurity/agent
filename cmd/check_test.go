@@ -165,6 +165,11 @@ func Test_runCheckCommand_NotLinked(t *testing.T) {
 }
 
 func Test_runCheckCommand_Timeout(t *testing.T) {
+	// Override the global timeout for this test
+	originalTimeout := shared.CheckTimeout
+	shared.CheckTimeout = 100 * time.Millisecond
+	defer func() { shared.CheckTimeout = originalTimeout }()
+
 	var logFatalCalled bool
 
 	config := &CheckConfig{
@@ -174,8 +179,14 @@ func Test_runCheckCommand_Timeout(t *testing.T) {
 		GetFailedChecks: func() []shared.LastState { return []shared.LastState{} },
 		ReportToTeam:    func(bool) error { return nil },
 		RunnerCheck: func(ctx context.Context, claims []claims.Claim, skipUUIDs []string, onlyUUID string) {
-			// Simulate long running check that exceeds timeout
-			time.Sleep(2 * time.Minute)
+			// Simulate long running check that respects context cancellation
+			select {
+			case <-time.After(1 * time.Second): // Longer than the 100ms timeout
+				// This should never be reached due to context timeout
+			case <-ctx.Done():
+				// Context was cancelled due to timeout, return immediately
+				return
+			}
 		},
 		LogFatal: func(msg string) {
 			logFatalCalled = true

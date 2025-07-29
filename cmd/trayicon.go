@@ -8,14 +8,13 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"time"
 
 	"fyne.io/systray"
 	"github.com/ParetoSecurity/agent/shared"
 	"github.com/ParetoSecurity/agent/trayapp"
 	"github.com/allan-simon/go-singleinstance"
 	"github.com/caarlos0/log"
-	"github.com/pkg/browser"
+	"github.com/godbus/dbus/v5"
 	"github.com/spf13/cobra"
 )
 
@@ -44,61 +43,52 @@ var trayiconCmd = &cobra.Command{
 				handleSystrayError()
 				return
 			}
-
-			// Set up channels to capture potential errors or completion
-			done := make(chan bool, 1)
-			errorChan := make(chan error, 1)
-
-			go func() {
-				defer func() {
-					if r := recover(); r != nil {
-						if err, ok := r.(error); ok && strings.Contains(err.Error(), "StatusNotifierWatcher") {
-							errorChan <- fmt.Errorf("systray error: %v", err)
-						} else {
-							errorChan <- fmt.Errorf("unexpected panic: %v", r)
-						}
-						return
-					}
-				}()
-
-				systray.Run(trayApp.OnReady, onExit)
-				// Only send done if no panic occurred
-				done <- true
-			}()
-
-			// Wait for either an error or successful startup
-			select {
-			case err := <-errorChan:
-				log.WithError(err).Error("Systray startup failed")
-				handleSystrayError()
-				return
-			case <-time.After(2 * time.Second):
-				// Systray seems to have started successfully
-				// Continue execution and wait for completion
-			}
-			<-done
-		} else {
-			systray.Run(trayApp.OnReady, onExit)
 		}
+
+		systray.Run(trayApp.OnReady, onExit)
 	},
 }
 
 func checkStatusNotifierSupport() bool {
-	// Check if StatusNotifierWatcher is available on the D-Bus session bus
+	// First try using dbus-send command
 	output, err := shared.RunCommand("dbus-send", "--session", "--dest=org.freedesktop.DBus", "--type=method_call", "--print-reply", "/org/freedesktop/DBus", "org.freedesktop.DBus.ListNames")
+	if err == nil {
+		// Check if StatusNotifierWatcher is in the list of available services
+		if strings.Contains(output, "org.kde.StatusNotifierWatcher") || strings.Contains(output, "org.freedesktop.StatusNotifierWatcher") {
+			return true
+		}
+		return false
+	}
+
+	// Fallback to native D-Bus package if dbus-send fails
+	log.WithError(err).Debug("dbus-send failed, trying native D-Bus")
+	conn, err := dbus.SessionBus()
 	if err != nil {
-		log.WithError(err).Debug("Failed to check D-Bus services")
-		return true // Assume support if we can't check
+		log.WithError(err).Debug("Failed to connect to D-Bus session bus")
+		return false
+	}
+	defer conn.Close()
+
+	// Get list of names on the bus
+	obj := conn.Object("org.freedesktop.DBus", "/org/freedesktop/DBus")
+	call := obj.Call("org.freedesktop.DBus.ListNames", 0)
+	if call.Err != nil {
+		log.WithError(call.Err).Debug("Failed to list D-Bus names")
+		return false
 	}
 
-	// Check if StatusNotifierWatcher is in the list of available services
-	if strings.Contains(output, "org.kde.StatusNotifierWatcher") {
-		return true
+	var names []string
+	err = call.Store(&names)
+	if err != nil {
+		log.WithError(err).Debug("Failed to parse D-Bus names")
+		return false
 	}
 
-	// Also check for alternative implementations
-	if strings.Contains(output, "org.freedesktop.StatusNotifierWatcher") {
-		return true
+	// Check if StatusNotifierWatcher is available
+	for _, name := range names {
+		if name == "org.kde.StatusNotifierWatcher" || name == "org.freedesktop.StatusNotifierWatcher" {
+			return true
+		}
 	}
 
 	return false
@@ -120,13 +110,6 @@ Opening documentation in your browser...`
 
 	log.Error(errorMsg)
 	fmt.Fprintln(os.Stderr, errorMsg)
-
-	// Try to open browser with documentation
-	docURL := "https://paretosecurity.com/docs/linux/trayicon"
-	if err := browser.OpenURL(docURL); err != nil {
-		fmt.Fprintf(os.Stderr, "\nFailed to open browser. Please visit: %s\n", docURL)
-	}
-
 	os.Exit(1)
 }
 
