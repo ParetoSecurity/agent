@@ -2,7 +2,7 @@ let
   common = import ./common.nix;
   inherit (common) pareto ssh;
 in {
-  name = "Password Manager";
+  name = "PWD";
   interactive.sshBackdoor.enable = true;
 
   nodes = {
