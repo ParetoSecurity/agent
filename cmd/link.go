@@ -44,6 +44,7 @@ func runLinkCommand(teamURL string) error {
 		shared.Config.TeamID = ""
 		shared.Config.AuthToken = ""
 		shared.Config.TeamAPI = ""
+		shared.Config.TeamAPI = ""
 		log.Info("Device unlinked, proceeding with new team linking")
 	}
 
