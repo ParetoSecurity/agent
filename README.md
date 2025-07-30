@@ -15,7 +15,14 @@
 
 
 
-Automatically audit your device for basic security hygiene.
+# Check for basic security hygiene of any Linux desktop
+
+Pareto Desktop is a standalone open-source app that makes sure your Linux device is correctly configured for security. It checks for 13 most imporant security settings, aimed at regular users, not security geeks. It runs automagically in the background via a systray icon, or as a one-off CLI cool. 
+
+Documentation on https://paretosecurity.com/docs/linux/install.
+
+![linux-2000w](https://github.com/user-attachments/assets/0a5a8572-2359-48ee-971b-1bd1f4d5c384)
+
 
 ## Installation
 
