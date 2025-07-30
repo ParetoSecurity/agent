@@ -88,3 +88,10 @@ type IconProvider interface {
 	IconBlack() []byte
 	IconWhite() []byte
 }
+
+// StartupManager interface for startup management
+type StartupManager interface {
+	IsStartupEnabled() bool
+	EnableStartup() error
+	DisableStartup() error
+}

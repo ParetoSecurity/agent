@@ -46,7 +46,7 @@ func TestCheckStatusNotifierSupport(t *testing.T) {
 			name:           "D-Bus command fails",
 			mockOutput:     "",
 			mockError:      fmt.Errorf("dbus-send not found"),
-			expectedResult: true, // Should assume support if can't check
+			expectedResult: false, // Should assume no support if can't check
 		},
 		{
 			name:           "Empty output",

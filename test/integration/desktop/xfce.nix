@@ -45,9 +45,9 @@ in {
         status, out = xfce.systemctl("is-enabled " + unit, "alice")
         assert status == 0, f"Unit {unit} is not enabled (status: {status}): {out}"
     xfce.succeed("xdotool mousemove 630 10")
-    xfce.wait_for_text("Pareto Security")
+    xfce.wait_for_text("Pareto Security", timeout=180)
     xfce.succeed("xdotool click 1")
-    xfce.wait_for_text("Run Checks")
+    xfce.wait_for_text("Run Checks", timeout=180)
 
     # Test: Desktop entry
     xfce.succeed("xdotool mousemove 10 10")

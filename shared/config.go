@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/caarlos0/log"
 	"github.com/google/uuid"
@@ -12,6 +13,10 @@ import (
 
 var Config ParetoConfig
 var ConfigPath string
+
+// CheckTimeout is the global timeout for check runs
+// Can be overridden for testing
+var CheckTimeout = 5 * time.Minute
 
 type ParetoConfig struct {
 	TeamID        string

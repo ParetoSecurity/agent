@@ -7,7 +7,7 @@ inputs:
   devenv:
     description: "Devenv version to install"
     required: false
-    default: "github:cachix/devenv/v1.6.1"
+    default: "github:cachix/devenv/v1.8.1"
 runs:
   using: "composite"
   steps:
