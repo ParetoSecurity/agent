@@ -33,3 +33,5 @@ devenv.local.nix
 
 # bins
 paretosecurity
+*.lock
+.claude/agents/*
