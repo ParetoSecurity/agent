@@ -104,9 +104,7 @@ To fix this issue, you can:
 2. Install snixembed for compatibility with older desktop environments
 3. For NixOS users: Enable services.status-notifier-watcher in Home Manager
 4. For Wayland users: Use waybar with tray support enabled
-5. Check the documentation for more solutions
-
-Opening documentation in your browser...`
+`
 
 	log.Error(errorMsg)
 	fmt.Fprintln(os.Stderr, errorMsg)
