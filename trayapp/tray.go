@@ -273,9 +273,21 @@ func (t *TrayApp) addHelpMenu() {
 	// Documentation option - all OSes
 	mDocs := mHelp.AddSubMenuItem("Documentation", "Open Pareto Security documentation")
 	go func() {
+		// Map of valid runtime.GOOS values to documentation paths
+		osDocPaths := map[string]string{
+			"windows": "windows",
+			"linux":   "linux",
+			"darwin":  "macos",
+		}
+		fallbackPath := "unknown"
+
 		for range mDocs.ClickedCh() {
 			log.Info("Opening documentation...")
-			docURL := fmt.Sprintf("https://paretosecurity.com/docs/%s", runtime.GOOS)
+			osPath, ok := osDocPaths[runtime.GOOS]
+			if !ok {
+				osPath = fallbackPath
+			}
+			docURL := fmt.Sprintf("https://paretosecurity.com/docs/%s", osPath)
 			if err := t.browserOpener.OpenURL(docURL); err != nil {
 				log.WithError(err).Error("failed to open documentation URL")
 				t.notifier.Toast(fmt.Sprintf("Failed to open documentation. Please visit %s", docURL))
