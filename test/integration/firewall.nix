@@ -1,6 +1,9 @@
 let
   common = import ./common.nix;
-  inherit (common) pareto ssh;
+  inherit (common) pareto testHelpers;
+  inherit (testHelpers) setupNetwork formatCheckOutput checkMessages waitForService ports;
+
+  firewallUuid = "2e46c89a-5461-4865-a92e-3b799c12034a";
 
   # A simple web server for testing connectivity
   nginx = {pkgs, ...}: {
@@ -57,41 +60,44 @@ in {
 
   testScript = ''
     # Test Setup
-    for m in [wideopen, iptables, nftables]:
-      m.systemctl("start network-online.target")
-      m.wait_for_unit("network-online.target")
-      m.wait_for_unit("nginx")
+    ${setupNetwork ["wideopen" "iptables" "nftables"]}
 
-    # Test 0: assert firewall is actually configured
-    wideopen.fail("curl --fail --connect-timeout 2 http://iptables")
-    wideopen.fail("curl --fail --connect-timeout 2 http://nftables")
-    iptables.succeed("curl --fail --connect-timeout 2 http://wideopen")
+    # Wait for nginx service and port on all nodes
+    ${waitForService {
+      node = "wideopen";
+      service = "nginx";
+      port = ports.http;
+    }}
+    ${waitForService {
+      node = "iptables";
+      service = "nginx";
+      port = ports.http;
+    }}
+    ${waitForService {
+      node = "nftables";
+      service = "nginx";
+      port = ports.http;
+    }}
 
-    # Test 1: check fails with no firewall enabled
-    out = wideopen.fail("paretosecurity check --only 2e46c89a-5461-4865-a92e-3b799c12034a")
-    expected = (
-        "  • Starting checks...\n"
-        "  • [root] Firewall & Sharing: Firewall is configured > [FAIL] Firewall is off\n"
-        "  • Checks completed.\n"
-    )
-    assert out == expected, f"{expected} did not match actual, got \n{out}"
+    # Test 0: Verify firewall is actually configured
+    with subtest("Verify firewall configurations"):
+      wideopen.fail("curl --fail --connect-timeout 2 http://iptables")
+      wideopen.fail("curl --fail --connect-timeout 2 http://nftables")
+      iptables.succeed("curl --fail --connect-timeout 2 http://wideopen")
 
-    # Test 2: check succeeds with iptables enabled
-    out = iptables.succeed("paretosecurity check --only 2e46c89a-5461-4865-a92e-3b799c12034a")
-    expected = (
-        "  • Starting checks...\n"
-        "  • [root] Firewall & Sharing: Firewall is configured > [OK] Firewall is on\n"
-        "  • Checks completed.\n"
-    )
-    assert out == expected, f"{expected} did not match actual, got \n{out}"
+    with subtest("Check fails with no firewall enabled"):
+      out = wideopen.fail("paretosecurity check --only ${firewallUuid}")
+      expected = ${builtins.toJSON (formatCheckOutput [checkMessages.firewall.fail])}
+      assert out == expected, f"Expected:\n{expected}\n\nActual:\n{out}"
 
-    # Test 3: check succeeds with nftables enabled
-    out = nftables.succeed("paretosecurity check --only 2e46c89a-5461-4865-a92e-3b799c12034a")
-    expected = (
-        "  • Starting checks...\n"
-        "  • [root] Firewall & Sharing: Firewall is configured > [OK] Firewall is on\n"
-        "  • Checks completed.\n"
-    )
-    assert out == expected, f"{expected} did not match actual, got \n{out}"
+    with subtest("Check succeeds with iptables enabled"):
+      out = iptables.succeed("paretosecurity check --only ${firewallUuid}")
+      expected = ${builtins.toJSON (formatCheckOutput [checkMessages.firewall.ok])}
+      assert out == expected, f"Expected:\n{expected}\n\nActual:\n{out}"
+
+    with subtest("Check succeeds with nftables enabled"):
+      out = nftables.succeed("paretosecurity check --only ${firewallUuid}")
+      expected = ${builtins.toJSON (formatCheckOutput [checkMessages.firewall.ok])}
+      assert out == expected, f"Expected:\n{expected}\n\nActual:\n{out}"
   '';
 }

@@ -1,6 +1,16 @@
 let
   common = import ./common.nix;
-  inherit (common) pareto ssh;
+  inherit (common) pareto testHelpers;
+  inherit (testHelpers) formatCheckOutput checkMessages timeouts;
+
+  luksUuid = "21830a4e-84f1-48fe-9c5b-beab436b2cdb";
+
+  # LUKS configuration constants
+  luks = {
+    diskSizeMB = 512; # Size of virtual disks for encryption
+    passphrase = "supersecret";
+    iterTime = 1; # Fast iteration for testing
+  };
 in {
   name = "FS Encryption";
   interactive.sshBackdoor.enable = true;
@@ -47,8 +57,8 @@ in {
       # Use systemd-boot
       virtualisation = {
         emptyDiskImages = [
-          512
-          512
+          luks.diskSizeMB
+          luks.diskSizeMB
         ];
         useBootLoader = true;
         useEFIBoot = true;
@@ -83,34 +93,37 @@ in {
   enableOCR = true;
 
   testScript = {nodes, ...}: ''
-    # Test 1: check fails with LUKS not configured
-    out = plaindisk.fail("paretosecurity check --only 21830a4e-84f1-48fe-9c5b-beab436b2cdb")
-    expected = (
-        "  • Starting checks...\n"
-        "  • [root] System Integrity: Filesystem encryption is enabled > [FAIL] Block device encryption is disabled\n"
-        "  • Checks completed.\n"
-    )
-    assert out == expected, f"Expected did not match actual, got \n{out}"
+    with subtest("Check fails with LUKS not configured"):
+      out = plaindisk.fail("paretosecurity check --only ${luksUuid}")
+      expected = ${builtins.toJSON (formatCheckOutput [checkMessages.luks.fail])}
+      assert out == expected, f"Expected:\n{expected}\n\nActual:\n{out}"
 
-    # Test 2: check succeeds with LUKS configured
-    luks.wait_for_unit("multi-user.target")
-    luks.succeed("echo -n supersecret | cryptsetup luksFormat -q --iter-time=1 /dev/vdb -")
-    luks.succeed("echo -n supersecret | cryptsetup luksFormat -q --iter-time=1 /dev/vdc -")
-    luks.succeed("bootctl set-default nixos-generation-1-specialisation-boot-luks.conf")
-    luks.succeed("sync")
-    luks.crash()
-    luks.start()
-    luks.wait_for_text("Passphrase for")
-    luks.send_chars("supersecret\n")
-    luks.wait_for_unit("multi-user.target")
-    assert "/dev/mapper/cryptroot on / type ext4" in luks.succeed("mount")
+    with subtest("Check succeeds with LUKS configured"):
+      luks.wait_for_unit("multi-user.target")
 
-    out = luks.succeed("paretosecurity check --only 21830a4e-84f1-48fe-9c5b-beab436b2cdb")
-    expected = (
-        "  • Starting checks...\n"
-        "  • [root] System Integrity: Filesystem encryption is enabled > [OK] Block device encryption is enabled\n"
-        "  • Checks completed.\n"
-    )
-    assert out == expected, f"Expected did not match actual, got \n{out}"
+      # Setup LUKS encryption on both virtual disks
+      luks.succeed("echo -n ${luks.passphrase} | cryptsetup luksFormat -q --iter-time=${toString luks.iterTime} /dev/vdb -")
+      luks.succeed("echo -n ${luks.passphrase} | cryptsetup luksFormat -q --iter-time=${toString luks.iterTime} /dev/vdc -")
+
+      # Configure boot to use LUKS specialisation
+      luks.succeed("bootctl set-default nixos-generation-1-specialisation-boot-luks.conf")
+      luks.succeed("sync")
+
+      # Reboot into encrypted system
+      luks.crash()
+      luks.start()
+
+      # Enter passphrase at boot prompt
+      luks.wait_for_text("Passphrase for")
+      luks.send_chars("${luks.passphrase}\n")
+      luks.wait_for_unit("multi-user.target")
+
+      # Verify encryption is active
+      assert "/dev/mapper/cryptroot on / type ext4" in luks.succeed("mount")
+
+      # Check should now pass
+      out = luks.succeed("paretosecurity check --only ${luksUuid}")
+      expected = ${builtins.toJSON (formatCheckOutput [checkMessages.luks.ok])}
+      assert out == expected, f"Expected:\n{expected}\n\nActual:\n{out}"
   '';
 }

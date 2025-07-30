@@ -3,3 +3,14 @@ inputs:
     url: github:cachix/devenv-nixpkgs/rolling
   upstream:
     url: github:nixos/nixpkgs/nixpkgs-unstable
+  devenv-ai-agents:
+    url: github:cachix/devenv-ai-agents
+    flake: false
+  dz0ny-ai-agents:
+    url: github:dz0ny/devenv-ai-agents
+    flake: false
+imports:
+- devenv-ai-agents
+- dz0ny-ai-agents
+allowUnfree: true
+allowBroken: true

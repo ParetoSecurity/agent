@@ -1,6 +1,9 @@
 let
   common = import ./common.nix;
-  inherit (common) pareto ssh;
+  inherit (common) pareto testHelpers;
+  inherit (testHelpers) formatCheckOutput checkMessages;
+
+  securebootUuid = "c96524f2-850b-4bb9-abc7-517051b6c14e";
 in {
   name = "SecureBoot";
   interactive.sshBackdoor.enable = true;
@@ -38,34 +41,29 @@ in {
   };
 
   testScript = {nodes, ...}: ''
-    # Test 1: check fails with SecureBoot disabled
-    out = regularboot.fail("paretosecurity check --only c96524f2-850b-4bb9-abc7-517051b6c14e")
-    expected = (
-        "  • Starting checks...\n"
-        "  • System Integrity: SecureBoot is enabled > [FAIL] System is not running in UEFI mode\n"
-        "  • Checks completed.\n"
-    )
-    assert out == expected, f"Expected did not match actual, got \n{out}"
+    with subtest("Check fails with SecureBoot disabled"):
+      out = regularboot.fail("paretosecurity check --only ${securebootUuid}")
+      expected = ${builtins.toJSON (formatCheckOutput [checkMessages.secureboot.fail])}
+      assert out == expected, f"Expected:\n{expected}\n\nActual:\n{out}"
 
-    # Test 2: check succeeds with SecureBoot enabled
-    secureboot.start(allow_reboot=True)
-    secureboot.wait_for_unit("multi-user.target")
+    with subtest("Check succeeds with SecureBoot enabled"):
+      secureboot.start(allow_reboot=True)
+      secureboot.wait_for_unit("multi-user.target")
 
-    secureboot.succeed("sbctl create-keys")
-    secureboot.succeed("sbctl enroll-keys --yes-this-might-brick-my-machine")
-    secureboot.succeed('sbctl sign /boot/EFI/systemd/systemd-boot*.efi')
-    secureboot.succeed('sbctl sign /boot/EFI/BOOT/BOOT*.EFI')
-    secureboot.succeed('sbctl sign /boot/EFI/nixos/*-linux-*Image.efi')
+      # Setup SecureBoot keys and sign bootloader
+      secureboot.succeed("sbctl create-keys")
+      secureboot.succeed("sbctl enroll-keys --yes-this-might-brick-my-machine")
+      secureboot.succeed('sbctl sign /boot/EFI/systemd/systemd-boot*.efi')
+      secureboot.succeed('sbctl sign /boot/EFI/BOOT/BOOT*.EFI')
+      secureboot.succeed('sbctl sign /boot/EFI/nixos/*-linux-*Image.efi')
 
-    secureboot.reboot()
-    assert "Secure Boot: enabled (user)" in secureboot.succeed("bootctl status")
+      # Reboot to activate SecureBoot
+      secureboot.reboot()
+      assert "Secure Boot: enabled (user)" in secureboot.succeed("bootctl status")
 
-    out = secureboot.succeed("paretosecurity check --only c96524f2-850b-4bb9-abc7-517051b6c14e")
-    expected = (
-        "  • Starting checks...\n"
-        "  • System Integrity: SecureBoot is enabled > [OK] SecureBoot is enabled\n"
-        "  • Checks completed.\n"
-    )
-    assert out == expected, f"Expected did not match actual, got \n{out}"
+      # Check should now pass
+      out = secureboot.succeed("paretosecurity check --only ${securebootUuid}")
+      expected = ${builtins.toJSON (formatCheckOutput ["System Integrity: SecureBoot is enabled > [OK] Secure Boot is enabled"])}
+      assert out == expected, f"Expected:\n{expected}\n\nActual:\n{out}"
   '';
 }

@@ -1,8 +1,17 @@
 let
   common = import ./common.nix;
-  inherit (common) pareto ssh;
+  inherit (common) pareto testHelpers;
+  inherit (testHelpers) formatCheckOutput;
+
+  passwordManagerUuid = "f962c423-fdf5-428a-a57a-827abc9b253e";
+
+  # Check messages specific to password manager
+  checkMessages = {
+    ok = "Access Security: Password Manager Presence > [OK] Password manager is present";
+    fail = "Access Security: Password Manager Presence > [FAIL] No password manager found";
+  };
 in {
-  name = "PWD";
+  name = "Password Manager";
   interactive.sshBackdoor.enable = true;
 
   nodes = {
@@ -32,22 +41,14 @@ in {
   };
 
   testScript = ''
-    # Test 1: Check passes with password managers installed
-    out = withPwdManager.succeed("paretosecurity check --only f962c423-fdf5-428a-a57a-827abc9b253e")
-    expected = (
-        "  • Starting checks...\n"
-        "  • Access Security: Password Manager Presence > [OK] Password manager is present\n"
-        "  • Checks completed.\n"
-    )
-    assert out == expected, f"Expected did not match actual, got \n{out}"
+    with subtest("Check passes with password manager installed"):
+      out = withPwdManager.succeed("paretosecurity check --only ${passwordManagerUuid}")
+      expected = ${builtins.toJSON (formatCheckOutput [checkMessages.ok])}
+      assert out == expected, f"Expected:\n{expected}\n\nActual:\n{out}"
 
-    # Test 2: Check fails without password manager
-    status, out = noPwdManager.execute("paretosecurity check --only f962c423-fdf5-428a-a57a-827abc9b253e")
-    expected = (
-        "  • Starting checks...\n"
-        "  • Access Security: Password Manager Presence > [FAIL] No password manager found\n"
-        "  • Checks completed.\n"
-    )
-    assert out == expected, f"Expected did not match actual, got \n{out}"
+    with subtest("Check fails without password manager"):
+      out = noPwdManager.fail("paretosecurity check --only ${passwordManagerUuid}")
+      expected = ${builtins.toJSON (formatCheckOutput [checkMessages.fail])}
+      assert out == expected, f"Expected:\n{expected}\n\nActual:\n{out}"
   '';
 }

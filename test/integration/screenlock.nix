@@ -1,6 +1,9 @@
 let
   common = import ./common.nix;
-  inherit (common) pareto ssh;
+  inherit (common) pareto testHelpers;
+  inherit (testHelpers) formatCheckOutput checkMessages;
+
+  screenlockUuid = "37dee029-605b-4aab-96b9-5438e5aa44d8";
 in {
   name = "Screen Lock";
   interactive.sshBackdoor.enable = true;
@@ -36,45 +39,29 @@ in {
   };
 
   testScript = ''
-    # Test GNOME
-    # Test 1: Check passes by default
-    out = gnome.succeed("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
-    expected = (
-        "  • Starting checks...\n"
-        "  • Access Security: Password is required to unlock the screen > [OK] Password after sleep or screensaver is on\n"
-        "  • Checks completed.\n"
-    )
-    assert out == expected, f"Expected did not match actual, got \n{out}"
+    with subtest("GNOME screenlock tests"):
+      # Test 1: Check passes by default
+      out = gnome.succeed("paretosecurity check --only ${screenlockUuid}")
+      expected = ${builtins.toJSON (formatCheckOutput [checkMessages.screenlock.ok])}
+      assert out == expected, f"Expected:\n{expected}\n\nActual:\n{out}"
 
-    # Test 2: Check fails when lock is disabled
-    gnome.succeed("dbus-run-session -- gsettings set org.gnome.desktop.screensaver lock-enabled false")
-    status, out = gnome.execute("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
-    expected = (
-        "  • Starting checks...\n"
-        "  • Access Security: Password is required to unlock the screen > [FAIL] Password after sleep or screensaver is off\n"
-        "  • Checks completed.\n"
-    )
-    assert out == expected, f"Expected did not match actual, got \n{out}"
+      # Test 2: Check fails when lock is disabled
+      gnome.succeed("dbus-run-session -- gsettings set org.gnome.desktop.screensaver lock-enabled false")
+      out = gnome.fail("paretosecurity check --only ${screenlockUuid}")
+      expected = ${builtins.toJSON (formatCheckOutput [checkMessages.screenlock.fail])}
+      assert out == expected, f"Expected:\n{expected}\n\nActual:\n{out}"
 
-    # Test KDE
-    # Test 1: Check passes with lock enabled
-    kde.succeed("kwriteconfig5 --file kscreenlockerrc --group Daemon --key LockOnResume true")
-    out = kde.succeed("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
-    expected = (
-        "  • Starting checks...\n"
-        "  • Access Security: Password is required to unlock the screen > [OK] Password after sleep or screensaver is on\n"
-        "  • Checks completed.\n"
-    )
-    assert out == expected, f"Expected did not match actual, got \n{out}"
+    with subtest("KDE screenlock tests"):
+      # Test 1: Check passes with lock enabled
+      kde.succeed("kwriteconfig5 --file kscreenlockerrc --group Daemon --key LockOnResume true")
+      out = kde.succeed("paretosecurity check --only ${screenlockUuid}")
+      expected = ${builtins.toJSON (formatCheckOutput [checkMessages.screenlock.ok])}
+      assert out == expected, f"Expected:\n{expected}\n\nActual:\n{out}"
 
-    # Test 2: Check fails when lock is disabled
-    kde.succeed("kwriteconfig5 --file kscreenlockerrc --group Daemon --key LockOnResume false")
-    status, out = kde.execute("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
-    expected = (
-        "  • Starting checks...\n"
-        "  • Access Security: Password is required to unlock the screen > [FAIL] Password after sleep or screensaver is off\n"
-        "  • Checks completed.\n"
-    )
-    assert out == expected, f"Expected did not match actual, got \n{out}"
+      # Test 2: Check fails when lock is disabled
+      kde.succeed("kwriteconfig5 --file kscreenlockerrc --group Daemon --key LockOnResume false")
+      out = kde.fail("paretosecurity check --only ${screenlockUuid}")
+      expected = ${builtins.toJSON (formatCheckOutput [checkMessages.screenlock.fail])}
+      assert out == expected, f"Expected:\n{expected}\n\nActual:\n{out}"
   '';
 }

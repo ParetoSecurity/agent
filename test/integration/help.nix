@@ -1,6 +1,6 @@
 let
   common = import ./common.nix;
-  inherit (common) pareto ssh;
+  inherit (common) pareto;
 in {
   name = "Help";
   interactive.sshBackdoor.enable = true;
@@ -17,6 +17,7 @@ in {
 
   testScript = ''
     from textwrap import dedent
+
     expected = dedent("""\
     Pareto Security CLI is a tool for running and reporting audits to paretosecurity.com.
 
@@ -44,20 +45,16 @@ in {
     Use "paretosecurity [command] --help" for more information about a command.
     """)
 
-    # Test 1: assert default output
-    out = vanilla.succeed("paretosecurity")
-    assert out == expected, f"Expected did not match actual, got \n{out}"
+    # Test help output variations
+    help_commands = [
+        ("default output", "paretosecurity"),
+        ("--help flag", "paretosecurity --help"),
+        ("-h flag", "paretosecurity -h"),
+        ("help command", "paretosecurity help")
+    ]
 
-    # Test 2: assert `--help` output
-    out = vanilla.succeed("paretosecurity --help")
-    assert out == expected, f"Expected did not match actual, got \n{out}"
-
-    # Test 3: assert `-h` output
-    out = vanilla.succeed("paretosecurity -h")
-    assert out == expected, f"Expected did not match actual, got \n{out}"
-
-    # Test 4: assert `help` output
-    out = vanilla.succeed("paretosecurity help")
-    assert out == expected, f"Expected did not match actual, got \n{out}"
+    for test_name, command in help_commands:
+        out = vanilla.succeed(command)
+        assert out == expected, f"Test '{test_name}' failed. Expected:\n{expected}\n\nActual:\n{out}"
   '';
 }

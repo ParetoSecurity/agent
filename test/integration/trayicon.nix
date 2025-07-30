@@ -1,8 +1,9 @@
 let
   common = import ./common.nix;
-  inherit (common) users pareto displayManager ssh;
+  inherit (common) users pareto displayManager;
 in {
   name = "Trayicon";
+  interactive.sshBackdoor.enable = true;
 
   nodes = {
     # GNOME with AppIndicator extension
@@ -71,7 +72,7 @@ in {
       # Test trayicon command starts without immediate error
       gnome.succeed("timeout 5s su - alice -c 'DISPLAY=:0 ${bus} paretosecurity trayicon &'")
 
-    # Shutdown GNOME before starting KDE
+    # Shutdown GNOME before starting minimal
     gnome.shutdown()
 
     with subtest("Minimal desktop environment failure handling"):
