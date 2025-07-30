@@ -7,11 +7,12 @@ in {
 
   nodes = {
     vanilla = {
-      pkgs,
+      config,
       lib,
+      pkgs,
       ...
     }: {
-      imports = [(pareto {inherit pkgs lib;})];
+      imports = [(pareto {inherit config lib pkgs;})];
     };
   };
 

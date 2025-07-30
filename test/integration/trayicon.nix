@@ -8,13 +8,14 @@ in {
   nodes = {
     # GNOME with AppIndicator extension
     gnome = {
-      pkgs,
+      config,
       lib,
+      pkgs,
       ...
     }: {
       imports = [
         (users {})
-        (pareto {inherit pkgs lib;})
+        (pareto {inherit config lib pkgs;})
         (displayManager {inherit pkgs;})
       ];
 
@@ -33,13 +34,14 @@ in {
 
     # Minimal desktop environment without StatusNotifierItem support
     minimal = {
-      pkgs,
+      config,
       lib,
+      pkgs,
       ...
     }: {
       imports = [
         (users {})
-        (pareto {inherit pkgs lib;})
+        (pareto {inherit config lib pkgs;})
         (displayManager {inherit pkgs;})
       ];
 

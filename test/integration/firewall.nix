@@ -22,36 +22,39 @@ in {
 
   nodes = {
     wideopen = {
-      pkgs,
+      config,
       lib,
+      pkgs,
       ...
     }: {
       imports = [
-        (pareto {inherit pkgs lib;})
+        (pareto {inherit config lib pkgs;})
         (nginx {inherit pkgs;})
       ];
       networking.firewall.enable = false;
     };
 
     iptables = {
-      pkgs,
+      config,
       lib,
+      pkgs,
       ...
     }: {
       imports = [
-        (pareto {inherit pkgs lib;})
+        (pareto {inherit config lib pkgs;})
         (nginx {inherit pkgs;})
       ];
       networking.firewall.enable = true;
     };
 
     nftables = {
-      pkgs,
+      config,
       lib,
+      pkgs,
       ...
     }: {
       imports = [
-        (pareto {inherit pkgs lib;})
+        (pareto {inherit config lib pkgs;})
         (nginx {inherit pkgs;})
       ];
       networking.nftables.enable = true;

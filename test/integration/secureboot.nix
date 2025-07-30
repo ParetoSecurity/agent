@@ -10,22 +10,24 @@ in {
 
   nodes = {
     regularboot = {
-      pkgs,
+      config,
       lib,
+      pkgs,
       ...
     }: {
       imports = [
-        (pareto {inherit pkgs lib;})
+        (pareto {inherit config lib pkgs;})
       ];
     };
 
     secureboot = {
-      pkgs,
+      config,
       lib,
+      pkgs,
       ...
     }: {
       imports = [
-        (pareto {inherit pkgs lib;})
+        (pareto {inherit config lib pkgs;})
       ];
       # NixOS SecureBoot test VM configuration taken from
       # https://github.com/NixOS/nixpkgs/blob/master/nixos/tests/systemd-boot.nix

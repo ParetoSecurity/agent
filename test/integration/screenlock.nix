@@ -10,12 +10,13 @@ in {
 
   nodes = {
     gnome = {
-      pkgs,
+      config,
       lib,
+      pkgs,
       ...
     }: {
       imports = [
-        (pareto {inherit pkgs lib;})
+        (pareto {inherit config lib pkgs;})
       ];
       # Install GNOME Desktop Environment
       services.xserver.desktopManager.gnome.enable = true;
@@ -23,12 +24,13 @@ in {
     };
 
     kde = {
-      pkgs,
+      config,
       lib,
+      pkgs,
       ...
     }: {
       imports = [
-        (pareto {inherit pkgs lib;})
+        (pareto {inherit config lib pkgs;})
       ];
       # Install KDE Plasma 5 Desktop Environment
       services.xserver.enable = true;

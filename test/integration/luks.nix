@@ -17,23 +17,24 @@ in {
 
   nodes = {
     plaindisk = {
-      pkgs,
+      config,
       lib,
+      pkgs,
       ...
     }: {
       imports = [
-        (pareto {inherit pkgs lib;})
+        (pareto {inherit config lib pkgs;})
       ];
     };
 
     luks = {
-      pkgs,
-      lib,
       config,
+      lib,
+      pkgs,
       ...
     }: {
       imports = [
-        (pareto {inherit pkgs lib;})
+        (pareto {inherit config lib pkgs;})
       ];
 
       # NixOS LUKS test VM configuration taken from

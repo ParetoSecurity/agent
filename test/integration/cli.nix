@@ -23,7 +23,7 @@ in {
     }: {
       imports = [
         (users {})
-        (pareto {inherit pkgs lib;})
+        (pareto {inherit config lib pkgs;})
       ];
     };
   };

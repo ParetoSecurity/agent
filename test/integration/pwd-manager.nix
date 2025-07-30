@@ -16,12 +16,13 @@ in {
 
   nodes = {
     withPwdManager = {
-      pkgs,
+      config,
       lib,
+      pkgs,
       ...
     }: {
       imports = [
-        (pareto {inherit pkgs lib;})
+        (pareto {inherit config lib pkgs;})
       ];
       environment.systemPackages = with pkgs; [
         bitwarden
@@ -29,12 +30,13 @@ in {
     };
 
     noPwdManager = {
-      pkgs,
+      config,
       lib,
+      pkgs,
       ...
     }: {
       imports = [
-        (pareto {inherit pkgs lib;})
+        (pareto {inherit config lib pkgs;})
       ];
       # No password manager installed
     };
