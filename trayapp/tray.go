@@ -165,17 +165,18 @@ func (t *TrayApp) addOptions() {
 					if err := t.startupManager.EnableStartup(); err != nil {
 						log.WithError(err).Error("failed to enable startup")
 						t.notifier.Toast("Failed to enable startup, please check the logs for more information.")
+						mstartup.Uncheck() // Ensure checkbox reflects actual state
+					} else {
+						mstartup.Check() // Only check if operation succeeded
 					}
 				} else {
 					if err := t.startupManager.DisableStartup(); err != nil {
 						log.WithError(err).Error("failed to disable startup")
 						t.notifier.Toast("Failed to disable startup, please check the logs for more information.")
+						mstartup.Check() // Ensure checkbox reflects actual state
+					} else {
+						mstartup.Uncheck() // Only uncheck if operation succeeded
 					}
-				}
-				if t.startupManager.IsStartupEnabled() {
-					mstartup.Check()
-				} else {
-					mstartup.Uncheck()
 				}
 			}
 		}()
