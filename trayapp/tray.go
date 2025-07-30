@@ -97,22 +97,33 @@ func (t *TrayApp) checkStatusToIcon(status, withError bool) string {
 // updateCheck updates the status of a specific check in the menu
 func (t *TrayApp) updateCheck(chk check.Check, mCheck MenuItem) {
 	checkStatus, found, _ := t.stateManager.GetLastState(chk.UUID())
-	if !chk.IsRunnable() || !found {
+
+	if !chk.IsRunnable() {
 		mCheck.Disable()
 		mCheck.SetTitle(fmt.Sprintf("🚫 %s", chk.Name()))
 		return
 	}
+
 	if found {
 		mCheck.Enable()
 		mCheck.SetTitle(fmt.Sprintf("%s %s", t.checkStatusToIcon(checkStatus.Passed, checkStatus.HasError), chk.Name()))
+		return
 	}
+	// Check is runnable but no data found yet - enable it so it's clickable
+	mCheck.Enable()
+	mCheck.SetTitle(chk.Name())
+
 }
 
 // updateClaim updates the status of a claim in the menu
 func (t *TrayApp) updateClaim(claim claims.Claim, mClaim MenuItem) {
 	hasValidData := false
+	hasRunnableChecks := false
 
 	for _, chk := range claim.Checks {
+		if chk.IsRunnable() {
+			hasRunnableChecks = true
+		}
 		checkStatus, found, _ := t.stateManager.GetLastState(chk.UUID())
 		if found && chk.IsRunnable() {
 			hasValidData = true
@@ -127,7 +138,11 @@ func (t *TrayApp) updateClaim(claim claims.Claim, mClaim MenuItem) {
 	if hasValidData {
 		mClaim.Enable()
 		mClaim.SetTitle(fmt.Sprintf("✅ %s", claim.Title))
+	} else if hasRunnableChecks {
+		mClaim.Enable()
+		mClaim.SetTitle(claim.Title)
 	} else {
+		mClaim.Disable()
 		mClaim.SetTitle(claim.Title)
 	}
 }

@@ -63,6 +63,18 @@ in {
     fi
   '';
 
+  scripts.build.description = "Build the project";
+  scripts.build.exec = ''
+    set -o pipefail
+    goreleaser --clean --snapshot
+    if [ $? -ne 0 ]; then
+      echo "Build failed. Please check the logs for details."
+      exit 1
+    fi
+    echo "Build completed successfully."
+    echo "Binaries are available in the ./dist directory."
+  '';
+
   enterShell = ''
     export PATH=$GOPATH/bin:$PATH
     help-scripts
