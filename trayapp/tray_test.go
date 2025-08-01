@@ -351,7 +351,7 @@ func TestTrayApp_updateCheck(t *testing.T) {
 		mockCheck.AssertExpectations(t)
 	})
 
-	t.Run("check not found in state", func(t *testing.T) {
+	t.Run("check not found in state but runnable", func(t *testing.T) {
 		// Mock dependencies
 		mockStateManager := &MockStateManager{}
 		mockMenuItem := NewMockMenuItem()
@@ -367,10 +367,10 @@ func TestTrayApp_updateCheck(t *testing.T) {
 		mockCheck.On("Name").Return("Test Check")
 		mockCheck.On("IsRunnable").Return(true)
 
-		// Test case: check not found
+		// Test case: check not found but runnable - should be enabled
 		mockStateManager.On("GetLastState", "test-uuid").Return(shared.LastState{}, false, nil)
-		mockMenuItem.On("Disable").Return()
-		mockMenuItem.On("SetTitle", "🚫 Test Check").Return()
+		mockMenuItem.On("Enable").Return()
+		mockMenuItem.On("SetTitle", "Test Check").Return()
 
 		trayApp.updateCheck(mockCheck, mockMenuItem)
 
@@ -444,7 +444,7 @@ func TestTrayApp_updateClaim(t *testing.T) {
 		mockCheck.AssertExpectations(t)
 	})
 
-	t.Run("no valid data - disabled state", func(t *testing.T) {
+	t.Run("no valid data but has runnable checks - enabled state", func(t *testing.T) {
 		// Mock dependencies
 		mockStateManager := &MockStateManager{}
 		mockMenuItem := NewMockMenuItem()
@@ -465,8 +465,42 @@ func TestTrayApp_updateClaim(t *testing.T) {
 			Checks: []check.Check{mockCheck},
 		}
 
-		// Test case: no valid data (not found)
+		// Test case: no valid data (not found) but has runnable checks
 		mockStateManager.On("GetLastState", "test-uuid").Return(shared.LastState{}, false, nil)
+		mockMenuItem.On("Enable").Return().Once()
+		mockMenuItem.On("SetTitle", "Test Claim").Return().Once()
+
+		trayApp.updateClaim(claim, mockMenuItem)
+
+		mockStateManager.AssertExpectations(t)
+		mockMenuItem.AssertExpectations(t)
+		mockCheck.AssertExpectations(t)
+	})
+
+	t.Run("no runnable checks - disabled state", func(t *testing.T) {
+		// Mock dependencies
+		mockStateManager := &MockStateManager{}
+		mockMenuItem := NewMockMenuItem()
+		mockBroadcaster := shared.NewBroadcaster()
+
+		trayApp := NewTrayAppWithDependencies(
+			nil, mockStateManager, nil, nil, nil, nil, nil, nil, nil, nil, mockBroadcaster,
+		)
+
+		// Mock check
+		mockCheck := &MockCheck{}
+		mockCheck.On("UUID").Return("test-uuid")
+		mockCheck.On("IsRunnable").Return(false).Maybe()
+
+		// Mock claim
+		claim := claims.Claim{
+			Title:  "Test Claim",
+			Checks: []check.Check{mockCheck},
+		}
+
+		// Test case: no runnable checks
+		mockStateManager.On("GetLastState", "test-uuid").Return(shared.LastState{}, false, nil).Maybe()
+		mockMenuItem.On("Disable").Return().Once()
 		mockMenuItem.On("SetTitle", "Test Claim").Return().Once()
 
 		trayApp.updateClaim(claim, mockMenuItem)

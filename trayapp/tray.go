@@ -97,22 +97,33 @@ func (t *TrayApp) checkStatusToIcon(status, withError bool) string {
 // updateCheck updates the status of a specific check in the menu
 func (t *TrayApp) updateCheck(chk check.Check, mCheck MenuItem) {
 	checkStatus, found, _ := t.stateManager.GetLastState(chk.UUID())
-	if !chk.IsRunnable() || !found {
+
+	if !chk.IsRunnable() {
 		mCheck.Disable()
 		mCheck.SetTitle(fmt.Sprintf("🚫 %s", chk.Name()))
 		return
 	}
+
 	if found {
 		mCheck.Enable()
 		mCheck.SetTitle(fmt.Sprintf("%s %s", t.checkStatusToIcon(checkStatus.Passed, checkStatus.HasError), chk.Name()))
+		return
 	}
+	// Check is runnable but no data found yet - enable it so it's clickable
+	mCheck.Enable()
+	mCheck.SetTitle(chk.Name())
+
 }
 
 // updateClaim updates the status of a claim in the menu
 func (t *TrayApp) updateClaim(claim claims.Claim, mClaim MenuItem) {
 	hasValidData := false
+	hasRunnableChecks := false
 
 	for _, chk := range claim.Checks {
+		if chk.IsRunnable() {
+			hasRunnableChecks = true
+		}
 		checkStatus, found, _ := t.stateManager.GetLastState(chk.UUID())
 		if found && chk.IsRunnable() {
 			hasValidData = true
@@ -127,7 +138,11 @@ func (t *TrayApp) updateClaim(claim claims.Claim, mClaim MenuItem) {
 	if hasValidData {
 		mClaim.Enable()
 		mClaim.SetTitle(fmt.Sprintf("✅ %s", claim.Title))
+	} else if hasRunnableChecks {
+		mClaim.Enable()
+		mClaim.SetTitle(claim.Title)
 	} else {
+		mClaim.Disable()
 		mClaim.SetTitle(claim.Title)
 	}
 }
@@ -227,6 +242,72 @@ func (t *TrayApp) addOptions() {
 	}
 }
 
+// addHelpMenu adds help menu items to the system tray
+func (t *TrayApp) addHelpMenu() {
+	mHelp := t.systemTray.AddMenuItem("Help", "Help and support options")
+
+	// Update option - Windows only
+	if runtime.GOOS == "windows" {
+		mUpdate := mHelp.AddSubMenuItem("Check for Updates", "Update Pareto Security to the latest version")
+		go func() {
+			for range mUpdate.ClickedCh() {
+				log.Info("Running update check...")
+				mUpdate.Disable()
+				mUpdate.SetTitle("Checking for updates...")
+
+				go func() {
+					_, err := t.commandRunner.RunCommand(t.stateManager.SelfExe(), "update")
+					if err != nil {
+						log.WithError(err).Error("failed to run update command")
+						t.notifier.Toast("Failed to check for updates.")
+					} else {
+						t.notifier.Toast("Update check completed.")
+					}
+					mUpdate.SetTitle("Check for Updates")
+					mUpdate.Enable()
+				}()
+			}
+		}()
+	}
+
+	// Documentation option - all OSes
+	mDocs := mHelp.AddSubMenuItem("Documentation", "Open Pareto Security documentation")
+	go func() {
+		// Map of valid runtime.GOOS values to documentation paths
+		osDocPaths := map[string]string{
+			"windows": "windows",
+			"linux":   "linux",
+			"darwin":  "macos",
+		}
+		fallbackPath := "unknown"
+
+		for range mDocs.ClickedCh() {
+			log.Info("Opening documentation...")
+			osPath, ok := osDocPaths[runtime.GOOS]
+			if !ok {
+				osPath = fallbackPath
+			}
+			docURL := fmt.Sprintf("https://paretosecurity.com/docs/%s", osPath)
+			if err := t.browserOpener.OpenURL(docURL); err != nil {
+				log.WithError(err).Error("failed to open documentation URL")
+				t.notifier.Toast(fmt.Sprintf("Failed to open documentation. Please visit %s", docURL))
+			}
+		}
+	}()
+
+	// Contact support option - all OSes
+	mSupport := mHelp.AddSubMenuItem("Contact Support", "Get help and support")
+	go func() {
+		for range mSupport.ClickedCh() {
+			log.Info("Opening support contact...")
+			if err := t.browserOpener.OpenURL("https://paretosecurity.com/contact"); err != nil {
+				log.WithError(err).Error("failed to open support URL")
+				t.notifier.Toast("Failed to open support page. Please visit https://paretosecurity.com/contact")
+			}
+		}
+	}()
+}
+
 // lastUpdated returns the last updated time as a formatted string
 func (t *TrayApp) lastUpdated() string {
 	return lastUpdated()
@@ -256,6 +337,7 @@ func (t *TrayApp) OnReady() {
 	t.systemTray.AddMenuItem(fmt.Sprintf("Pareto Security - %s", shared.Version), "").Disable()
 
 	t.addOptions()
+	t.addHelpMenu()
 	t.systemTray.AddSeparator()
 	rcheck := t.systemTray.AddMenuItem("Run Checks", "")
 

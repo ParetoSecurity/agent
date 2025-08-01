@@ -34,8 +34,8 @@ func runStartupScript(action string) (string, error) {
 		return "", err
 	}
 
-	// Write the startup script
-	if err := os.WriteFile(scriptPath, []byte(startupScript), 0644); err != nil {
+	// Write the startup script with secure permissions (owner read/write only)
+	if err := os.WriteFile(scriptPath, []byte(startupScript), 0600); err != nil {
 		log.WithError(err).Error("failed to write startup script")
 		return "", err
 	}
