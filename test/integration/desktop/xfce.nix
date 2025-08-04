@@ -57,11 +57,16 @@ in {
     xfce.succeed("xdotool click 1")
     xfce.wait_for_text("Pareto Security", timeout=20)
 
-    # Disabled as OCR fails at times
     # Test: paretosecurity:// URL handler is registered
-    # xfce.succeed("su - alice -c 'xdg-open"
-    # + " paretosecurity://enrollTeam/?token=xfce-integration-test-token'"
-    # + " >/dev/null &")
-    # xfce.wait_for_text("invite_id not found", timeout=20)
+    # Open terminal to capture output
+    xfce.send_key("ctrl-alt-t")
+    xfce.wait_for_text("alice@", timeout=30)
+    xfce.screenshot("xfce-terminal-open")
+
+    # Execute URL handler test in terminal to see output
+    xfce.send_chars("xdg-open paretosecurity://enrollTeam/?token=xfce-integration-test-token\n")
+    xfce.wait_for_text("invite_id not found", timeout=20)
+    xfce.screenshot("xfce-url-handler-result")
+    xfce.send_key("alt-f4")
   '';
 }
