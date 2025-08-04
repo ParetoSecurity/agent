@@ -9,6 +9,10 @@ in {
     imports = [
       (dashboard {})
     ];
+
+    # Minimal resources for dashboard mock server
+    virtualisation.memorySize = 512;
+    virtualisation.cores = 1;
   };
 
   nodes.xfce = {
@@ -21,6 +25,10 @@ in {
       (paretoPatchedDash {inherit pkgs lib;})
       (displayManager {inherit pkgs;})
     ];
+
+    # Optimize memory usage for desktop tests
+    virtualisation.memorySize = 1536; # 1.5GB instead of default 2GB
+    virtualisation.cores = 2; # Limit CPU cores
 
     services.xserver.enable = true;
     services.xserver.displayManager.lightdm.enable = true;

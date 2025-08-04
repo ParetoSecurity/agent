@@ -9,6 +9,10 @@ in {
     imports = [
       (dashboard {})
     ];
+
+    # Minimal resources for dashboard mock server
+    virtualisation.memorySize = 512;
+    virtualisation.cores = 1;
   };
 
   nodes.gnome = {
@@ -21,6 +25,10 @@ in {
       (paretoPatchedDash {inherit pkgs lib;})
       (displayManager {inherit pkgs;})
     ];
+
+    # Optimize memory usage for desktop tests
+    virtualisation.memorySize = 2048; # GNOME needs more memory
+    virtualisation.cores = 2; # Limit CPU cores
 
     services.xserver.enable = true;
 
