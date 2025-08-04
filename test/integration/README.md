@@ -54,11 +54,17 @@ $ nix build .#checks.aarch64-darwin.xfce
 
 ## Memory Requirements
 
-Desktop environment tests have different memory requirements:
+Tests have different memory requirements based on their complexity:
+
+### Desktop Environment Tests
 - **XFCE**: 1.5GB (lightweight desktop)
 - **GNOME**: 2GB (requires more resources for Wayland/GNOME Shell)
 - **KDE**: 2GB (Plasma desktop needs significant memory)
 - **Dashboard node**: 512MB (minimal mock server)
+
+### Other Tests
+- **SecureBoot**: 3GB (UEFI boot and disk image operations require significant memory)
+- **Regular tests**: 1GB (standard tests without desktop environments)
 
 If you encounter segmentation faults or out-of-memory errors, consider:
 1. Running tests individually rather than in parallel
