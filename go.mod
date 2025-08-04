@@ -12,7 +12,7 @@ require (
 	github.com/fyne-io/image v0.1.1
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/kolide/toast v1.0.2
-	github.com/olekukonko/tablewriter v1.0.7
+	github.com/olekukonko/tablewriter v1.0.9
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.9
