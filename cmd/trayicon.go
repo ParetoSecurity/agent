@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"fyne.io/systray"
 	"github.com/ParetoSecurity/agent/shared"
@@ -39,9 +40,23 @@ var trayiconCmd = &cobra.Command{
 		// On Linux, handle potential systray registration failure
 		if runtime.GOOS == "linux" {
 			// Check if the desktop environment supports StatusNotifierWatcher
-			if !checkStatusNotifierSupport() {
-				handleSystrayError()
-				return
+
+			maxRetries := 10
+			for i := 0; i < maxRetries; i++ {
+				if i > 0 {
+					log.Infof("Checking for StatusNotifierWatcher support, attempt %d/%d", i+1, maxRetries)
+					time.Sleep(6 * time.Second)
+				}
+
+				if checkStatusNotifierSupport() {
+					break
+				}
+				log.Warn("StatusNotifierWatcher not found, retrying...")
+				if i == maxRetries-1 {
+					log.Error("Failed to find StatusNotifierWatcher after multiple attempts.")
+					handleSystrayError()
+					return
+				}
 			}
 		}
 
