@@ -42,6 +42,8 @@
           secureboot = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/secureboot.nix;
           trayicon = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/trayicon.nix;
           xfce = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/desktop/xfce.nix;
+          gnome = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/desktop/gnome.nix;
+          kde = pkgsAllowUnsupported.testers.runNixOSTest ./test/integration/desktop/kde.nix;
         };
       };
     };
