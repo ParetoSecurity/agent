@@ -173,6 +173,64 @@ func TestApplicationUpdates_checkUpdates(t *testing.T) {
 			}{true, "All packages are up to date"},
 		},
 		{
+			name: "snap with single line output not containing up to date message",
+			mocks: []shared.RunCommandMock{
+				{Command: "systemctl", Args: []string{"is-active", "snapd"}, Out: "active", Err: nil},
+				{Command: "snap", Args: []string{"refresh", "--list"}, Out: "Some other single line output", Err: nil},
+			},
+			presentPackageManagers: []string{"snap"},
+			expected: struct {
+				passed bool
+				detail string
+			}{false, "Updates available for: Snap"},
+		},
+		{
+			name: "snap with empty output",
+			mocks: []shared.RunCommandMock{
+				{Command: "systemctl", Args: []string{"is-active", "snapd"}, Out: "active", Err: nil},
+				{Command: "snap", Args: []string{"refresh", "--list"}, Out: "", Err: nil},
+			},
+			presentPackageManagers: []string{"snap"},
+			expected: struct {
+				passed bool
+				detail string
+			}{true, "All packages are up to date"},
+		},
+		{
+			name: "snap with snapd not active",
+			mocks: []shared.RunCommandMock{
+				{Command: "systemctl", Args: []string{"is-active", "snapd"}, Out: "inactive", Err: nil},
+			},
+			presentPackageManagers: []string{"snap"},
+			expected: struct {
+				passed bool
+				detail string
+			}{true, "All packages are up to date"},
+		},
+		{
+			name: "snap with snapd service check error",
+			mocks: []shared.RunCommandMock{
+				{Command: "systemctl", Args: []string{"is-active", "snapd"}, Out: "", Err: exec.ErrNotFound},
+			},
+			presentPackageManagers: []string{"snap"},
+			expected: struct {
+				passed bool
+				detail string
+			}{true, "All packages are up to date"},
+		},
+		{
+			name: "snap with refresh list error",
+			mocks: []shared.RunCommandMock{
+				{Command: "systemctl", Args: []string{"is-active", "snapd"}, Out: "active", Err: nil},
+				{Command: "snap", Args: []string{"refresh", "--list"}, Out: "", Err: exec.ErrNotFound},
+			},
+			presentPackageManagers: []string{"snap"},
+			expected: struct {
+				passed bool
+				detail string
+			}{true, "All packages are up to date"},
+		},
+		{
 			name: "multiple package managers with updates",
 			mocks: []shared.RunCommandMock{
 				{Command: "flatpak", Args: []string{"remote-ls", "--app", "--updates", "--columns=application,version"}, Out: "com.example.App\t1.2.0\n", Err: nil},
