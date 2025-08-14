@@ -103,7 +103,8 @@ func (f *ApplicationUpdates) checkUpdates() (bool, string) {
 		if err == nil && strings.TrimSpace(string(snapdStatus)) == "active" {
 			output, err := shared.RunCommand("snap", "refresh", "--list")
 			log.WithField("output", string(output)).Debug("Snap updates")
-			if err == nil && len(output) > 0 && !strings.Contains(string(output), "All snaps up to date.") {
+			if err == nil && !lo.IsEmpty(output) && !strings.Contains(string(output), "All snaps up to date") {
+				log.WithField("output", string(output)).Info("Snap updates found")
 				updates = append(updates, "Snap")
 			}
 		} else {
