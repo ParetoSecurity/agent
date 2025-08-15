@@ -24,6 +24,65 @@ Documentation on https://paretosecurity.com/docs/linux/install.
 ![linux-2000w](https://github.com/user-attachments/assets/0a5a8572-2359-48ee-971b-1bd1f4d5c384)
 
 
+## Development
+
+### Running Integration Tests on macOS
+
+To run NixOS VM-based integration tests on macOS (including Apple Silicon), you need to set up a Linux builder:
+
+#### Option 1: Configure Linux Builder in nix.conf
+```bash
+# Add to ~/.config/nix/nix.conf or /etc/nix/nix.conf:
+builders = ssh-ng://builder@linux-builder aarch64-linux /etc/nix/builder_ed25519 4 - - - c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUpCV2N4Yi9CbGFxdDFhdU90RStGOFFVV3JVb3RpQzVxQkorVXVFV2RWQ2Igcm9vdEBuaXhvcwo=
+builders-use-substitutes = true
+
+# Then restart the nix daemon
+sudo launchctl kickstart -k system/org.nixos.nix-daemon
+```
+
+#### Option 2: Use darwin.linux-builder module
+```nix
+# In your nix-darwin configuration:
+{
+  nix.linux-builder = {
+    enable = true;
+    ephemeral = true;
+    maxJobs = 4;
+  };
+}
+```
+
+#### Option 3: Manual setup
+```bash
+# First, ensure the Linux builder VM is running (keep this terminal open):
+nix run nixpkgs#darwin.linux-builder
+
+# Wait for the VM to fully start, then in a new terminal, test the connection:
+ssh -p 31022 builder@localhost
+
+# If SSH connection works, configure Nix to use the builder.
+# The correct format includes the port in the SSH URL:
+nix build .#checks.aarch64-darwin.xfce \
+  --builders 'ssh-ng://builder@localhost:31022 aarch64-linux - - - - -'
+
+# Or use the store option directly:
+nix build .#checks.aarch64-darwin.xfce \
+  --store ssh-ng://builder@localhost:31022 \
+  --eval-store auto
+
+# Alternative: Configure SSH to use port 31022 for localhost
+echo "Host linux-builder
+  HostName localhost
+  Port 31022
+  User builder" >> ~/.ssh/config
+
+# Then use the configured host:
+nix build .#checks.aarch64-darwin.xfce \
+  --builders 'ssh-ng://builder@linux-builder aarch64-linux - - - - -'
+```
+
+Note: The error "a 'aarch64-linux' with features {} is required to build" occurs when trying to build Linux packages on macOS without a Linux builder configured. The flake's `allowUnsupportedSystem = true` allows tests to be queued on Darwin, but they still need a Linux builder to actually execute.
+
 ## Installation
 
 ### Using Debian/Ubuntu/Pop!_OS/RHEL/Fedora/CentOS
