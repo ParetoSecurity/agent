@@ -61,6 +61,7 @@ in {
       m.systemctl("start network-online.target")
       m.wait_for_unit("network-online.target")
       m.wait_for_unit("nginx")
+      m.wait_for_open_port(80)
 
     # Test 0: assert firewall is actually configured
     wideopen.fail("curl --fail --connect-timeout 2 http://iptables")
