@@ -1,16 +1,14 @@
 {
-  pkgs,
+  paretosecurity,
   lib,
 }: let
-  nixpkgsPareto = pkgs.callPackage (pkgs.path + "/pkgs/by-name/pa/paretosecurity/package.nix") {};
-
   # Create a fake src with rev attribute
   srcWithRev = {
     outPath = ./.;
     rev = lib.substring 0 8 (builtins.hashFile "sha256" ./go.sum);
   };
 in
-  nixpkgsPareto.overrideAttrs (oldAttrs: {
+  paretosecurity.overrideAttrs (oldAttrs: {
     src = srcWithRev;
     version = "${builtins.hashFile "sha256" "${toString ./go.sum}"}";
 
