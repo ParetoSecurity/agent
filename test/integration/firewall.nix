@@ -1,7 +1,4 @@
 let
-  common = import ./common.nix;
-  inherit (common) pareto ssh;
-
   # A simple web server for testing connectivity
   nginx = {pkgs, ...}: {
     services.nginx = {
@@ -18,39 +15,27 @@ in {
   interactive.sshBackdoor.enable = true;
 
   nodes = {
-    wideopen = {
-      pkgs,
-      lib,
-      ...
-    }: {
+    wideopen = {pkgs, ...}: {
       imports = [
-        (pareto {inherit pkgs lib;})
         (nginx {inherit pkgs;})
       ];
+      services.paretosecurity.enable = true;
       networking.firewall.enable = false;
     };
 
-    iptables = {
-      pkgs,
-      lib,
-      ...
-    }: {
+    iptables = {pkgs, ...}: {
       imports = [
-        (pareto {inherit pkgs lib;})
         (nginx {inherit pkgs;})
       ];
+      services.paretosecurity.enable = true;
       networking.firewall.enable = true;
     };
 
-    nftables = {
-      pkgs,
-      lib,
-      ...
-    }: {
+    nftables = {pkgs, ...}: {
       imports = [
-        (pareto {inherit pkgs lib;})
         (nginx {inherit pkgs;})
       ];
+      services.paretosecurity.enable = true;
       networking.nftables.enable = true;
     };
   };
@@ -61,6 +46,7 @@ in {
       m.systemctl("start network-online.target")
       m.wait_for_unit("network-online.target")
       m.wait_for_unit("nginx")
+      m.wait_for_open_port(80)
 
     # Test 0: assert firewall is actually configured
     wideopen.fail("curl --fail --connect-timeout 2 http://iptables")

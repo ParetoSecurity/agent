@@ -1,26 +1,44 @@
 let
   common = import ../common.nix;
-  inherit (common) users paretoPatchedDash dashboard displayManager ssh;
+  inherit (common) users displayManager;
 in {
   name = "XFCE";
   interactive.sshBackdoor.enable = true;
 
-  nodes.dashboard = {
-    imports = [
-      (dashboard {})
-    ];
+  # Cloud mockup server
+  nodes.cloud = {
+    networking.firewall.allowedTCPPorts = [80];
+
+    services.nginx = {
+      enable = true;
+      virtualHosts."cloud" = {
+        locations."/api/v1/team/".extraConfig = ''
+          add_header Content-Type application/json;
+          return 200 '{"message": "Linked device."}';
+        '';
+      };
+    };
   };
 
-  nodes.xfce = {
-    pkgs,
-    lib,
-    ...
-  }: {
+  nodes.xfce = {pkgs, ...}: {
     imports = [
       (users {})
-      (paretoPatchedDash {inherit pkgs lib;})
       (displayManager {inherit pkgs;})
     ];
+
+    # Enable paretosecurity service with cloud URL patched to local test server
+    services.paretosecurity = {
+      enable = true;
+      package = pkgs.paretosecurity.overrideAttrs (oldAttrs: {
+        postPatch =
+          oldAttrs.postPatch or ""
+          + ''
+            substituteInPlace team/report.go \
+              --replace-warn 'const reportURL = "https://cloud.paretosecurity.com"' \
+                             'const reportURL = "http://cloud"'
+          '';
+      });
+    };
 
     services.xserver.enable = true;
     services.xserver.displayManager.lightdm.enable = true;
@@ -31,7 +49,7 @@ in {
 
   testScript = ''
     # Test setup
-    for m in [xfce, dashboard]:
+    for m in [xfce, cloud]:
       m.systemctl("start network-online.target")
       m.wait_for_unit("network-online.target")
 
@@ -44,6 +62,7 @@ in {
     ]:
         status, out = xfce.systemctl("is-enabled " + unit, "alice")
         assert status == 0, f"Unit {unit} is not enabled (status: {status}): {out}"
+
     xfce.succeed("xdotool mousemove 630 10")
     xfce.wait_for_text("Pareto Security", timeout=180)
     xfce.succeed("xdotool click 1")

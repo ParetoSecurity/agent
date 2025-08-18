@@ -1,17 +1,10 @@
-let
-  common = import ./common.nix;
-  inherit (common) pareto ssh;
-in {
+{
   name = "Help";
   interactive.sshBackdoor.enable = true;
 
   nodes = {
-    vanilla = {
-      pkgs,
-      lib,
-      ...
-    }: {
-      imports = [(pareto {inherit pkgs lib;})];
+    vanilla = {pkgs, ...}: {
+      services.paretosecurity.enable = true;
     };
   };
 
