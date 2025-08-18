@@ -5,7 +5,6 @@
   inputs,
   ...
 }: let
-  flakePackage = import ./package.nix {inherit pkgs lib;};
   upstream = import inputs.upstream {system = pkgs.stdenv.system;};
 in {
   packages = [
@@ -44,7 +43,7 @@ in {
     echo "Test coverage: $coverage%"
   '';
 
-  scripts.verify-package.description = "Verify package.nix hash";
+  scripts.verify-package.description = "Verify flake.nix hash";
   scripts.verify-package.exec = ''
     output=$(nix build .# 2>&1 || true)
     specified=$(echo "$output" | grep -o "specified: sha256-[A-Za-z0-9+/=]*" | cut -d' ' -f2)
@@ -52,8 +51,8 @@ in {
     echo "Specified: $specified"
     echo "Got: $got"
     if [ -n "$specified" ] && [ -n "$got" ] && [ "$specified" != "$got" ]; then
-      echo "Mismatch detected, updating package.nix hash from $specified to $got"
-      sed -i -e "s|$specified|$got|g" ./package.nix
+      echo "Mismatch detected, updating flake.nix hash from $specified to $got"
+      sed -i -e "s|$specified|$got|g" ./flake.nix
     else
       if [ -z "$specified" ] && [ -z "$got" ]; then
         echo "No hash mismatch found in build output."
@@ -95,7 +94,7 @@ in {
     # golangci-lint.enable = true;
     # revive.enable = true;
     packaga-sha = {
-      name = "Verify package.nix hash";
+      name = "Verify flake.nix hash";
       enable = true;
       pass_filenames = false;
       files = "go.(mod|sum)$";

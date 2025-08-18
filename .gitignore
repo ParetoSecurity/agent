@@ -35,3 +35,4 @@ devenv.local.nix
 paretosecurity
 *.lock
 .claude/agents/*
+.claude/settings.json

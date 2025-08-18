@@ -1,11 +1,4 @@
-let
-  # Use local Pareto codebase
-  paretoLocalPkg = {
-    pkgs,
-    lib,
-  }:
-    pkgs.callPackage ../../package.nix {inherit lib;};
-in {
+{
   # Create dummy user account
   users = {}: {
     users.users.alice = {
@@ -16,7 +9,7 @@ in {
     };
   };
 
-  # Paretosecurity that uses local codebase
+  # Paretosecurity that uses local codebase from overlay
   pareto = {
     pkgs,
     lib,
@@ -24,7 +17,7 @@ in {
   }: {
     services.paretosecurity = {
       enable = true;
-      package = paretoLocalPkg {inherit pkgs lib;};
+      package = pkgs.paretosecurity;
     };
   };
 
@@ -33,12 +26,10 @@ in {
     pkgs,
     lib,
     ...
-  }: let
-    paretoPkg = paretoLocalPkg {inherit pkgs lib;};
-  in {
+  }: {
     services.paretosecurity = {
       enable = true;
-      package = paretoPkg.overrideAttrs (oldAttrs: {
+      package = pkgs.paretosecurity.overrideAttrs (oldAttrs: {
         postPatch =
           oldAttrs.postPatch or ""
           + ''
