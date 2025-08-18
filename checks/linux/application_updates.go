@@ -57,7 +57,7 @@ func (f *ApplicationUpdates) checkUpdates() (bool, string) {
 			return true, "Flatpak installed apps check failed"
 		}
 		updatableApps := f.parseFlatpak(string(updatesOutput))
-		log.WithField("updates", updatesOutput).WithField("installed", installedOutput).Debug("Flatpak updates")
+		log.WithField("updates", updatesOutput).Debug("Flatpak updates")
 
 		if len(updatableApps) > 0 {
 			updates = append(updates, "Flatpak")
