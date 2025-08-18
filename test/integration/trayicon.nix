@@ -1,21 +1,17 @@
 let
   common = import ./common.nix;
-  inherit (common) users pareto displayManager ssh;
+  inherit (common) users displayManager;
 in {
   name = "Trayicon";
 
   nodes = {
     # GNOME with AppIndicator extension
-    gnome = {
-      pkgs,
-      lib,
-      ...
-    }: {
+    gnome = {pkgs, ...}: {
       imports = [
         (users {})
-        (pareto {inherit pkgs lib;})
         (displayManager {inherit pkgs;})
       ];
+      services.paretosecurity.enable = true;
 
       services.xserver.enable = true;
       services.xserver.displayManager.gdm.enable = true;
@@ -31,16 +27,12 @@ in {
     };
 
     # Minimal desktop environment without StatusNotifierItem support
-    minimal = {
-      pkgs,
-      lib,
-      ...
-    }: {
+    minimal = {pkgs, ...}: {
       imports = [
         (users {})
-        (pareto {inherit pkgs lib;})
         (displayManager {inherit pkgs;})
       ];
+      services.paretosecurity.enable = true;
 
       services.xserver.enable = true;
       services.xserver.displayManager.lightdm.enable = true;

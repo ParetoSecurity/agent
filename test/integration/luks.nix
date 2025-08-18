@@ -1,19 +1,10 @@
-let
-  common = import ./common.nix;
-  inherit (common) pareto ssh;
-in {
+{
   name = "FS Encryption";
   interactive.sshBackdoor.enable = true;
 
   nodes = {
-    plaindisk = {
-      pkgs,
-      lib,
-      ...
-    }: {
-      imports = [
-        (pareto {inherit pkgs lib;})
-      ];
+    plaindisk = {pkgs, ...}: {
+      services.paretosecurity.enable = true;
     };
 
     luks = {
@@ -22,9 +13,7 @@ in {
       config,
       ...
     }: {
-      imports = [
-        (pareto {inherit pkgs lib;})
-      ];
+      services.paretosecurity.enable = true;
 
       # NixOS LUKS test VM configuration taken from
       # https://github.com/NixOS/nixpkgs/blob/master/nixos/tests/luks.nix

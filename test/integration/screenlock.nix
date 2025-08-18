@@ -1,32 +1,17 @@
-let
-  common = import ./common.nix;
-  inherit (common) pareto ssh;
-in {
+{
   name = "Screen Lock";
   interactive.sshBackdoor.enable = true;
 
   nodes = {
-    gnome = {
-      pkgs,
-      lib,
-      ...
-    }: {
-      imports = [
-        (pareto {inherit pkgs lib;})
-      ];
+    gnome = {pkgs, ...}: {
+      services.paretosecurity.enable = true;
       # Install GNOME Desktop Environment
       services.xserver.desktopManager.gnome.enable = true;
       services.xserver.displayManager.gdm.enable = true;
     };
 
-    kde = {
-      pkgs,
-      lib,
-      ...
-    }: {
-      imports = [
-        (pareto {inherit pkgs lib;})
-      ];
+    kde = {pkgs, ...}: {
+      services.paretosecurity.enable = true;
       # Install KDE Plasma 5 Desktop Environment
       services.xserver.enable = true;
       services.xserver.desktopManager.plasma5.enable = true;

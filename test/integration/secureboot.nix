@@ -1,29 +1,14 @@
-let
-  common = import ./common.nix;
-  inherit (common) pareto ssh;
-in {
+{
   name = "SecureBoot";
   interactive.sshBackdoor.enable = true;
 
   nodes = {
-    regularboot = {
-      pkgs,
-      lib,
-      ...
-    }: {
-      imports = [
-        (pareto {inherit pkgs lib;})
-      ];
+    regularboot = {pkgs, ...}: {
+      services.paretosecurity.enable = true;
     };
 
-    secureboot = {
-      pkgs,
-      lib,
-      ...
-    }: {
-      imports = [
-        (pareto {inherit pkgs lib;})
-      ];
+    secureboot = {pkgs, ...}: {
+      services.paretosecurity.enable = true;
       # NixOS SecureBoot test VM configuration taken from
       # https://github.com/NixOS/nixpkgs/blob/master/nixos/tests/systemd-boot.nix
 

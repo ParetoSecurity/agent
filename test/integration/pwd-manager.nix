@@ -1,32 +1,17 @@
-let
-  common = import ./common.nix;
-  inherit (common) pareto ssh;
-in {
+{
   name = "PWD";
   interactive.sshBackdoor.enable = true;
 
   nodes = {
-    withPwdManager = {
-      pkgs,
-      lib,
-      ...
-    }: {
-      imports = [
-        (pareto {inherit pkgs lib;})
-      ];
+    withPwdManager = {pkgs, ...}: {
+      services.paretosecurity.enable = true;
       environment.systemPackages = with pkgs; [
         bitwarden
       ];
     };
 
-    noPwdManager = {
-      pkgs,
-      lib,
-      ...
-    }: {
-      imports = [
-        (pareto {inherit pkgs lib;})
-      ];
+    noPwdManager = {pkgs, ...}: {
+      services.paretosecurity.enable = true;
       # No password manager installed
     };
   };

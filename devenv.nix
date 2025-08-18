@@ -43,16 +43,16 @@ in {
     echo "Test coverage: $coverage%"
   '';
 
-  scripts.verify-package.description = "Verify flake.nix hash";
-  scripts.verify-package.exec = ''
+  scripts.update-vendor-hash.description = "Update vendorHash in flake.nix";
+  scripts.update-vendor-hash.exec = ''
     output=$(nix build .# 2>&1 || true)
     specified=$(echo "$output" | grep -o "specified: sha256-[A-Za-z0-9+/=]*" | cut -d' ' -f2)
     got=$(echo "$output" | grep -o "got: *sha256-[A-Za-z0-9+/=]*" | cut -d' ' -f2)
     echo "Specified: $specified"
     echo "Got: $got"
     if [ -n "$specified" ] && [ -n "$got" ] && [ "$specified" != "$got" ]; then
-      echo "Mismatch detected, updating flake.nix hash from $specified to $got"
-      sed -i -e "s|$specified|$got|g" ./flake.nix
+      echo "Mismatch detected, updating flake.nix vendorHash from $specified to $got"
+      sed -i -e "s|vendorHash = \"$specified\"|vendorHash = \"$got\"|g" ./flake.nix
     else
       if [ -z "$specified" ] && [ -z "$got" ]; then
         echo "No hash mismatch found in build output."
@@ -93,12 +93,12 @@ in {
     gofmt.enable = true;
     # golangci-lint.enable = true;
     # revive.enable = true;
-    packaga-sha = {
-      name = "Verify flake.nix hash";
+    vendor-hash = {
+      name = "Update vendorHash in flake.nix";
       enable = true;
       pass_filenames = false;
       files = "go.(mod|sum)$";
-      entry = "verify-package";
+      entry = "update-vendor-hash";
     };
   };
 
