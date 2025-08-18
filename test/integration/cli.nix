@@ -55,6 +55,7 @@ in {
     agent.succeed("su - alice -c 'paretosecurity config disable c96524f2-850b-4bb9-abc7-517051b6c14e'")  # secureboot
     agent.succeed("su - alice -c 'paretosecurity config disable 21830a4e-84f1-48fe-9c5b-beab436b2cdb'")  # luks
     agent.succeed("su - alice -c 'paretosecurity config disable f962c423-fdf5-428a-a57a-827abc9b253e'")  # password manager
+    agent.succeed("su - alice -c 'paretosecurity config disable 44e4754a-0b42-4964-9cc2-b88b2023cb1e'")  # pareto up to date
     out = agent.succeed("su - alice -c 'paretosecurity check'")
   '';
 }
