@@ -28,11 +28,11 @@ devenv.local.nix
 # pre-commit
 .pre-commit-config.yaml
 *.syso
-**/.claude/settings.local.json
 *.txt
 
 # bins
 paretosecurity
 *.lock
-.claude/agents/*
-.claude/settings.json
+
+# AI
+.claude/

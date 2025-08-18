@@ -46,15 +46,15 @@ jobs:
               apt-get upgrade -y
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
-          - distro: debian-11
-            image: jrei/systemd-debian:11
+          - distro: debian-12
+            image: jrei/systemd-debian:12
             setup: |
               apt-get update
               apt-get upgrade -y
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
-          - distro: debian-12
-            image: jrei/systemd-debian:12
+          - distro: debian-13
+            image: jrei/systemd-debian:13
             setup: |
               apt-get update
               apt-get upgrade -y
@@ -111,9 +111,7 @@ jobs:
           echo "${{ matrix.setup }}" | docker exec -i runner bash
 
           # Install testing dependencies
-          docker exec runner ${{ matrix.installer }} curl keepassxc firewalld
-          docker exec runner systemctl enable firewalld
-          docker exec runner systemctl start firewalld
+          docker exec runner ${{ matrix.installer }} curl keepassxc
 
           # Create test user
           docker exec runner useradd -m -s /bin/bash alice
@@ -145,6 +143,7 @@ jobs:
           docker exec -u alice runner paretosecurity config disable 21830a4e-84f1-48fe-9c5b-beab436b2cdb  # luks
           docker exec -u alice runner paretosecurity config disable 7436553a-ae52-479b-937b-2ae14d15a520  # updates
           docker exec -u alice runner paretosecurity config disable 44e4754a-0b42-4964-9cc2-b88b2023cb1e  # self-check
+          docker exec -u alice runner paretosecurity config disable 2e46c89a-5461-4865-a92e-3b799c12034a  # firewall
 
           # Run checks
           docker exec -u alice runner paretosecurity check
