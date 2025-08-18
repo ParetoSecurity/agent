@@ -56,15 +56,11 @@ func (f *ApplicationUpdates) checkUpdates() (bool, string) {
 			log.WithError(err).Error("Failed to list installed flatpak apps")
 			return true, "Flatpak installed apps check failed"
 		}
-		installedApps := f.parseFlatpak(string(installedOutput))
 		updatableApps := f.parseFlatpak(string(updatesOutput))
 		log.WithField("updates", updatesOutput).WithField("installed", installedOutput).Debug("Flatpak updates")
 
-		for app, version := range installedApps {
-			if installed, ok := updatableApps[app]; ok && version != installed {
-				updates = append(updates, "Flatpak")
-				break
-			}
+		if len(updatableApps) > 0 {
+			updates = append(updates, "Flatpak")
 		}
 	}
 

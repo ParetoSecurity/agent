@@ -93,6 +93,18 @@ func TestApplicationUpdates_checkUpdates(t *testing.T) {
 			}{false, "Updates available for: Flatpak"},
 		},
 		{
+			name: "flatpak with multiple updates from user example",
+			mocks: []shared.RunCommandMock{
+				{Command: "flatpak", Args: []string{"remote-ls", "--app", "--updates", "--columns=application,version"}, Out: "de.swsnr.pictureoftheday\t1.7.0\ndev.zed.Zed\tv0.199.6\norg.nickvision.tubeconverter\t2025.7.2\n", Err: nil},
+				{Command: "flatpak", Args: []string{"list", "--app", "--columns=application,version"}, Out: "app.zen_browser.zen\t1.14.11b\ncom.github.neithern.g4music\t4.5\ncom.mattjakeman.ExtensionManager\t0.6.3\ncom.quexten.Goldwarden\tv0.3.6\nde.swsnr.pictureoftheday\t1.7.0\ndev.zed.Zed\tv0.199.6\norg.nickvision.tubeconverter\t2025.7.2\npage.tesk.Refine\t0.5.10\n", Err: nil},
+			},
+			presentPackageManagers: []string{"flatpak"},
+			expected: struct {
+				passed bool
+				detail string
+			}{false, "Updates available for: Flatpak"},
+		},
+		{
 			name: "flatpak no updates",
 			mocks: []shared.RunCommandMock{
 				{Command: "flatpak", Args: []string{"remote-ls", "--app", "--updates", "--columns=application,version"}, Out: "", Err: nil},
