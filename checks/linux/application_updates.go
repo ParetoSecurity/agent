@@ -154,7 +154,7 @@ func (f *ApplicationUpdates) FailedMessage() string {
 
 // RequiresRoot returns whether the check requires root access
 func (f *ApplicationUpdates) RequiresRoot() bool {
-	return false
+	return true
 }
 
 // Status returns the status of the check
