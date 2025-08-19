@@ -141,17 +141,6 @@ in {
         gettyautologin.wait_for_unit("network-online.target")
         gettyautologin.wait_for_unit("multi-user.target")
 
-        # Debug: Check what systemd service files are created
-        print("Checking getty service configuration...")
-        gettyautologin.succeed("ls -la /etc/systemd/system/ | grep getty || true")
-
-        # Check if autologin is configured in the service
-        autologin_check = gettyautologin.succeed("systemctl cat getty@tty1.service | grep -E 'autologin|ExecStart' || true")
-        print(f"Getty service config: {autologin_check}")
-
-        # Verify autologin is actually configured
-        gettyautologin.succeed("systemctl cat getty@tty1.service | grep -q 'autologin.*root'")
-
         out = gettyautologin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
@@ -168,10 +157,6 @@ in {
         gettyuser.wait_for_unit("network-online.target")
         gettyuser.wait_for_unit("multi-user.target")
 
-        # Check the getty service configuration
-        autologin_check = gettyuser.succeed("systemctl cat getty@tty1.service | grep -E 'autologin.*testuser' || true")
-        print(f"Getty service config for testuser: {autologin_check}")
-
         out = gettyuser.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
@@ -187,9 +172,6 @@ in {
         gettyonce.systemctl("start network-online.target")
         gettyonce.wait_for_unit("network-online.target")
         gettyonce.wait_for_unit("multi-user.target")
-
-        # Check if the autologin configuration exists
-        gettyonce.succeed("systemctl cat getty@tty1.service | grep -q 'autologin.*testuser'")
 
         # The check should fail because autologin is configured
         out = gettyonce.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
@@ -208,13 +190,6 @@ in {
         gdmautologin.wait_for_unit("network-online.target")
         gdmautologin.wait_for_unit("multi-user.target")
 
-        # Check if GDM config file was created and contains autologin settings
-        gdm_config = gdmautologin.succeed("cat /etc/gdm/custom.conf 2>/dev/null || cat /etc/gdm3/custom.conf 2>/dev/null || echo 'No GDM config found'")
-        print(f"GDM config: {gdm_config}")
-
-        # Verify autologin is configured
-        gdmautologin.succeed("grep -q 'AutomaticLogin' /etc/gdm/custom.conf 2>/dev/null || grep -q 'AutomaticLogin' /etc/gdm3/custom.conf 2>/dev/null")
-
         out = gdmautologin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
@@ -230,13 +205,6 @@ in {
         gdmtimedlogin.systemctl("start network-online.target")
         gdmtimedlogin.wait_for_unit("network-online.target")
         gdmtimedlogin.wait_for_unit("multi-user.target")
-
-        # Check GDM config for timed login settings
-        gdm_config = gdmtimedlogin.succeed("cat /etc/gdm/custom.conf 2>/dev/null || cat /etc/gdm3/custom.conf 2>/dev/null || echo 'No GDM config'")
-        print(f"GDM timed config: {gdm_config}")
-
-        # Verify timed login is configured
-        gdmtimedlogin.succeed("grep -E 'TimedLogin|AutomaticLogin' /etc/gdm/custom.conf 2>/dev/null || grep -E 'TimedLogin|AutomaticLogin' /etc/gdm3/custom.conf 2>/dev/null")
 
         out = gdmtimedlogin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
@@ -254,10 +222,6 @@ in {
         gdmzerodelay.wait_for_unit("network-online.target")
         gdmzerodelay.wait_for_unit("multi-user.target")
 
-        # Check GDM config for zero delay setting
-        gdm_config = gdmzerodelay.succeed("cat /etc/gdm/custom.conf 2>/dev/null || cat /etc/gdm3/custom.conf 2>/dev/null || echo 'No GDM config'")
-        print(f"GDM zero delay config: {gdm_config}")
-
         out = gdmzerodelay.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
@@ -273,16 +237,6 @@ in {
         sddmautologin.systemctl("start network-online.target")
         sddmautologin.wait_for_unit("network-online.target")
         sddmautologin.wait_for_unit("multi-user.target")
-
-        # Check SDDM config
-        sddm_config = sddmautologin.succeed("cat /etc/sddm.conf 2>/dev/null || echo 'No SDDM config'")
-        print(f"SDDM config: {sddm_config}")
-
-        # Also check for conf.d files
-        sddmautologin.succeed("ls -la /etc/sddm.conf.d/ 2>/dev/null || true")
-
-        # Verify autologin is configured (check both main config and conf.d)
-        sddmautologin.succeed("grep -r 'User=' /etc/sddm.conf /etc/sddm.conf.d/ 2>/dev/null || true")
 
         out = sddmautologin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
