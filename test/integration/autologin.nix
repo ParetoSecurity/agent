@@ -41,6 +41,16 @@ in {
       services.getty.autologinUser = "testuser";
     };
 
+    # Getty autologin once - should fail (creates marker file)
+    gettyonce = {pkgs, ...}: {
+      imports = [
+        (testUser {})
+      ];
+      services.paretosecurity.enable = true;
+      services.getty.autologinUser = "testuser";
+      services.getty.autologinOnce = true;
+    };
+
     # Display manager automatic login - should fail
     gdmautologin = {pkgs, ...}: {
       imports = [
@@ -122,6 +132,12 @@ in {
         noautologin.wait_for_unit("network-online.target")
         noautologin.wait_for_unit("multi-user.target")
 
+        # Verify no autologin files exist
+        noautologin.fail("test -f /run/agetty.autologged")
+        noautologin.fail("test -f /etc/gdm/custom.conf")
+        noautologin.fail("test -f /etc/sddm.conf")
+        noautologin.fail("test -f /etc/lightdm/lightdm.conf")
+
         out = noautologin.succeed("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
@@ -138,6 +154,17 @@ in {
         gettyautologin.wait_for_unit("network-online.target")
         gettyautologin.wait_for_unit("multi-user.target")
 
+        # Debug: Check what systemd service files are created
+        print("Checking getty service configuration...")
+        gettyautologin.succeed("ls -la /etc/systemd/system/ | grep getty || true")
+
+        # Check if autologin is configured in the service
+        autologin_check = gettyautologin.succeed("systemctl cat getty@tty1.service | grep -E 'autologin|ExecStart' || true")
+        print(f"Getty service config: {autologin_check}")
+
+        # Verify autologin is actually configured
+        gettyautologin.succeed("systemctl cat getty@tty1.service | grep -q 'autologin.*root'")
+
         out = gettyautologin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
@@ -145,9 +172,6 @@ in {
             "  • Checks completed.\n"
         )
         assert out == expected, f"Test 2 failed: {expected} did not match actual, got \n{out}"
-
-        # Additional debug check
-        gettyautologin.succeed("systemctl cat getty@tty1.service | grep -q autologin || echo 'Autologin flag found in getty service'")
         gettyautologin.shutdown()
 
     # Test 3: Getty autologin as regular user - should fail
@@ -157,6 +181,10 @@ in {
         gettyuser.wait_for_unit("network-online.target")
         gettyuser.wait_for_unit("multi-user.target")
 
+        # Check the getty service configuration
+        autologin_check = gettyuser.succeed("systemctl cat getty@tty1.service | grep -E 'autologin.*testuser' || true")
+        print(f"Getty service config for testuser: {autologin_check}")
+
         out = gettyuser.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
@@ -164,10 +192,27 @@ in {
             "  • Checks completed.\n"
         )
         assert out == expected, f"Test 3 failed: {expected} did not match actual, got \n{out}"
-
-        # Check for autologin configuration
-        gettyuser.succeed("systemctl cat getty@tty1.service | grep -q autologin || echo 'Autologin configured for regular user'")
         gettyuser.shutdown()
+
+    # Test 3b: Getty autologin once - should fail due to configuration
+    with subtest("Getty autologin once"):
+        gettyonce.start()
+        gettyonce.systemctl("start network-online.target")
+        gettyonce.wait_for_unit("network-online.target")
+        gettyonce.wait_for_unit("multi-user.target")
+
+        # Check if the autologin configuration exists
+        gettyonce.succeed("systemctl cat getty@tty1.service | grep -q 'autologin.*testuser'")
+
+        # The check should fail because autologin is configured
+        out = gettyonce.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
+        expected = (
+            "  • Starting checks...\n"
+            "  • Security Policy: Automatic login is disabled > [FAIL] Automatic login is on\n"
+            "  • Checks completed.\n"
+        )
+        assert out == expected, f"Test 3b failed: {expected} did not match actual, got \n{out}"
+        gettyonce.shutdown()
 
     # Test 4: GDM automatic login - should fail
     with subtest("GDM automatic login"):
@@ -176,8 +221,13 @@ in {
         gdmautologin.wait_for_unit("network-online.target")
         gdmautologin.wait_for_unit("multi-user.target")
 
-        # Check if GDM config file was created
-        gdmautologin.succeed("test -f /etc/gdm/custom.conf || test -f /etc/gdm3/custom.conf")
+        # Check if GDM config file was created and contains autologin settings
+        gdm_config = gdmautologin.succeed("cat /etc/gdm/custom.conf 2>/dev/null || cat /etc/gdm3/custom.conf 2>/dev/null || echo 'No GDM config found'")
+        print(f"GDM config: {gdm_config}")
+
+        # Verify autologin is configured
+        gdmautologin.succeed("grep -q 'AutomaticLogin' /etc/gdm/custom.conf 2>/dev/null || grep -q 'AutomaticLogin' /etc/gdm3/custom.conf 2>/dev/null")
+
         out = gdmautologin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
@@ -194,7 +244,13 @@ in {
         gdmtimedlogin.wait_for_unit("network-online.target")
         gdmtimedlogin.wait_for_unit("multi-user.target")
 
-        gdmtimedlogin.succeed("test -f /etc/gdm/custom.conf || test -f /etc/gdm3/custom.conf")
+        # Check GDM config for timed login settings
+        gdm_config = gdmtimedlogin.succeed("cat /etc/gdm/custom.conf 2>/dev/null || cat /etc/gdm3/custom.conf 2>/dev/null || echo 'No GDM config'")
+        print(f"GDM timed config: {gdm_config}")
+
+        # Verify timed login is configured
+        gdmtimedlogin.succeed("grep -E 'TimedLogin|AutomaticLogin' /etc/gdm/custom.conf 2>/dev/null || grep -E 'TimedLogin|AutomaticLogin' /etc/gdm3/custom.conf 2>/dev/null")
+
         out = gdmtimedlogin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
@@ -211,7 +267,10 @@ in {
         gdmzerodelay.wait_for_unit("network-online.target")
         gdmzerodelay.wait_for_unit("multi-user.target")
 
-        gdmzerodelay.succeed("test -f /etc/gdm/custom.conf || test -f /etc/gdm3/custom.conf")
+        # Check GDM config for zero delay setting
+        gdm_config = gdmzerodelay.succeed("cat /etc/gdm/custom.conf 2>/dev/null || cat /etc/gdm3/custom.conf 2>/dev/null || echo 'No GDM config'")
+        print(f"GDM zero delay config: {gdm_config}")
+
         out = gdmzerodelay.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
@@ -228,7 +287,13 @@ in {
         lightdmautologin.wait_for_unit("network-online.target")
         lightdmautologin.wait_for_unit("multi-user.target")
 
-        lightdmautologin.succeed("test -f /etc/lightdm/lightdm.conf")
+        # Check LightDM config
+        lightdm_config = lightdmautologin.succeed("cat /etc/lightdm/lightdm.conf 2>/dev/null || echo 'No LightDM config'")
+        print(f"LightDM config: {lightdm_config}")
+
+        # Verify autologin is configured
+        lightdmautologin.succeed("grep -q 'autologin-user' /etc/lightdm/lightdm.conf")
+
         out = lightdmautologin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
@@ -245,7 +310,16 @@ in {
         sddmautologin.wait_for_unit("network-online.target")
         sddmautologin.wait_for_unit("multi-user.target")
 
-        sddmautologin.succeed("test -f /etc/sddm.conf || test -d /etc/sddm.conf.d")
+        # Check SDDM config
+        sddm_config = sddmautologin.succeed("cat /etc/sddm.conf 2>/dev/null || echo 'No SDDM config'")
+        print(f"SDDM config: {sddm_config}")
+
+        # Also check for conf.d files
+        sddmautologin.succeed("ls -la /etc/sddm.conf.d/ 2>/dev/null || true")
+
+        # Verify autologin is configured (check both main config and conf.d)
+        sddmautologin.succeed("grep -r 'User=' /etc/sddm.conf /etc/sddm.conf.d/ 2>/dev/null || true")
+
         out = sddmautologin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"

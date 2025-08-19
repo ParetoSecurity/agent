@@ -25,23 +25,28 @@ func (f *Autologin) Run() error {
 
 	// Check KDE (SDDM) autologin
 	sddmFiles, _ := filepathGlob("/etc/sddm.conf.d/*.conf")
+	sddmFiles = append(sddmFiles, "/etc/sddm.conf") // Add main config to list
+
 	for _, file := range sddmFiles {
 		content, err := shared.ReadFile(file)
 		if err == nil {
-			if strings.Contains(string(content), "Autologin=true") {
+			contentStr := string(content)
+
+			// SDDM uses User= under [Autologin] section
+			// Check for User= setting (any non-empty user means autologin is configured)
+			if regexp.MustCompile(`(?m)^\s*User\s*=\s*\S+`).MatchString(contentStr) {
 				f.passed = false
-				f.status = "Autologin=true in SDDM is enabled"
+				f.status = "SDDM autologin user is configured"
 				return nil
 			}
-		}
-	}
 
-	// Check main SDDM config
-	if content, err := shared.ReadFile("/etc/sddm.conf"); err == nil {
-		if strings.Contains(string(content), "Autologin=true") {
-			f.passed = false
-			f.status = "Autologin=true in SDDM is enabled"
-			return nil
+			// Also check for Session= which might indicate autologin setup
+			if regexp.MustCompile(`(?m)^\s*\[Autologin\]`).MatchString(contentStr) &&
+				regexp.MustCompile(`(?m)^\s*Session\s*=\s*\S+`).MatchString(contentStr) {
+				f.passed = false
+				f.status = "SDDM autologin session is configured"
+				return nil
+			}
 		}
 	}
 
@@ -111,19 +116,33 @@ func (f *Autologin) Run() error {
 	}
 
 	// Check LightDM autologin
-	lightdmPaths := []string{"/etc/lightdm/lightdm.conf", "/etc/lightdm/lightdm.conf.d/*.conf"}
-	for _, pattern := range lightdmPaths {
-		files, _ := filepathGlob(pattern)
-		if pattern == "/etc/lightdm/lightdm.conf" {
-			files = []string{pattern}
-		}
-		for _, file := range files {
-			if content, err := shared.ReadFile(file); err == nil {
-				if strings.Contains(string(content), "autologin-user=") && !strings.Contains(string(content), "#autologin-user=") {
-					f.passed = false
-					f.status = "Autologin detected in LightDM configuration"
-					return nil
-				}
+	lightdmFiles, _ := filepathGlob("/etc/lightdm/lightdm.conf.d/*.conf")
+	lightdmFiles = append(lightdmFiles, "/etc/lightdm/lightdm.conf")
+
+	for _, file := range lightdmFiles {
+		if content, err := shared.ReadFile(file); err == nil {
+			contentStr := string(content)
+
+			// Check for autologin-user setting (ignoring commented lines)
+			// Uses (?m) for multiline mode where ^ matches start of line
+			if regexp.MustCompile(`(?m)^\s*autologin-user\s*=\s*\S+`).MatchString(contentStr) {
+				f.passed = false
+				f.status = "LightDM autologin user is configured"
+				return nil
+			}
+
+			// Also check for autologin-guest (guest session autologin)
+			if regexp.MustCompile(`(?m)^\s*autologin-guest\s*=\s*true`).MatchString(contentStr) {
+				f.passed = false
+				f.status = "LightDM guest autologin is enabled"
+				return nil
+			}
+
+			// Check for autologin-session
+			if regexp.MustCompile(`(?m)^\s*autologin-session\s*=\s*\S+`).MatchString(contentStr) {
+				f.passed = false
+				f.status = "LightDM autologin session is configured"
+				return nil
 			}
 		}
 	}

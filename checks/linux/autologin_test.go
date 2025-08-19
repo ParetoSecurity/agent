@@ -22,19 +22,21 @@ func TestAutologin_Run(t *testing.T) {
 		{
 			name: "SDDM autologin enabled in conf.d",
 			mockFiles: map[string]string{
-				"/etc/sddm.conf.d/test.conf": "Autologin=true",
-				"/etc/sddm.conf":             "Autologin=true",
+				"/etc/sddm.conf.d/test.conf": "[Autologin]\nUser=alice",
+			},
+			mockFilepathGlob: map[string][]string{
+				"/etc/sddm.conf.d/*.conf": {"/etc/sddm.conf.d/test.conf"},
 			},
 			expectedPassed: false,
-			expectedStatus: "Autologin=true in SDDM is enabled",
+			expectedStatus: "SDDM autologin user is configured",
 		},
 		{
 			name: "SDDM autologin enabled in main config",
 			mockFiles: map[string]string{
-				"/etc/sddm.conf": "Autologin=true",
+				"/etc/sddm.conf": "[Autologin]\nUser=bob",
 			},
 			expectedPassed: false,
-			expectedStatus: "Autologin=true in SDDM is enabled",
+			expectedStatus: "SDDM autologin user is configured",
 		},
 		{
 			name: "GDM autologin enabled in custom.conf",
@@ -62,14 +64,14 @@ func TestAutologin_Run(t *testing.T) {
 		{
 			name: "Multiple SDDM configs with autologin enabled",
 			mockFiles: map[string]string{
-				"/etc/sddm.conf.d/10-test.conf": "Autologin=true",
-				"/etc/sddm.conf.d/20-test.conf": "Autologin=true",
+				"/etc/sddm.conf.d/10-test.conf": "[Autologin]\nUser=charlie",
+				"/etc/sddm.conf.d/20-test.conf": "[Autologin]\nSession=plasma",
 			},
 			mockFilepathGlob: map[string][]string{
 				"/etc/sddm.conf.d/*.conf": {"/etc/sddm.conf.d/10-test.conf", "/etc/sddm.conf.d/20-test.conf"},
 			},
 			expectedPassed: false,
-			expectedStatus: "Autologin=true in SDDM is enabled",
+			expectedStatus: "SDDM autologin user is configured",
 		},
 		{
 			name:           "No autologin enabled",
@@ -139,7 +141,7 @@ func TestAutologin_Run(t *testing.T) {
 				"/etc/lightdm/lightdm.conf": "[Seat:*]\nautologin-user=alice",
 			},
 			expectedPassed: false,
-			expectedStatus: "Autologin detected in LightDM configuration",
+			expectedStatus: "LightDM autologin user is configured",
 		},
 		{
 			name: "LightDM autologin commented out",
@@ -148,6 +150,38 @@ func TestAutologin_Run(t *testing.T) {
 			},
 			expectedPassed: true,
 			expectedStatus: "Automatic login is off",
+		},
+		{
+			name: "SDDM autologin user configured",
+			mockFiles: map[string]string{
+				"/etc/sddm.conf": "[Autologin]\nUser=testuser\nSession=plasma",
+			},
+			expectedPassed: false,
+			expectedStatus: "SDDM autologin user is configured",
+		},
+		{
+			name: "SDDM autologin session only",
+			mockFiles: map[string]string{
+				"/etc/sddm.conf": "[Autologin]\nSession=plasma",
+			},
+			expectedPassed: false,
+			expectedStatus: "SDDM autologin session is configured",
+		},
+		{
+			name: "LightDM guest autologin",
+			mockFiles: map[string]string{
+				"/etc/lightdm/lightdm.conf": "[Seat:*]\nautologin-guest=true",
+			},
+			expectedPassed: false,
+			expectedStatus: "LightDM guest autologin is enabled",
+		},
+		{
+			name: "LightDM autologin session configured",
+			mockFiles: map[string]string{
+				"/etc/lightdm/lightdm.conf": "[Seat:*]\nautologin-session=xfce",
+			},
+			expectedPassed: false,
+			expectedStatus: "LightDM autologin session is configured",
 		},
 	}
 

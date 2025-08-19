@@ -6,20 +6,12 @@
   outputs = inputs @ {
     flake-parts,
     nixpkgs,
-    self,
     ...
   }:
     flake-parts.lib.mkFlake {inherit inputs;} {
       systems = nixpkgs.lib.systems.flakeExposed;
 
-      perSystem = {
-        config,
-        pkgs,
-        lib,
-        self,
-        system,
-        ...
-      }: let
+      perSystem = {pkgs, ...}: let
         # Extend pkgs with our paretosecurity overlay
         pkgsOverlayed = pkgs.extend (final: prev: {
           paretosecurity = prev.paretosecurity.overrideAttrs (oldAttrs: {
@@ -44,6 +36,7 @@
           secureboot = pkgsOverlayed.testers.runNixOSTest ./test/integration/secureboot.nix;
           trayicon = pkgsOverlayed.testers.runNixOSTest ./test/integration/trayicon.nix;
           xfce = pkgsOverlayed.testers.runNixOSTest ./test/integration/desktop/xfce.nix;
+          autologin = pkgsOverlayed.testers.runNixOSTest ./test/integration/desktop/autologin.nix;
         };
       };
     };
