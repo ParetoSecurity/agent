@@ -6,7 +6,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 0 * * 0' # Runs every Sunday at midnight UTC
+    - cron: "0 0 * * 0" # Runs every Sunday at midnight UTC
 
 jobs:
   check-on-nix:
@@ -15,16 +15,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        check: [
-          pwd-manager,
-          firewall,
-          screenlock,
-          secureboot,
-          luks,
-          help,
-          xfce,
-          trayicon,
-        ]
+        check:
+          [
+            pwd-manager,
+            firewall,
+            screenlock,
+            secureboot,
+            luks,
+            help,
+            xfce,
+            trayicon,
+            autologin,
+          ]
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: ./.github/actions/devenv
@@ -35,4 +37,4 @@ jobs:
 
       - run: nix build .#checks.x86_64-linux.${{ matrix.check }} --print-build-logs
         env:
-            NIX_PAGER: cat
+          NIX_PAGER: cat
