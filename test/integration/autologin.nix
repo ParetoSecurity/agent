@@ -128,7 +128,7 @@ in {
         out = noautologin.succeed("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
-            "  • Security Policy: Automatic login is disabled > [OK] Automatic login is off\n"
+            "  • Access Security: Automatic login is disabled > [OK] Automatic login is off\n"
             "  • Checks completed.\n"
         )
         assert out == expected, f"Test 1 failed: {expected} did not match actual, got \n{out}"
@@ -155,7 +155,7 @@ in {
         out = gettyautologin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
-            "  • Security Policy: Automatic login is disabled > [FAIL] Automatic login is on\n"
+            "  • Access Security: Automatic login is disabled > [FAIL] Automatic login is on\n"
             "  • Checks completed.\n"
         )
         assert out == expected, f"Test 2 failed: {expected} did not match actual, got \n{out}"
@@ -175,7 +175,7 @@ in {
         out = gettyuser.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
-            "  • Security Policy: Automatic login is disabled > [FAIL] Automatic login is on\n"
+            "  • Access Security: Automatic login is disabled > [FAIL] Automatic login is on\n"
             "  • Checks completed.\n"
         )
         assert out == expected, f"Test 3 failed: {expected} did not match actual, got \n{out}"
@@ -195,7 +195,7 @@ in {
         out = gettyonce.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
-            "  • Security Policy: Automatic login is disabled > [FAIL] Automatic login is on\n"
+            "  • Access Security: Automatic login is disabled > [FAIL] Automatic login is on\n"
             "  • Checks completed.\n"
         )
         assert out == expected, f"Test 3b failed: {expected} did not match actual, got \n{out}"
@@ -218,7 +218,7 @@ in {
         out = gdmautologin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
-            "  • Security Policy: Automatic login is disabled > [FAIL] Automatic login is on\n"
+            "  • Access Security: Automatic login is disabled > [FAIL] Automatic login is on\n"
             "  • Checks completed.\n"
         )
         assert out == expected, f"Test 4 failed: {expected} did not match actual, got \n{out}"
@@ -241,7 +241,7 @@ in {
         out = gdmtimedlogin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
-            "  • Security Policy: Automatic login is disabled > [FAIL] Automatic login is on\n"
+            "  • Access Security: Automatic login is disabled > [FAIL] Automatic login is on\n"
             "  • Checks completed.\n"
         )
         assert out == expected, f"Test 5 failed: {expected} did not match actual, got \n{out}"
@@ -261,7 +261,7 @@ in {
         out = gdmzerodelay.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
-            "  • Security Policy: Automatic login is disabled > [FAIL] Automatic login is on\n"
+            "  • Access Security: Automatic login is disabled > [FAIL] Automatic login is on\n"
             "  • Checks completed.\n"
         )
         assert out == expected, f"Test 6 failed: {expected} did not match actual, got \n{out}"
@@ -287,7 +287,7 @@ in {
         out = sddmautologin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
-            "  • Security Policy: Automatic login is disabled > [FAIL] Automatic login is on\n"
+            "  • Access Security: Automatic login is disabled > [FAIL] Automatic login is on\n"
             "  • Checks completed.\n"
         )
         assert out == expected, f"Test 8 failed: {expected} did not match actual, got \n{out}"
