@@ -36,7 +36,7 @@
           secureboot = pkgsOverlayed.testers.runNixOSTest ./test/integration/secureboot.nix;
           trayicon = pkgsOverlayed.testers.runNixOSTest ./test/integration/trayicon.nix;
           xfce = pkgsOverlayed.testers.runNixOSTest ./test/integration/desktop/xfce.nix;
-          autologin = pkgsOverlayed.testers.runNixOSTest ./test/integration/desktop/autologin.nix;
+          autologin = pkgsOverlayed.testers.runNixOSTest ./test/integration/autologin.nix;
         };
       };
     };
