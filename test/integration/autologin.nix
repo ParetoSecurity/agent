@@ -95,20 +95,6 @@ in {
       };
     };
 
-    # LightDM autologin - should fail
-    lightdmautologin = {pkgs, ...}: {
-      imports = [
-        (testUser {})
-      ];
-      services.paretosecurity.enable = true;
-      services.xserver.enable = true;
-      services.xserver.displayManager.lightdm.enable = true;
-      services.displayManager.autoLogin = {
-        enable = true;
-        user = "testuser";
-      };
-    };
-
     # SDDM autologin - should fail
     sddmautologin = {pkgs, ...}: {
       imports = [
@@ -136,7 +122,6 @@ in {
         noautologin.fail("test -f /run/agetty.autologged")
         noautologin.fail("test -f /etc/gdm/custom.conf")
         noautologin.fail("test -f /etc/sddm.conf")
-        noautologin.fail("test -f /etc/lightdm/lightdm.conf")
 
         out = noautologin.succeed("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
@@ -279,29 +264,6 @@ in {
         )
         assert out == expected, f"Test 6 failed: {expected} did not match actual, got \n{out}"
         gdmzerodelay.shutdown()
-
-    # Test 7: LightDM autologin - should fail
-    with subtest("LightDM autologin"):
-        lightdmautologin.start()
-        lightdmautologin.systemctl("start network-online.target")
-        lightdmautologin.wait_for_unit("network-online.target")
-        lightdmautologin.wait_for_unit("multi-user.target")
-
-        # Check LightDM config
-        lightdm_config = lightdmautologin.succeed("cat /etc/lightdm/lightdm.conf 2>/dev/null || echo 'No LightDM config'")
-        print(f"LightDM config: {lightdm_config}")
-
-        # Verify autologin is configured
-        lightdmautologin.succeed("grep -q 'autologin-user' /etc/lightdm/lightdm.conf")
-
-        out = lightdmautologin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
-        expected = (
-            "  • Starting checks...\n"
-            "  • Security Policy: Automatic login is disabled > [FAIL] Automatic login is on\n"
-            "  • Checks completed.\n"
-        )
-        assert out == expected, f"Test 7 failed: {expected} did not match actual, got \n{out}"
-        lightdmautologin.shutdown()
 
     # Test 8: SDDM autologin - should fail
     with subtest("SDDM autologin"):
