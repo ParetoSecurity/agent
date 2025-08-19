@@ -58,13 +58,9 @@ func (f *ApplicationUpdates) checkUpdates() (bool, string) {
 		}
 		installedApps := f.parseFlatpak(string(installedOutput))
 		updatableApps := f.parseFlatpak(string(updatesOutput))
-		log.WithField("updates", updatesOutput).WithField("installed", installedOutput).Debug("Flatpak updates")
-
-		for app, version := range installedApps {
-			if installed, ok := updatableApps[app]; ok && version != installed {
-				updates = append(updates, "Flatpak")
-				break
-			}
+		log.WithField("updates", updatableApps).WithField("installed", installedApps).Debug("Flatpak updates")
+		if len(updatableApps) > 0 {
+			updates = append(updates, "Flatpak")
 		}
 	}
 
@@ -154,7 +150,7 @@ func (f *ApplicationUpdates) FailedMessage() string {
 
 // RequiresRoot returns whether the check requires root access
 func (f *ApplicationUpdates) RequiresRoot() bool {
-	return false
+	return true
 }
 
 // Status returns the status of the check
