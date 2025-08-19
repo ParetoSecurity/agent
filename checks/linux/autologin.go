@@ -2,6 +2,7 @@
 package checks
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/ParetoSecurity/agent/shared"
@@ -48,9 +49,32 @@ func (f *Autologin) Run() error {
 	gdmPaths := []string{"/etc/gdm3/custom.conf", "/etc/gdm/custom.conf"}
 	for _, path := range gdmPaths {
 		if content, err := shared.ReadFile(path); err == nil {
-			if strings.Contains(string(content), "AutomaticLoginEnable=true") {
+			contentStr := string(content)
+
+			if strings.Contains(contentStr, "AutomaticLoginEnable=true") {
 				f.passed = false
 				f.status = "AutomaticLoginEnable=true in GDM is enabled"
+				return nil
+			}
+
+			// Check for NixOS-style timed login settings (any of these indicate autologin)
+			if strings.Contains(contentStr, "TimedLoginEnable=true") {
+				f.passed = false
+				f.status = "TimedLoginEnable=true in GDM is enabled"
+				return nil
+			}
+
+			// Check if TimedLogin user is set
+			if regexp.MustCompile(`TimedLogin=\S+`).MatchString(contentStr) {
+				f.passed = false
+				f.status = "TimedLogin user is configured in GDM"
+				return nil
+			}
+
+			// Check if TimedLoginDelay is set (any value, including 0)
+			if regexp.MustCompile(`TimedLoginDelay=\d+`).MatchString(contentStr) {
+				f.passed = false
+				f.status = "TimedLoginDelay is configured in GDM"
 				return nil
 			}
 		}
@@ -62,6 +86,46 @@ func (f *Autologin) Run() error {
 		f.passed = false
 		f.status = "Automatic login is enabled in GNOME"
 		return nil
+	}
+
+	// Check for NixOS getty autologin marker file
+	if _, err := osStat("/run/agetty.autologged"); err == nil {
+		f.passed = false
+		f.status = "Getty autologin detected (NixOS /run/agetty.autologged exists)"
+		return nil
+	}
+
+	// Check systemd getty service overrides for autologin
+	gettyOverrides, _ := filepathGlob("/etc/systemd/system/getty@*.service.d/*.conf")
+	gettyOverrides = append(gettyOverrides, "/etc/systemd/system/getty@.service.d/overrides.conf")
+	gettyOverrides = append(gettyOverrides, "/etc/systemd/system/serial-getty@.service.d/overrides.conf")
+
+	for _, file := range gettyOverrides {
+		if content, err := shared.ReadFile(file); err == nil {
+			if strings.Contains(string(content), "--autologin") {
+				f.passed = false
+				f.status = "Getty autologin detected in systemd service override"
+				return nil
+			}
+		}
+	}
+
+	// Check LightDM autologin
+	lightdmPaths := []string{"/etc/lightdm/lightdm.conf", "/etc/lightdm/lightdm.conf.d/*.conf"}
+	for _, pattern := range lightdmPaths {
+		files, _ := filepathGlob(pattern)
+		if pattern == "/etc/lightdm/lightdm.conf" {
+			files = []string{pattern}
+		}
+		for _, file := range files {
+			if content, err := shared.ReadFile(file); err == nil {
+				if strings.Contains(string(content), "autologin-user=") && !strings.Contains(string(content), "#autologin-user=") {
+					f.passed = false
+					f.status = "Autologin detected in LightDM configuration"
+					return nil
+				}
+			}
+		}
 	}
 
 	return nil

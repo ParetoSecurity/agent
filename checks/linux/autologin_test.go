@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"os"
 	"testing"
 
 	"github.com/ParetoSecurity/agent/shared"
@@ -12,6 +13,7 @@ func TestAutologin_Run(t *testing.T) {
 		name             string
 		mockFiles        map[string]string
 		mockFilepathGlob map[string][]string
+		mockOsStat       map[string]bool
 		mockCommand      string
 		mockCommandOut   string
 		expectedPassed   bool
@@ -74,6 +76,79 @@ func TestAutologin_Run(t *testing.T) {
 			expectedPassed: true,
 			expectedStatus: "Automatic login is off",
 		},
+		{
+			name: "GDM timed login enabled (NixOS style)",
+			mockFiles: map[string]string{
+				"/etc/gdm/custom.conf": "TimedLoginEnable=true",
+			},
+			expectedPassed: false,
+			expectedStatus: "TimedLoginEnable=true in GDM is enabled",
+		},
+		{
+			name: "GDM timed login user configured",
+			mockFiles: map[string]string{
+				"/etc/gdm/custom.conf": "[daemon]\nTimedLogin=foo",
+			},
+			expectedPassed: false,
+			expectedStatus: "TimedLogin user is configured in GDM",
+		},
+		{
+			name: "GDM timed login delay with non-zero value",
+			mockFiles: map[string]string{
+				"/etc/gdm/custom.conf": "[daemon]\nTimedLoginDelay=30",
+			},
+			expectedPassed: false,
+			expectedStatus: "TimedLoginDelay is configured in GDM",
+		},
+		{
+			name: "GDM timed login delay with zero value (should also fail)",
+			mockFiles: map[string]string{
+				"/etc/gdm/custom.conf": "[daemon]\nTimedLoginDelay=0",
+			},
+			expectedPassed: false,
+			expectedStatus: "TimedLoginDelay is configured in GDM",
+		},
+		{
+			name: "GDM complete timed login configuration",
+			mockFiles: map[string]string{
+				"/etc/gdm/custom.conf": "[daemon]\nTimedLoginEnable=true\nTimedLogin=alice\nTimedLoginDelay=5",
+			},
+			expectedPassed: false,
+			expectedStatus: "TimedLoginEnable=true in GDM is enabled", // First match wins
+		},
+		{
+			name:           "NixOS getty autologin marker file exists",
+			mockOsStat:     map[string]bool{"/run/agetty.autologged": true},
+			expectedPassed: false,
+			expectedStatus: "Getty autologin detected (NixOS /run/agetty.autologged exists)",
+		},
+		{
+			name: "Getty autologin in systemd override",
+			mockFiles: map[string]string{
+				"/etc/systemd/system/getty@.service.d/overrides.conf": "ExecStart=-/sbin/agetty --autologin root",
+			},
+			mockFilepathGlob: map[string][]string{
+				"/etc/systemd/system/getty@*.service.d/*.conf": {"/etc/systemd/system/getty@.service.d/overrides.conf"},
+			},
+			expectedPassed: false,
+			expectedStatus: "Getty autologin detected in systemd service override",
+		},
+		{
+			name: "LightDM autologin enabled",
+			mockFiles: map[string]string{
+				"/etc/lightdm/lightdm.conf": "[Seat:*]\nautologin-user=alice",
+			},
+			expectedPassed: false,
+			expectedStatus: "Autologin detected in LightDM configuration",
+		},
+		{
+			name: "LightDM autologin commented out",
+			mockFiles: map[string]string{
+				"/etc/lightdm/lightdm.conf": "[Seat:*]\n#autologin-user=alice",
+			},
+			expectedPassed: true,
+			expectedStatus: "Automatic login is off",
+		},
 	}
 
 	for _, tt := range tests {
@@ -95,6 +170,17 @@ func TestAutologin_Run(t *testing.T) {
 				}
 				return nil, nil
 			}
+
+			// Mock os.Stat
+			osStatMock = func(file string) (os.FileInfo, error) {
+				if tt.mockOsStat != nil {
+					if exists, ok := tt.mockOsStat[file]; ok && exists {
+						return nil, nil // File exists
+					}
+				}
+				return nil, os.ErrNotExist // File doesn't exist
+			}
+
 			// Mock shared.RunCommand
 			shared.RunCommandMocks = convertCommandMapToMocks(map[string]string{
 				tt.mockCommand: tt.mockCommandOut,
