@@ -177,7 +177,7 @@ in {
         out = gettyonce.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
-            "  • Access Security: Automatic login is disabled > [FAIL] Getty autologin detected in systemd service override\n"
+            "  • Access Security: Automatic login is disabled > [FAIL] Getty autologin detected (NixOS /run/agetty.autologged exists)\n"
             "  • Checks completed.\n"
         )
         assert out == expected, f"Test 3b failed: {expected} did not match actual, got \n{out}"
