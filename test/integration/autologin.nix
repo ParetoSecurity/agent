@@ -193,7 +193,7 @@ in {
         out = gdmautologin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
-            "  • Access Security: Automatic login is disabled > [FAIL] GDM autologin is enabled\n"
+            "  • Access Security: Automatic login is disabled > [FAIL] AutomaticLoginEnable=true in GDM is enabled\n"
             "  • Checks completed.\n"
         )
         assert out == expected, f"Test 4 failed: {expected} did not match actual, got \n{out}"
@@ -225,7 +225,7 @@ in {
         out = gdmzerodelay.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
-            "  • Access Security: Automatic login is disabled > [FAIL] GDM autologin is enabled\n"
+            "  • Access Security: Automatic login is disabled > [FAIL] AutomaticLoginEnable=true in GDM is enabled\n"
             "  • Checks completed.\n"
         )
         assert out == expected, f"Test 6 failed: {expected} did not match actual, got \n{out}"
