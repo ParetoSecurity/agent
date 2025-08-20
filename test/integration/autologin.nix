@@ -209,7 +209,7 @@ in {
         out = gdmtimedlogin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
         expected = (
             "  • Starting checks...\n"
-            "  • Access Security: Automatic login is disabled > [FAIL] GDM timed login is enabled\n"
+            "  • Access Security: Automatic login is disabled > [FAIL] TimedLoginEnable=true in GDM is enabled\n"
             "  • Checks completed.\n"
         )
         assert out == expected, f"Test 5 failed: {expected} did not match actual, got \n{out}"
