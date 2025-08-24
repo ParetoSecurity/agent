@@ -123,6 +123,34 @@ num  target     prot opt source               destination
 			mockError:      nil,
 			expectedResult: true,
 		},
+		{
+			name: "Real iptables with ACCEPT policy and ts-input chain should fail",
+			mockOutput: `Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+1    ts-input   all  --  anywhere             anywhere            
+`,
+			mockError:      nil,
+			expectedResult: false,
+		},
+		{
+			name: "Iptables with DROP rules should pass",
+			mockOutput: `Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+1    ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           tcp dpt:22
+2    DROP       all  --  0.0.0.0/0            0.0.0.0/0           
+`,
+			mockError:      nil,
+			expectedResult: true,
+		},
+		{
+			name: "UFW chain should pass",
+			mockOutput: `Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+1    ufw-before-logging-input  all  --  anywhere             anywhere            
+`,
+			mockError:      nil,
+			expectedResult: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -182,6 +210,13 @@ num  target     prot opt source               destination
 `,
 			expectedResult: false,
 		},
+		{
+			name: "Policy ACCEPT with no rules should fail",
+			mockOutput: `Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+`,
+			expectedResult: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -204,10 +239,11 @@ func TestFirewall_Run(t *testing.T) {
 		expectedPassed bool
 	}{
 		{
-			name: "Iptables active",
+			name: "Iptables active with DROP rule",
 			mockOutput: `Chain INPUT (policy ACCEPT)
 num  target     prot opt source               destination         
 1    ACCEPT     tcp  --  0.0.0.0/0            0.0.0.0/0           tcp dpt:22
+2    DROP       all  --  0.0.0.0/0            0.0.0.0/0           
 `,
 			mockError:      nil,
 			expectedPassed: true,

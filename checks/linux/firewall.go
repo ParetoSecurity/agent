@@ -136,22 +136,51 @@ func (f *Firewall) checkIptables() bool {
 		}
 	}
 
-	// Check for custom chains like nixos-fw
+	// Check for restrictive rules (DROP/REJECT) or custom chains that likely provide filtering
+	hasRestrictiveRules := false
 	hasCustomChain := false
 	for _, rule := range rules {
+		if rule.Target == "DROP" || rule.Target == "REJECT" {
+			hasRestrictiveRules = true
+		}
+		// Custom chains like nixos-fw, ts-input might provide filtering
+		// but we can't be sure without analyzing them recursively
 		if rule.Target != "ACCEPT" && rule.Target != "DROP" && rule.Target != "REJECT" {
 			hasCustomChain = true
-			break
 		}
 	}
 
 	log.WithField("rules_count", len(rules)).
 		WithField("policy", policy).
 		WithField("has_custom_chain", hasCustomChain).
+		WithField("has_restrictive_rules", hasRestrictiveRules).
 		Debug("Iptables has active rules or restrictive policy")
 
-	// Firewall is active if there are rules or the policy is restrictive or custom chains are used
-	return len(rules) > 0 || policy == "DROP" || policy == "REJECT" || hasCustomChain
+	// Firewall is active if:
+	// 1. The default policy is restrictive (DROP/REJECT), OR
+	// 2. There are explicit DROP/REJECT rules in the INPUT chain, OR
+	// 3. There's a custom chain AND it's a known firewall chain (nixos-fw, ufw-, etc)
+	if policy == "DROP" || policy == "REJECT" {
+		return true
+	}
+
+	if hasRestrictiveRules {
+		return true
+	}
+
+	// Only accept certain known firewall chains as evidence of an active firewall
+	// ts-input alone is not sufficient as it may not provide proper filtering
+	for _, rule := range rules {
+		target := strings.ToLower(rule.Target)
+		if strings.HasPrefix(target, "nixos-fw") ||
+			strings.HasPrefix(target, "ufw") ||
+			strings.HasPrefix(target, "firewalld") ||
+			strings.HasPrefix(target, "iptables-") {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Run executes the check
