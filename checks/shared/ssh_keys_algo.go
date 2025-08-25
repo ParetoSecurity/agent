@@ -102,7 +102,7 @@ func (f *SSHKeysAlgo) Passed() bool {
 
 // IsRunnable returns whether SSHKeysAlgo is runnable.
 func (f *SSHKeysAlgo) IsRunnable() bool {
-	f.details = "No private keys found in the .ssh directory"
+	f.details = "No private keys found in the ~/.ssh directory"
 
 	// Check if the user home directory exists
 	home, err := os.UserHomeDir()

@@ -69,7 +69,7 @@ func (f *SSHKeys) Passed() bool {
 
 // CanRun returns whether the check can run
 func (f *SSHKeys) IsRunnable() bool {
-	f.details = "No private keys found in .ssh directory"
+	f.details = "No private keys found in ~/.ssh directory"
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return false
