@@ -16,10 +16,17 @@ jobs:
           issues: write
 
         steps:
+
+            - uses: actions/create-github-app-token@v1
+              id: generate-token
+              with:
+                app-id: "1839676"
+                private-key: ${{ secrets.PARETO_BOT_SECRET }}
+
             - name: Checkout repository
               uses: actions/checkout@v4
               with:
-                token: ${{ secrets.WORKFLOW_TOKEN }}
+                token: ${{ steps.generate-token.outputs.token }}
               
             - name: Set up Python
               uses: actions/setup-python@v5
@@ -29,7 +36,7 @@ jobs:
             - name: Install dependencies
               run: |
                 python -m pip install --upgrade pip
-                pip install requests pyyaml ruamel.yaml
+                pip install -r .github/workflows/requirements.txt
 
             - name: Update supported distros
               id: update
@@ -39,12 +46,18 @@ jobs:
               if: steps.update.outputs.changes_made == 'true'
               uses: peter-evans/create-pull-request@v7
               with:
-                token: ${{ secrets.WORKFLOW_TOKEN }}
+                token: ${{ steps.generate-token.outputs.token }}
                 commit-message: "Update supported distro versions"
                 title: "Update versions of distros we test against"
                 body: ${{ steps.update.outputs.pr_description }}
                 branch: update/distro-versions-${{ github.run_number }}
                 delete-branch: true
+
+            - name: DeadManSwitch ping
+              if: success()
+              run: |
+                echo "Notifying Dead Man's Snitch of successful workflow completion"
+                curl -s https://nosnch.in/ba608c34d1
 
             - name: Create failure summary
               if: failure()

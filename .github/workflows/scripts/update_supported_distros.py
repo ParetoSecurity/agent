@@ -2,6 +2,7 @@ import requests
 import os
 import yaml
 import re
+from typing import List, Dict, Any, Optional, Tuple
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import LiteralScalarString, DoubleQuotedScalarString
 
@@ -13,10 +14,15 @@ It automatically runs every Monday at 8:30 AM CEST, via a Github Action, which c
 It can also be run manually.
 """
 
-IGNORED_DISTROS = ['arch']
+IGNORED_DISTROS: List[str] = ['arch']
 
-def get_supported_distros():
-
+def get_supported_distros() -> List[str]:
+    """
+    Fetch currently supported distribution versions from endoflife.date API.
+    
+    Returns:
+        List[str]: List of supported distros in format "distro-version" (e.g., "ubuntu-24.04")
+    """
     distros = ['debian', 'ubuntu', 'fedora']
     supported = []
 
@@ -38,7 +44,14 @@ def get_supported_distros():
     return supported
 
 
-def get_current_distros():
+def get_current_distros() -> Optional[List[Dict[str, Any]]]:
+    """
+    Read the current distribution configurations from distro.yml file.
+    
+    Returns:
+        Optional[List[Dict[str, Any]]]: List of distro configurations from the matrix,
+                                        excluding ignored distros. Returns None on error.
+    """
     try:
         current = os.path.dirname(os.path.abspath(__file__))
         path = os.path.join(current, "..", "distro.yml")
@@ -56,15 +69,37 @@ def get_current_distros():
         return None
 
 
-def fix_cleanup_run_field(content):
-    """ The Yaml formatter adds a '|-' in the run field in the Cleanup step, 
-    so this function replaces it with a '|' to preserve the original format."""
+def fix_cleanup_run_field(content: str) -> str:
+    """
+    Fix YAML formatting for the Cleanup step's run field.
+    
+    The YAML formatter adds a '|-' in the run field in the Cleanup step,
+    so this function replaces it with a '|' to preserve the original format.
+    
+    Args:
+        content (str): The YAML file content
+        
+    Returns:
+        str: Fixed YAML content with proper run field formatting
+    """
     pattern = r'(- name: Cleanup\s*\n\s*if: always\(\)\s*\n\s*run:\s*)(\|-)'
     return re.sub(pattern, r'\1|', content)
 
 
-def extract_distro_template(distro_name):
-
+def extract_distro_template(distro_name: str) -> Optional[Dict[str, str]]:
+    """
+    Extract a template configuration for a given distribution type.
+    
+    Finds the first entry for the specified distro type and creates a template
+    by replacing the version number with a placeholder.
+    
+    Args:
+        distro_name (str): The distribution name (e.g., 'ubuntu', 'debian', 'fedora')
+        
+    Returns:
+        Optional[Dict[str, str]]: Template dict with 'image', 'setup', 'installer',
+                                  and 'verify_package' fields. Returns None if not found.
+    """
     try:
         current = os.path.dirname(os.path.abspath(__file__))
         path = os.path.join(current, "..", "distro.yml")
@@ -98,7 +133,13 @@ def extract_distro_template(distro_name):
         return None
 
 
-def remove_distro(distro):
+def remove_distro(distro: str) -> None:
+    """
+    Remove a distribution entry from the distro.yml matrix.
+    
+    Args:
+        distro (str): The distro identifier to remove (e.g., 'ubuntu-23.10')
+    """
     current = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(current, "..", "distro.yml")
     
@@ -134,7 +175,16 @@ def remove_distro(distro):
         f.write(content)
         
     
-def add_distro(distro):
+def add_distro(distro: str) -> None:
+    """
+    Add a new distribution entry to the distro.yml matrix.
+    
+    Extracts a template from existing entries of the same distro type and
+    inserts the new entry in the appropriate position to maintain ordering.
+    
+    Args:
+        distro (str): The distro identifier to add (e.g., 'ubuntu-24.10')
+    """
     current = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(current, "..", "distro.yml")
     
@@ -216,7 +266,17 @@ def add_distro(distro):
 
 
 
-def set_github_output(name, value):
+def set_github_output(name: str, value: str) -> None:
+    """
+    Set output variables for GitHub Actions.
+    
+    Writes output variables to the GITHUB_OUTPUT file in the format expected
+    by GitHub Actions. Handles multi-line values using delimiters.
+    
+    Args:
+        name (str): The output variable name
+        value (str): The output variable value
+    """
     
     github_output = os.environ.get('GITHUB_OUTPUT')
     if github_output:
@@ -230,12 +290,19 @@ def set_github_output(name, value):
                 f.write(f"{name}={value}\n")
 
 
-def main():
+def main() -> None:
+    """
+    Main entry point for the distro update script.
+    
+    Compares currently supported distros from endoflife.date with the
+    distro.yml matrix and updates it as needed. Creates GitHub Actions
+    outputs for the workflow to use.
+    """
 
     supported_distros = get_supported_distros()
     current_distros = get_current_distros()
     current_distro_names = [d['distro'] for d in current_distros]
-
+    
     if set(supported_distros) != set(current_distro_names):
         print("Updating supported distros in .github/workflows/distro.yml")
         
