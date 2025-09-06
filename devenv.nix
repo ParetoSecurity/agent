@@ -4,14 +4,16 @@
   config,
   inputs,
   ...
-}: let
-  upstream = import inputs.upstream {system = pkgs.stdenv.system;};
-in {
+}:
+let
+  upstream = import inputs.upstream { inherit (pkgs.stdenv) system; };
+in
+{
   packages = [
-    upstream.alejandra
     upstream.goreleaser
     upstream.go_1_24
   ];
+
   languages.nix.enable = true;
 
   env.GOROOT = upstream.go_1_24 + "/share/go/";
@@ -26,7 +28,11 @@ in {
     echo Helper scripts:
     echo
     ${upstream.gnused}/bin/sed -e 's| |••|g' -e 's|=| |' <<EOF | ${upstream.util-linuxMinimal}/bin/column -t | ${upstream.gnused}/bin/sed -e 's|••| |g'
-    ${lib.generators.toKeyValue {} (lib.filterAttrs (name: _: name != "help-scripts") (lib.mapAttrs (name: value: value.description) config.scripts))}
+    ${lib.generators.toKeyValue { } (
+      lib.filterAttrs (name: _: name != "help-scripts") (
+        lib.mapAttrs (_name: value: value.description) config.scripts
+      )
+    )}
     EOF
     echo
   '';
@@ -89,7 +95,9 @@ in {
 
   # https://devenv.sh/pre-commit-hooks/
   git-hooks.hooks = {
-    alejandra.enable = true;
+    nixfmt-rfc-style.enable = true;
+    deadnix.enable = true;
+    statix.enable = true;
     gofmt.enable = true;
     # golangci-lint.enable = true;
     # revive.enable = true;

@@ -3,21 +3,25 @@
   interactive.sshBackdoor.enable = true;
 
   nodes = {
-    gnome = {pkgs, ...}: {
-      services.paretosecurity.enable = true;
-      # Install GNOME Desktop Environment
-      services.xserver.desktopManager.gnome.enable = true;
-      services.xserver.displayManager.gdm.enable = true;
-    };
+    gnome =
+      { ... }:
+      {
+        services.paretosecurity.enable = true;
+        # Install GNOME Desktop Environment
+        services.xserver.desktopManager.gnome.enable = true;
+        services.xserver.displayManager.gdm.enable = true;
+      };
 
-    kde = {pkgs, ...}: {
-      services.paretosecurity.enable = true;
-      # Install KDE Plasma 5 Desktop Environment
-      services.xserver.enable = true;
-      services.xserver.desktopManager.plasma5.enable = true;
-      services.xserver.displayManager.sddm.enable = true;
-      services.colord.enable = false;
-    };
+    kde =
+      { ... }:
+      {
+        services.paretosecurity.enable = true;
+        # Install KDE Plasma 5 Desktop Environment
+        services.xserver.enable = true;
+        services.xserver.desktopManager.plasma5.enable = true;
+        services.xserver.displayManager.sddm.enable = true;
+        services.colord.enable = false;
+      };
   };
 
   testScript = ''

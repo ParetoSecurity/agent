@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Test specific package: `go test github.com/ParetoSecurity/agent/checks/linux`
 - Test single test: `go test -run TestApplicationUpdates_Run ./checks/linux`
 - Coverage: `go test -coverprofile=coverage.txt ./...`
-- Lint: Uses pre-commit hooks with `alejandra` and `gofmt`
+- Lint: Uses pre-commit hooks with Go and Nix linters: `pre-commit run --all-files`
 - Run checks: `./paretosecurity check`
 - Run specific check: `./paretosecurity check --only <UUID>`
 

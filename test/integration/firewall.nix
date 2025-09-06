@@ -1,43 +1,52 @@
 let
   # A simple web server for testing connectivity
-  nginx = {pkgs, ...}: {
-    services.nginx = {
-      enable = true;
-      virtualHosts."localhost" = {
-        locations."/" = {
-          root = pkgs.writeTextDir "index.html" "<html><body><h1>Test Server</h1></body></html>";
+  nginx =
+    { pkgs, ... }:
+    {
+      services.nginx = {
+        enable = true;
+        virtualHosts."localhost" = {
+          locations."/" = {
+            root = pkgs.writeTextDir "index.html" "<html><body><h1>Test Server</h1></body></html>";
+          };
         };
       };
     };
-  };
-in {
+in
+{
   name = "Firewall";
   interactive.sshBackdoor.enable = true;
 
   nodes = {
-    wideopen = {pkgs, ...}: {
-      imports = [
-        (nginx {inherit pkgs;})
-      ];
-      services.paretosecurity.enable = true;
-      networking.firewall.enable = false;
-    };
+    wideopen =
+      { pkgs, ... }:
+      {
+        imports = [
+          (nginx { inherit pkgs; })
+        ];
+        services.paretosecurity.enable = true;
+        networking.firewall.enable = false;
+      };
 
-    iptables = {pkgs, ...}: {
-      imports = [
-        (nginx {inherit pkgs;})
-      ];
-      services.paretosecurity.enable = true;
-      networking.firewall.enable = true;
-    };
+    iptables =
+      { pkgs, ... }:
+      {
+        imports = [
+          (nginx { inherit pkgs; })
+        ];
+        services.paretosecurity.enable = true;
+        networking.firewall.enable = true;
+      };
 
-    nftables = {pkgs, ...}: {
-      imports = [
-        (nginx {inherit pkgs;})
-      ];
-      services.paretosecurity.enable = true;
-      networking.nftables.enable = true;
-    };
+    nftables =
+      { pkgs, ... }:
+      {
+        imports = [
+          (nginx { inherit pkgs; })
+        ];
+        services.paretosecurity.enable = true;
+        networking.nftables.enable = true;
+      };
   };
 
   testScript = ''

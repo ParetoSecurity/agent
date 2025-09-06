@@ -1,8 +1,7 @@
 let
-  common = import ./common.nix;
 
   # Create a user for testing
-  testUser = {}: {
+  testUser = _: {
     users.users.testuser = {
       isNormalUser = true;
       description = "Test User";
@@ -10,106 +9,123 @@ let
       uid = 1001;
     };
   };
-in {
+in
+{
   name = "Autologin";
   interactive.sshBackdoor.enable = true;
 
   nodes = {
     # No autologin configured - should pass
-    noautologin = {pkgs, ...}: {
-      imports = [
-        (testUser {})
-      ];
-      services.paretosecurity.enable = true;
-    };
+    noautologin =
+      { ... }:
+      {
+        imports = [
+          (testUser { })
+        ];
+        services.paretosecurity.enable = true;
+      };
 
     # Getty autologin configured - should fail
-    gettyautologin = {pkgs, ...}: {
-      imports = [
-        (testUser {})
-      ];
-      services.paretosecurity.enable = true;
-      services.getty.autologinUser = "root";
-    };
+    gettyautologin =
+      { ... }:
+      {
+        imports = [
+          (testUser { })
+        ];
+        services.paretosecurity.enable = true;
+        services.getty.autologinUser = "root";
+      };
 
     # Getty autologin with regular user - should fail
-    gettyuser = {pkgs, ...}: {
-      imports = [
-        (testUser {})
-      ];
-      services.paretosecurity.enable = true;
-      services.getty.autologinUser = "testuser";
-    };
+    gettyuser =
+      { ... }:
+      {
+        imports = [
+          (testUser { })
+        ];
+        services.paretosecurity.enable = true;
+        services.getty.autologinUser = "testuser";
+      };
 
     # Getty autologin once - should fail (creates marker file)
-    gettyonce = {pkgs, ...}: {
-      imports = [
-        (testUser {})
-      ];
-      services.paretosecurity.enable = true;
-      services.getty.autologinUser = "testuser";
-      services.getty.autologinOnce = true;
-    };
+    gettyonce =
+      { ... }:
+      {
+        imports = [
+          (testUser { })
+        ];
+        services.paretosecurity.enable = true;
+        services.getty.autologinUser = "testuser";
+        services.getty.autologinOnce = true;
+      };
 
     # Display manager automatic login - should fail
-    gdmautologin = {pkgs, ...}: {
-      imports = [
-        (testUser {})
-      ];
-      services.paretosecurity.enable = true;
-      services.xserver.enable = true;
-      services.displayManager.gdm.enable = true;
-      services.displayManager.autoLogin = {
-        enable = true;
-        user = "testuser";
+    gdmautologin =
+      { ... }:
+      {
+        imports = [
+          (testUser { })
+        ];
+        services.paretosecurity.enable = true;
+        services.xserver.enable = true;
+        services.displayManager.gdm.enable = true;
+        services.displayManager.autoLogin = {
+          enable = true;
+          user = "testuser";
+        };
       };
-    };
 
     # Display manager timed login with delay - should fail
-    gdmtimedlogin = {pkgs, ...}: {
-      imports = [
-        (testUser {})
-      ];
-      services.paretosecurity.enable = true;
-      services.xserver.enable = true;
-      services.displayManager.gdm.enable = true;
-      services.displayManager.gdm.autoLogin.delay = 30;
-      services.displayManager.autoLogin = {
-        enable = true;
-        user = "testuser";
+    gdmtimedlogin =
+      { ... }:
+      {
+        imports = [
+          (testUser { })
+        ];
+        services.paretosecurity.enable = true;
+        services.xserver.enable = true;
+        services.displayManager.gdm.enable = true;
+        services.displayManager.gdm.autoLogin.delay = 30;
+        services.displayManager.autoLogin = {
+          enable = true;
+          user = "testuser";
+        };
       };
-    };
 
     # Display manager with zero delay (immediate login) - should fail
-    gdmzerodelay = {pkgs, ...}: {
-      imports = [
-        (testUser {})
-      ];
-      services.paretosecurity.enable = true;
-      services.xserver.enable = true;
-      services.displayManager.gdm.enable = true;
-      services.displayManager.gdm.autoLogin.delay = 0;
-      services.displayManager.autoLogin = {
-        enable = true;
-        user = "testuser";
+    gdmzerodelay =
+      { ... }:
+      {
+        imports = [
+          (testUser { })
+        ];
+        services.paretosecurity.enable = true;
+        services.xserver.enable = true;
+        services.displayManager.gdm.enable = true;
+        services.displayManager.gdm.autoLogin.delay = 0;
+        services.displayManager.autoLogin = {
+          enable = true;
+          user = "testuser";
+        };
       };
-    };
 
     # SDDM autologin - should fail
-    sddmautologin = {pkgs, ...}: {
-      imports = [
-        (testUser {})
-      ];
-      services.paretosecurity.enable = true;
-      services.xserver.enable = true;
-      services.xserver.desktopManager.plasma5.enable = true;
-      services.displayManager.sddm.enable = true;
-      services.displayManager.defaultSession = "plasma";
-      services.displayManager.autoLogin = {
-        enable = true;
-        user = "testuser";
+    sddmautologin =
+      { ... }:
+      {
+        imports = [
+          (testUser { })
+        ];
+        services.paretosecurity.enable = true;
+        services.xserver.enable = true;
+        services.xserver.desktopManager.plasma5.enable = true;
+        services.displayManager.sddm.enable = true;
+        services.displayManager.defaultSession = "plasma";
+        services.displayManager.autoLogin = {
+          enable = true;
+          user = "testuser";
+        };
       };
-    };
   };
 
   testScript = ''

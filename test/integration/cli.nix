@@ -1,17 +1,20 @@
 let
   common = import ./common.nix;
   inherit (common) users;
-in {
+in
+{
   name = "CLI";
   interactive.sshBackdoor.enable = true;
 
   nodes = {
-    agent = {pkgs, ...}: {
-      imports = [
-        (users {})
-      ];
-      services.paretosecurity.enable = true;
-    };
+    agent =
+      { ... }:
+      {
+        imports = [
+          (users { })
+        ];
+        services.paretosecurity.enable = true;
+      };
   };
 
   testScript = ''
