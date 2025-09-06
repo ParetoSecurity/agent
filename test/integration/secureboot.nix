@@ -3,26 +3,33 @@
   interactive.sshBackdoor.enable = true;
 
   nodes = {
-    regularboot = {pkgs, ...}: {
-      services.paretosecurity.enable = true;
-    };
+    regularboot =
+      { ... }:
+      {
+        services.paretosecurity.enable = true;
+      };
 
-    secureboot = {pkgs, ...}: {
-      services.paretosecurity.enable = true;
-      # NixOS SecureBoot test VM configuration taken from
-      # https://github.com/NixOS/nixpkgs/blob/master/nixos/tests/systemd-boot.nix
+    secureboot =
+      { pkgs, ... }:
+      {
+        services.paretosecurity.enable = true;
+        # NixOS SecureBoot test VM configuration taken from
+        # https://github.com/NixOS/nixpkgs/blob/master/nixos/tests/systemd-boot.nix
 
-      virtualisation.useSecureBoot = true;
-      virtualisation.useBootLoader = true;
-      virtualisation.useEFIBoot = true;
-      boot.loader.systemd-boot.enable = true;
-      boot.loader.efi.canTouchEfiVariables = true;
-      environment.systemPackages = [pkgs.efibootmgr pkgs.sbctl];
-      system.switch.enable = true;
-    };
+        virtualisation.useSecureBoot = true;
+        virtualisation.useBootLoader = true;
+        virtualisation.useEFIBoot = true;
+        boot.loader.systemd-boot.enable = true;
+        boot.loader.efi.canTouchEfiVariables = true;
+        environment.systemPackages = [
+          pkgs.efibootmgr
+          pkgs.sbctl
+        ];
+        system.switch.enable = true;
+      };
   };
 
-  testScript = {nodes, ...}: ''
+  testScript = ''
     # Test 1: check fails with SecureBoot disabled
     out = regularboot.fail("paretosecurity check --only c96524f2-850b-4bb9-abc7-517051b6c14e")
     expected = (

@@ -1,13 +1,14 @@
 let
   common = import ../common.nix;
   inherit (common) users displayManager;
-in {
+in
+{
   name = "XFCE";
   interactive.sshBackdoor.enable = true;
 
   # Cloud mockup server
   nodes.cloud = {
-    networking.firewall.allowedTCPPorts = [80];
+    networking.firewall.allowedTCPPorts = [ 80 ];
 
     services.nginx = {
       enable = true;
@@ -20,30 +21,32 @@ in {
     };
   };
 
-  nodes.xfce = {pkgs, ...}: {
-    imports = [
-      (users {})
-      (displayManager {inherit pkgs;})
-    ];
+  nodes.xfce =
+    { pkgs, ... }:
+    {
+      imports = [
+        (users { })
+        (displayManager { inherit pkgs; })
+      ];
 
-    # Enable paretosecurity service with cloud URL patched to local test server
-    services.paretosecurity = {
-      enable = true;
-      package = pkgs.paretosecurity.overrideAttrs (oldAttrs: {
-        postPatch =
-          oldAttrs.postPatch or ""
-          + ''
-            substituteInPlace team/report.go \
-              --replace-warn 'const reportURL = "https://cloud.paretosecurity.com"' \
-                             'const reportURL = "http://cloud"'
-          '';
-      });
+      # Enable paretosecurity service with cloud URL patched to local test server
+      services.paretosecurity = {
+        enable = true;
+        package = pkgs.paretosecurity.overrideAttrs (oldAttrs: {
+          postPatch =
+            oldAttrs.postPatch or ""
+            + ''
+              substituteInPlace team/report.go \
+                --replace-warn 'const reportURL = "https://cloud.paretosecurity.com"' \
+                               'const reportURL = "http://cloud"'
+            '';
+        });
+      };
+
+      services.xserver.enable = true;
+      services.xserver.displayManager.lightdm.enable = true;
+      services.xserver.desktopManager.xfce.enable = true;
     };
-
-    services.xserver.enable = true;
-    services.xserver.displayManager.lightdm.enable = true;
-    services.xserver.desktopManager.xfce.enable = true;
-  };
 
   enableOCR = true;
 

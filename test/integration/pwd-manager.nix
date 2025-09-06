@@ -3,17 +3,21 @@
   interactive.sshBackdoor.enable = true;
 
   nodes = {
-    withPwdManager = {pkgs, ...}: {
-      services.paretosecurity.enable = true;
-      environment.systemPackages = with pkgs; [
-        bitwarden
-      ];
-    };
+    withPwdManager =
+      { pkgs, ... }:
+      {
+        services.paretosecurity.enable = true;
+        environment.systemPackages = with pkgs; [
+          bitwarden
+        ];
+      };
 
-    noPwdManager = {pkgs, ...}: {
-      services.paretosecurity.enable = true;
-      # No password manager installed
-    };
+    noPwdManager =
+      { ... }:
+      {
+        services.paretosecurity.enable = true;
+        # No password manager installed
+      };
   };
 
   testScript = ''
