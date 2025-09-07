@@ -277,24 +277,23 @@ func (m model) generateASCIIHeader(titleStyle lipgloss.Style, contentWidth int) 
 	// Use different logos based on terminal width
 	var asciiHeader string
 
-	if contentWidth >= 80 {
+	if contentWidth >= 120 {
 		// Full wide logo for wide terminals
 		asciiHeader = `
 ██████╗  █████╗ ██████╗ ███████╗████████╗ ██████╗     ███████╗███████╗ ██████╗██╗   ██╗██████╗ ██╗████████╗██╗   ██╗
 ██╔══██╗██╔══██╗██╔══██╗██╔════╝╚══██╔══╝██╔═══██╗    ██╔════╝██╔════╝██╔════╝██║   ██║██╔══██╗██║╚══██╔══╝╚██╗ ██╔╝
 ██████╔╝███████║██████╔╝█████╗     ██║   ██║   ██║    ███████╗█████╗  ██║     ██║   ██║██████╔╝██║   ██║    ╚████╔╝ 
 ██╔═══╝ ██╔══██║██╔══██╗██╔══╝     ██║   ██║   ██║    ╚════██║██╔══╝  ██║     ██║   ██║██╔══██╗██║   ██║     ╚██╔╝  
-██║     ██║  ██║██║  ██║███████╗   ██║   ╚██████╔╝    ███████║███████╗╚██████╗╚██████╔╝██║  ██║██║   ██║      ██║   
-╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝   ╚═╝    ╚═════╝     ╚══════╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝   ╚═╝      ╚═╝`
+██║     ██║  ██║██║  ██║███████╗   ██║   ╚██████╔╝    ███████║███████╗╚██████╗╚██████╔╝██║  ██║██║   ██║      ██║`
 	} else {
 		// Braille pattern logo for narrow terminals
 		asciiHeader = `
-⣏⡱ ⢀⣀ ⡀⣀ ⢀⡀ ⣰⡀ ⢀⡀   ⢎⡑ ⢀⡀ ⢀⣀ ⡀⢀ ⡀⣀ ⠄ ⣰⡀ ⡀⢀
+ ⣏⡱ ⢀⣀ ⡀⣀ ⢀⡀ ⣰⡀ ⢀⡀   ⢎⡑ ⢀⡀ ⢀⣀ ⡀⢀ ⡀⣀ ⠄ ⣰⡀ ⡀⢀
  ⠇  ⠣⠼ ⠏  ⠣⠭ ⠘⠤ ⠣⠜   ⠢⠜ ⠣⠭ ⠣⠤ ⠣⠼ ⠏  ⠇ ⠘⠤ ⣑⡺`
 	}
 
 	var headerBuilder strings.Builder
-	headerLines := strings.Split(strings.TrimSpace(asciiHeader), "\n")
+	headerLines := strings.Split(asciiHeader, "\n")
 
 	for _, line := range headerLines {
 		headerBuilder.WriteString(titleStyle.Render(line))
