@@ -3,9 +3,11 @@
   interactive.sshBackdoor.enable = true;
 
   nodes = {
-    vanilla = {pkgs, ...}: {
-      services.paretosecurity.enable = true;
-    };
+    vanilla =
+      { ... }:
+      {
+        services.paretosecurity.enable = true;
+      };
   };
 
   testScript = ''
