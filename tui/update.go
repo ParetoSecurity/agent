@@ -96,6 +96,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.updateClaimCounts(msg.claimIdx)
 			m.rebuildDisplayItems()
 		}
+		// Set running to false after single check completes
+		m.running = false
+		m.lastUpdate = time.Now()
 
 	case batchRunMsg:
 		m.updateAllResults(msg.results)

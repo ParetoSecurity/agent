@@ -1,17 +1,13 @@
 package tui
 
 import (
-	"bytes"
 	"fmt"
 	"net/url"
-	"os"
-	"os/exec"
 	"runtime"
-	"strings"
-	"syscall"
 	"time"
 
 	"github.com/ParetoSecurity/agent/check"
+	"github.com/ParetoSecurity/agent/runner"
 	"github.com/ParetoSecurity/agent/shared"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pkg/browser"
@@ -47,7 +43,7 @@ func openBrowserForCheck(check check.Check) tea.Cmd {
 
 // runSingleCheck creates a command to run a single security check
 func runSingleCheck(claimIdx, checkIdx int, checkResult checkResult) tea.Cmd {
-	return tea.Cmd(func() tea.Msg {
+	return func() tea.Msg {
 		result := checkResult
 		result.LastRun = time.Now()
 
@@ -63,107 +59,70 @@ func runSingleCheck(claimIdx, checkIdx int, checkResult checkResult) tea.Cmd {
 			return checkCompleteMsg{claimIdx: claimIdx, checkIdx: checkIdx, result: result}
 		}
 
-		// Run check in completely isolated subprocess to avoid terminal interference
-		result = runCheckInSubprocess(result)
+		// Run check directly - this should be fast enough for most checks
+		result = runCheckDirectly(result)
 		return checkCompleteMsg{claimIdx: claimIdx, checkIdx: checkIdx, result: result}
-	})
+	}
 }
 
-// runCheckInSubprocess runs a single check in an isolated subprocess
-func runCheckInSubprocess(result checkResult) checkResult {
-	// Get the current executable path
-	execPath, err := os.Executable()
-	if err != nil {
-		result.Status = "Error"
-		result.HasError = true
-		result.Details = "Failed to get executable path: " + err.Error()
-		return result
-	}
+// runCheckDirectly runs a single check directly
+func runCheckDirectly(result checkResult) checkResult {
+	var hasError bool
 
-	// Run the check command in a subprocess with all output redirected
-	cmd := exec.Command(execPath, "check", "--only", result.Check.UUID())
-
-	// Create completely isolated environment
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	cmd.Stdin = nil
-
-	// Set process group to isolate from terminal
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
-		Pgid:    0,
-	}
-
-	// Run with timeout
-	err = cmd.Run()
-
-	if err != nil {
-		result.Status = "Error"
-		result.HasError = true
-		result.Details = "Check failed: " + err.Error()
-		if stderr.Len() > 0 {
-			result.Details += " | " + strings.TrimSpace(stderr.String())
+	if result.Check.RequiresRoot() {
+		// Run as root using the runner
+		status, err := runner.RunCheckViaRoot(result.Check.UUID())
+		if err != nil {
+			result.Status = "Error"
+			result.HasError = true
+			result.Details = "Root check failed: " + err.Error()
+			return result
 		}
-		return result
+		result.Passed = status.Passed
+		result.HasError = false
+		result.Details = status.Details
+		if result.Passed {
+			result.Status = "Pass"
+		} else {
+			result.Status = "Fail"
+		}
+	} else {
+		// Run check directly
+		if err := result.Check.Run(); err != nil {
+			hasError = true
+			result.Status = "Error"
+			result.HasError = true
+			result.Details = "Check failed: " + err.Error()
+			return result
+		}
+
+		result.Passed = result.Check.Passed()
+		result.HasError = hasError
+		if result.Passed {
+			result.Status = "Pass"
+			result.Details = result.Check.PassedMessage()
+		} else {
+			result.Status = "Fail"
+			result.Details = result.Check.FailedMessage()
+		}
 	}
 
-	// Check exit code to determine pass/fail
-	if cmd.ProcessState.Success() {
-		result.Status = "Pass"
-		result.Passed = true
-		result.HasError = false
-		result.Details = result.Check.PassedMessage()
-	} else {
-		result.Status = "Fail"
-		result.Passed = false
-		result.HasError = false
-		result.Details = result.Check.FailedMessage()
-	}
+	// Update the last state for consistency with runner behavior
+	shared.UpdateLastState(shared.LastState{
+		UUID:     result.Check.UUID(),
+		Name:     result.Check.Name(),
+		Passed:   result.Passed,
+		HasError: result.HasError,
+		Details:  result.Details,
+	})
 
 	return result
 }
 
 // runAllChecks creates a command to run all security checks in batch
 func runAllChecks(checks []checkResult) tea.Cmd {
-	return tea.Cmd(func() tea.Msg {
+	return func() tea.Msg {
 		var results []checkResult
-
-		// Get the current executable path
-		execPath, err := os.Executable()
-		if err != nil {
-			// If we can't get executable path, run checks individually
-			for _, check := range checks {
-				result := check
-				result.LastRun = time.Now()
-				result.Status = "Error"
-				result.HasError = true
-				result.Details = "Failed to get executable path"
-				results = append(results, result)
-			}
-			return batchRunMsg{results: results}
-		}
-
-		// Run all checks in a single subprocess to be completely isolated
-		cmd := exec.Command(execPath, "check")
-
-		// Create completely isolated environment
-		var stdout, stderr bytes.Buffer
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
-		cmd.Stdin = nil
-
-		// Set process group to isolate from terminal
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			Setpgid: true,
-			Pgid:    0,
-		}
-
-		// Run all checks
-		err = cmd.Run()
-
-		// Update all results based on the final state
-		currentStates := shared.GetLastStates()
 
 		for _, check := range checks {
 			result := check
@@ -178,33 +137,20 @@ func runAllChecks(checks []checkResult) tea.Cmd {
 				} else {
 					result.Details = result.Check.Status()
 				}
-			} else if state, exists := currentStates[result.Check.UUID()]; exists {
-				// Use the state from the check run
-				if state.HasError {
-					result.Status = "Error"
-					result.HasError = true
-					result.Details = state.Details
-				} else if state.Passed {
-					result.Status = "Pass"
-					result.Passed = true
-					result.HasError = false
-					result.Details = state.Details
-				} else {
-					result.Status = "Fail"
-					result.Passed = false
-					result.HasError = false
-					result.Details = state.Details
-				}
 			} else {
-				// Fallback if no state available
-				result.Status = "Error"
-				result.HasError = true
-				result.Details = "No result available"
+				// Run each check directly
+				result = runCheckDirectly(result)
 			}
 
 			results = append(results, result)
 		}
 
+		// Commit all state changes at once for consistency
+		if err := shared.CommitLastState(); err != nil {
+			// If commit fails, don't fail the whole operation
+			// Just continue with the results we have
+		}
+
 		return batchRunMsg{results: results}
-	})
+	}
 }
