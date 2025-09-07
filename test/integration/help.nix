@@ -29,6 +29,7 @@
       schema      Output schema for all checks
       status      Print the status of the checks
       trayicon    Display the status of the checks in the system tray
+      tui         Launch interactive TUI for running checks
       unlink      Unlink this device from the team
 
     Flags:
