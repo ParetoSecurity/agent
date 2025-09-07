@@ -281,7 +281,6 @@ func (m model) generateASCIIHeader(titleStyle lipgloss.Style, contentWidth int) 
 ██████╔╝███████║██████╔╝█████╗     ██║   ██║   ██║    ███████╗█████╗  ██║     ██║   ██║██████╔╝██║   ██║    ╚████╔╝ 
 ██╔═══╝ ██╔══██║██╔══██╗██╔══╝     ██║   ██║   ██║    ╚════██║██╔══╝  ██║     ██║   ██║██╔══██╗██║   ██║     ╚██╔╝  
 ██║     ██║  ██║██║  ██║███████╗   ██║   ╚██████╔╝    ███████║███████╗╚██████╗╚██████╔╝██║  ██║██║   ██║      ██║   
-╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝   ╚═╝    ╚═════╝     ╚══════╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝   ╚═╝      ╚═╝   
                                                                                                                     `
 	} else {
 		// Braille pattern logo for narrow terminals
@@ -290,5 +289,5 @@ func (m model) generateASCIIHeader(titleStyle lipgloss.Style, contentWidth int) 
 ░▀░░░▀░▀░▀░▀░▀▀▀░░▀░░▀▀▀░░░▀▀▀░▀▀▀░▀▀▀░▀▀▀░▀░▀░▀▀▀░░▀░░░▀░`
 	}
 
-	return "\n" + titleStyle.Render(asciiHeader) + "\n"
+	return titleStyle.Render(asciiHeader) + "\n"
 }
