@@ -8,6 +8,37 @@ import (
 )
 
 // View implements the tea.Model interface and renders the TUI
+// getStatusStyles returns the status color styles
+func getStatusStyles() (passStyle, failStyle, errorStyle, disabledStyle lipgloss.Style) {
+	passStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))             // Green
+	failStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))             // Red
+	errorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true) // Bright Red and bold
+	disabledStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))         // Dark Gray
+	return
+}
+
+// styleStatus applies consistent styling to status text
+func styleStatus(statusText string, isRunning bool) string {
+	passStyle, failStyle, errorStyle, disabledStyle := getStatusStyles()
+	runningStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("4")) // Blue
+
+	switch {
+	case strings.Contains(statusText, "PASS"):
+		return passStyle.Render(statusText)
+	case strings.Contains(statusText, "FAIL"):
+		return failStyle.Render(statusText)
+	case strings.Contains(statusText, "ERROR"):
+		return errorStyle.Render(statusText)
+	case strings.Contains(statusText, "DISABLED"):
+		return disabledStyle.Render(statusText)
+	default:
+		if isRunning {
+			return runningStyle.Render("⟳ RUNNING")
+		}
+		return statusText
+	}
+}
+
 func (m model) View() string {
 	if m.viewport.width == 0 {
 		return "Loading..."
@@ -22,13 +53,6 @@ func (m model) View() string {
 		Width(contentWidth).
 		Align(lipgloss.Center)
 
-	// Status colors using terminal color palette
-	passStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))             // Green
-	failStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("1"))             // Red
-	errorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true) // Bright Red and bold
-	disabledStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))         // Dark Gray
-	runningStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("4"))          // Blue
-
 	var s strings.Builder
 
 	// Generate ASCII header
@@ -37,28 +61,14 @@ func (m model) View() string {
 	// Checks table with border
 	var tableBuilder strings.Builder
 
-	// Display all items if they fit, otherwise paginate
-	maxVisibleHeight := m.viewport.height - 6 // Account for compact layout
-	startIdx := 0
+	// Show all items or truncate if too many
+	maxItems := m.viewport.height - 8 // Leave space for header and footer
 	endIdx := len(m.displayItems)
-
-	// Only paginate if we have more items than available space
-	if maxVisibleHeight > 0 && len(m.displayItems) > maxVisibleHeight {
-		startIdx = m.selectedIdx - maxVisibleHeight/2
-		if startIdx < 0 {
-			startIdx = 0
-		}
-		endIdx = startIdx + maxVisibleHeight
-		if endIdx > len(m.displayItems) {
-			endIdx = len(m.displayItems)
-			startIdx = endIdx - maxVisibleHeight
-			if startIdx < 0 {
-				startIdx = 0
-			}
-		}
+	if maxItems > 0 && endIdx > maxItems {
+		endIdx = maxItems
 	}
 
-	for i := startIdx; i < endIdx; i++ {
+	for i := 0; i < endIdx; i++ {
 		item := m.displayItems[i]
 
 		// Selection indicator
@@ -78,22 +88,7 @@ func (m model) View() string {
 		if item.IsHeader {
 			statusText = item.StatusText
 		} else {
-			switch {
-			case strings.Contains(item.StatusText, "PASS"):
-				statusText = passStyle.Render(item.StatusText)
-			case strings.Contains(item.StatusText, "FAIL"):
-				statusText = failStyle.Render(item.StatusText)
-			case strings.Contains(item.StatusText, "ERROR"):
-				statusText = errorStyle.Render(item.StatusText)
-			case strings.Contains(item.StatusText, "DISABLED"):
-				statusText = disabledStyle.Render(item.StatusText)
-			default:
-				if m.running {
-					statusText = runningStyle.Render("⟳ RUNNING")
-				} else {
-					statusText = item.StatusText
-				}
-			}
+			statusText = styleStatus(item.StatusText, m.running)
 		}
 
 		var line string
@@ -247,6 +242,7 @@ func (m model) View() string {
 		totalChecks += len(claim.Checks)
 	}
 
+	passStyle, failStyle, errorStyle, disabledStyle := getStatusStyles()
 	stats := fmt.Sprintf("Total: %d | %s | %s | %s | %s",
 		totalChecks,
 		passStyle.Render(fmt.Sprintf("Pass: %d", passed)),
@@ -258,6 +254,7 @@ func (m model) View() string {
 	if !m.lastUpdate.IsZero() {
 		stats += fmt.Sprintf(" | Last Updated: %s", m.lastUpdate.Format("15:04:05"))
 	} else if passed+failed+errors > 0 {
+		_, _, _, disabledStyle := getStatusStyles()
 		stats += " | " + disabledStyle.Render("(Previous Results)")
 	}
 
@@ -279,26 +276,19 @@ func (m model) generateASCIIHeader(titleStyle lipgloss.Style, contentWidth int) 
 
 	if contentWidth >= 120 {
 		// Full wide logo for wide terminals
-		asciiHeader = `
-██████╗  █████╗ ██████╗ ███████╗████████╗ ██████╗     ███████╗███████╗ ██████╗██╗   ██╗██████╗ ██╗████████╗██╗   ██╗
+		asciiHeader = `██████╗  █████╗ ██████╗ ███████╗████████╗ ██████╗     ███████╗███████╗ ██████╗██╗   ██╗██████╗ ██╗████████╗██╗   ██╗
 ██╔══██╗██╔══██╗██╔══██╗██╔════╝╚══██╔══╝██╔═══██╗    ██╔════╝██╔════╝██╔════╝██║   ██║██╔══██╗██║╚══██╔══╝╚██╗ ██╔╝
 ██████╔╝███████║██████╔╝█████╗     ██║   ██║   ██║    ███████╗█████╗  ██║     ██║   ██║██████╔╝██║   ██║    ╚████╔╝ 
 ██╔═══╝ ██╔══██║██╔══██╗██╔══╝     ██║   ██║   ██║    ╚════██║██╔══╝  ██║     ██║   ██║██╔══██╗██║   ██║     ╚██╔╝  
-██║     ██║  ██║██║  ██║███████╗   ██║   ╚██████╔╝    ███████║███████╗╚██████╗╚██████╔╝██║  ██║██║   ██║      ██║`
+██║     ██║  ██║██║  ██║███████╗   ██║   ╚██████╔╝    ███████║███████╗╚██████╗╚██████╔╝██║  ██║██║   ██║      ██║   
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝   ╚═╝    ╚═════╝     ╚══════╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝   ╚═╝      ╚═╝   
+                                                                                                                    `
 	} else {
 		// Braille pattern logo for narrow terminals
-		asciiHeader = `
- ⣏⡱ ⢀⣀ ⡀⣀ ⢀⡀ ⣰⡀ ⢀⡀   ⢎⡑ ⢀⡀ ⢀⣀ ⡀⢀ ⡀⣀ ⠄ ⣰⡀ ⡀⢀
- ⠇  ⠣⠼ ⠏  ⠣⠭ ⠘⠤ ⠣⠜   ⠢⠜ ⠣⠭ ⠣⠤ ⠣⠼ ⠏  ⠇ ⠘⠤ ⣑⡺`
+		asciiHeader = `░█▀█░█▀█░█▀▄░█▀▀░▀█▀░█▀█░░░█▀▀░█▀▀░█▀▀░█░█░█▀▄░▀█▀░▀█▀░█░█
+░█▀▀░█▀█░█▀▄░█▀▀░░█░░█░█░░░▀▀█░█▀▀░█░░░█░█░█▀▄░░█░░░█░░░█░
+░▀░░░▀░▀░▀░▀░▀▀▀░░▀░░▀▀▀░░░▀▀▀░▀▀▀░▀▀▀░▀▀▀░▀░▀░▀▀▀░░▀░░░▀░`
 	}
 
-	var headerBuilder strings.Builder
-	headerLines := strings.Split(asciiHeader, "\n")
-
-	for _, line := range headerLines {
-		headerBuilder.WriteString(titleStyle.Render(line))
-		headerBuilder.WriteString("\n")
-	}
-
-	return headerBuilder.String()
+	return "\n" + titleStyle.Render(asciiHeader) + "\n"
 }

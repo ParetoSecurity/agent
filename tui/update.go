@@ -93,7 +93,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case checkCompleteMsg:
 		if msg.claimIdx < len(m.claims) && msg.checkIdx < len(m.claims[msg.claimIdx].Checks) {
 			m.claims[msg.claimIdx].Checks[msg.checkIdx] = msg.result
-			m.updateClaimCounts(msg.claimIdx)
+			m.updateModelState(nil, msg.claimIdx)
 			m.rebuildDisplayItems()
 		}
 		// Set running to false after single check completes
@@ -101,12 +101,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.lastUpdate = time.Now()
 
 	case batchRunMsg:
-		m.updateAllResults(msg.results)
-		m.running = false
-		m.lastUpdate = time.Now()
-		m.rebuildDisplayItems()
-
-	case runCompleteMsg:
+		m.updateModelState(msg.results, -1)
 		m.running = false
 		m.lastUpdate = time.Now()
 		m.rebuildDisplayItems()

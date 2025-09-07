@@ -60,8 +60,6 @@ type checkCompleteMsg struct {
 	result   checkResult
 }
 
-type runCompleteMsg struct{}
-
 type batchRunMsg struct {
 	results []checkResult
 }

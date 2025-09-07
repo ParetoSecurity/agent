@@ -168,56 +168,63 @@ func (m *model) rebuildDisplayItems() {
 	}
 }
 
-// updateClaimCounts recalculates the status counts for a specific claim
-func (m *model) updateClaimCounts(claimIdx int) {
-	if claimIdx >= len(m.claims) {
-		return
-	}
-
-	claim := &m.claims[claimIdx]
-	claim.PassCount = 0
-	claim.FailCount = 0
-	claim.ErrorCount = 0
-	claim.DisabledCount = 0
-	claim.NotRunCount = 0
-
-	for _, check := range claim.Checks {
-		switch check.Status {
-		case "Pass":
-			claim.PassCount++
-		case "Fail":
-			claim.FailCount++
-		case "Error":
-			claim.ErrorCount++
-		case "Disabled":
-			claim.DisabledCount++
-		default:
-			claim.NotRunCount++
+// updateModelState updates check results and recalculates all claim counts
+func (m *model) updateModelState(results []checkResult, claimIdx int) {
+	if len(results) > 0 {
+		// Batch update - update all results
+		resultMap := make(map[string][]checkResult)
+		for _, result := range results {
+			resultMap[result.Claim] = append(resultMap[result.Claim], result)
 		}
-	}
-}
 
-// updateAllResults updates all model results from a batch of check results
-func (m *model) updateAllResults(results []checkResult) {
-	// Group results by claim
-	resultMap := make(map[string][]checkResult)
-	for _, result := range results {
-		resultMap[result.Claim] = append(resultMap[result.Claim], result)
-	}
-
-	// Update claims with new results
-	for claimIdx, claim := range m.claims {
-		if claimResults, exists := resultMap[claim.Title]; exists {
-			// Match results to existing checks by UUID
-			for checkIdx, check := range claim.Checks {
-				for _, result := range claimResults {
-					if check.Check.UUID() == result.Check.UUID() {
-						m.claims[claimIdx].Checks[checkIdx] = result
-						break
+		for claimIdx, claim := range m.claims {
+			if claimResults, exists := resultMap[claim.Title]; exists {
+				for checkIdx, check := range claim.Checks {
+					for _, result := range claimResults {
+						if check.Check.UUID() == result.Check.UUID() {
+							m.claims[claimIdx].Checks[checkIdx] = result
+							break
+						}
 					}
 				}
 			}
-			m.updateClaimCounts(claimIdx)
+		}
+	}
+
+	// Recalculate counts for affected claims
+	claimsToUpdate := []int{}
+	if claimIdx >= 0 {
+		claimsToUpdate = append(claimsToUpdate, claimIdx)
+	} else {
+		// Update all claims
+		for i := range m.claims {
+			claimsToUpdate = append(claimsToUpdate, i)
+		}
+	}
+
+	for _, idx := range claimsToUpdate {
+		if idx < len(m.claims) {
+			claim := &m.claims[idx]
+			claim.PassCount = 0
+			claim.FailCount = 0
+			claim.ErrorCount = 0
+			claim.DisabledCount = 0
+			claim.NotRunCount = 0
+
+			for _, check := range claim.Checks {
+				switch check.Status {
+				case "Pass":
+					claim.PassCount++
+				case "Fail":
+					claim.FailCount++
+				case "Error":
+					claim.ErrorCount++
+				case "Disabled":
+					claim.DisabledCount++
+				default:
+					claim.NotRunCount++
+				}
+			}
 		}
 	}
 }
