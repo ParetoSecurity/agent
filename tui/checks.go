@@ -3,8 +3,10 @@ package tui
 import (
 	"bytes"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -12,25 +14,34 @@ import (
 	"github.com/ParetoSecurity/agent/check"
 	"github.com/ParetoSecurity/agent/shared"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/pkg/browser"
 )
 
 // openBrowserForCheck opens a browser to the help page for a specific check
 func openBrowserForCheck(check check.Check) tea.Cmd {
 	return tea.Cmd(func() tea.Msg {
-		// Try different browser commands in order of preference
-		browsers := []string{"xdg-open", "open", "start", "firefox", "chrome", "chromium"}
-
-		// Generate help URL based on check UUID
-		// Format: https://paretosecurity.com/help/checks/{uuid}
-		url := fmt.Sprintf("https://paretosecurity.com/help/checks/%s", check.UUID())
-
-		for _, browser := range browsers {
-			cmd := exec.Command(browser, url)
-			if err := cmd.Start(); err == nil {
-				return nil // Successfully opened browser
-			}
+		// Determine the correct URL path based on OS
+		arch := "check-linux"
+		if runtime.GOOS == "windows" {
+			arch = "check-windows"
 		}
-		return nil // Failed to open browser, but don't crash the TUI
+
+		// Get check status for error handling
+		checkStatus, found, _ := shared.GetLastState(check.UUID())
+
+		var targetURL string
+		if found && checkStatus.HasError {
+			targetURL = "https://paretosecurity.com/docs/linux/check-error"
+		} else {
+			targetURL = fmt.Sprintf("https://paretosecurity.com/%s/%s?details=%s", arch, check.UUID(), url.QueryEscape(check.Status()))
+		}
+
+		// Use the browsers package to open the URL
+		if err := browser.OpenURL(targetURL); err != nil {
+			// Log error but don't crash the TUI
+			return nil
+		}
+		return nil
 	})
 }
 
