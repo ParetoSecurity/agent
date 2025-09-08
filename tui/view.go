@@ -39,7 +39,7 @@ func styleStatus(statusText string, isRunning bool) string {
 	}
 }
 
-func (m model) View() string {
+func (m *model) View() string {
 	if m.viewport.width == 0 {
 		return "Loading..."
 	}
@@ -57,6 +57,11 @@ func (m model) View() string {
 
 	// Generate ASCII header
 	s.WriteString(m.generateASCIIHeader(titleStyle, contentWidth))
+
+	// If showing logs, render logs view instead of checks
+	if m.showLogs {
+		return m.renderLogsView(&s, contentWidth)
+	}
 
 	// Checks table with border
 	var tableBuilder strings.Builder
@@ -149,7 +154,7 @@ func (m model) View() string {
 	if m.running {
 		helpText = "Running checks..."
 	} else {
-		helpText = "r=run all • space=run selected • b=help • q=quit"
+		helpText = "r=run all • space=run selected • b=help • l=logs • q=quit"
 	}
 
 	// Use lipgloss to create a proper bordered style with custom bottom border
@@ -269,8 +274,149 @@ func (m model) View() string {
 	return s.String()
 }
 
+// renderLogsView renders the logs view
+func (m *model) renderLogsView(s *strings.Builder, contentWidth int) string {
+	// Create logs content
+	var logsBuilder strings.Builder
+
+	// Calculate available height for logs (accounting for header, borders, help)
+	viewportHeight := m.viewport.height - 12 // Leave space for header, borders, help, and scroll indicator
+	if viewportHeight < 5 {
+		viewportHeight = 5
+	}
+
+	totalLogs := len(m.logBuffer)
+
+	if totalLogs == 0 {
+		logsBuilder.WriteString("No logs available. Run checks to see log output.\n")
+		logsBuilder.WriteString("\nPress 'r' to run all checks and generate logs.")
+	} else {
+		// Calculate scroll boundaries
+		maxScroll := totalLogs - viewportHeight
+		if maxScroll < 0 {
+			maxScroll = 0
+		}
+
+		// Ensure scroll position is within bounds
+		if m.logScrollPos < 0 {
+			m.logScrollPos = 0
+		}
+		if m.logScrollPos > maxScroll {
+			m.logScrollPos = maxScroll
+		}
+
+		// Calculate visible range
+		startIdx := m.logScrollPos
+		endIdx := startIdx + viewportHeight
+		if endIdx > totalLogs {
+			endIdx = totalLogs
+		}
+
+		// Build visible logs
+		for i := startIdx; i < endIdx; i++ {
+			logsBuilder.WriteString(m.logBuffer[i])
+			if i < endIdx-1 {
+				logsBuilder.WriteString("\n")
+			}
+		}
+
+		// Add scroll indicator
+		scrollInfo := fmt.Sprintf("\n\n[Lines %d-%d of %d]", startIdx+1, endIdx, totalLogs)
+		if totalLogs > viewportHeight {
+			scrollPercent := 0
+			if maxScroll > 0 {
+				scrollPercent = (m.logScrollPos * 100) / maxScroll
+			}
+			scrollInfo += fmt.Sprintf(" [%d%%]", scrollPercent)
+		}
+		logsBuilder.WriteString(scrollInfo)
+	}
+
+	// Create bordered logs view
+	borderStyle := lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("4")).
+		Padding(0, 1).
+		Width(contentWidth - 2)
+
+	// Apply border to logs content
+	borderedLogs := borderStyle.Render(logsBuilder.String())
+
+	// Replace bottom border with help text
+	lines := strings.Split(borderedLogs, "\n")
+	if len(lines) > 0 {
+		helpText := "↑↓=scroll • PgUp/PgDn=page • l=close • q=quit"
+
+		// Calculate the exact space needed
+		lastLineIdx := len(lines) - 1
+		originalBottomBorder := lines[lastLineIdx]
+		borderWidth := lipgloss.Width(originalBottomBorder)
+
+		helpTextLength := lipgloss.Width(helpText)
+		cornersAndSpaces := 6 // ╰ + ╯ + spaces around help text
+		minDashes := 2
+
+		totalNeeded := cornersAndSpaces + helpTextLength + minDashes
+
+		if totalNeeded <= borderWidth {
+			remainingDashes := borderWidth - cornersAndSpaces - helpTextLength
+			leftDashes := remainingDashes / 2
+			rightDashes := remainingDashes - leftDashes
+
+			if leftDashes < 1 {
+				leftDashes = 1
+				rightDashes = remainingDashes - leftDashes
+			}
+			if rightDashes < 1 {
+				rightDashes = 1
+				leftDashes = remainingDashes - rightDashes
+			}
+
+			// Style help text
+			styledHelpText := lipgloss.NewStyle().Foreground(lipgloss.Color("3")).Bold(true).Render(helpText)
+
+			// Create border parts
+			borderStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("4"))
+			leftPart := borderStyle.Render("╰" + strings.Repeat("─", leftDashes) + " ")
+			rightPart := borderStyle.Render(" " + strings.Repeat("─", rightDashes) + "╯")
+
+			newBottomBorder := leftPart + styledHelpText + rightPart
+
+			// Adjust width if needed
+			actualWidth := lipgloss.Width(newBottomBorder)
+			if actualWidth != borderWidth {
+				rightDashes = rightDashes + (borderWidth - actualWidth)
+				if rightDashes >= 0 {
+					rightPart = borderStyle.Render(" " + strings.Repeat("─", rightDashes) + "╯")
+					newBottomBorder = leftPart + styledHelpText + rightPart
+				}
+			}
+
+			lines[lastLineIdx] = newBottomBorder
+		}
+
+		borderedLogs = strings.Join(lines, "\n")
+	}
+
+	// Add title
+	logsTitle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("6")).
+		Width(contentWidth).
+		Align(lipgloss.Center).
+		Render("━━━ Log Output ━━━")
+
+	s.WriteString(logsTitle)
+	s.WriteString("\n\n")
+	s.WriteString(borderedLogs)
+
+	// Stats are now included in the scroll indicator above, so we can remove this section
+
+	return s.String()
+}
+
 // generateASCIIHeader generates the ASCII art header based on terminal width
-func (m model) generateASCIIHeader(titleStyle lipgloss.Style, contentWidth int) string {
+func (m *model) generateASCIIHeader(titleStyle lipgloss.Style, contentWidth int) string {
 	// Use different logos based on terminal width
 	var asciiHeader string
 

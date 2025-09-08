@@ -47,6 +47,10 @@ type model struct {
 	selectedIdx  int
 	running      bool
 	lastUpdate   time.Time
+	showLogs     bool
+	logBuffer    []string
+	logWriter    *logWriter
+	logScrollPos int // Current scroll position in logs
 	viewport     struct {
 		width  int
 		height int

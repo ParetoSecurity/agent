@@ -8,12 +8,13 @@ import (
 
 	"github.com/ParetoSecurity/agent/claims"
 	"github.com/ParetoSecurity/agent/shared"
+	"github.com/caarlos0/log"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 // initialModel creates and returns the initial TUI model
-func initialModel() model {
+func initialModel() *model {
 	// Load previous state from disk
 	stateMap := shared.GetLastStates()
 
@@ -80,9 +81,10 @@ func initialModel() model {
 		return claimGroups[i].Title < claimGroups[j].Title
 	})
 
-	model := model{
+	model := &model{
 		claims:      claimGroups,
 		selectedIdx: 0,
+		logBuffer:   make([]string, 0, 1000), // Pre-allocate log buffer
 	}
 
 	model.rebuildDisplayItems()
@@ -230,7 +232,10 @@ func (m *model) updateModelState(results []checkResult, claimIdx int) {
 }
 
 // Init implements the tea.Model interface
-func (m model) Init() tea.Cmd {
+func (m *model) Init() tea.Cmd {
+	// Test log to verify logging is working
+	log.Info("TUI initialized successfully")
+	log.Debug("Log capture system is active")
 	return nil
 }
 

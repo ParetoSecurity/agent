@@ -9,6 +9,7 @@ import (
 	"github.com/ParetoSecurity/agent/check"
 	"github.com/ParetoSecurity/agent/runner"
 	"github.com/ParetoSecurity/agent/shared"
+	"github.com/caarlos0/log"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pkg/browser"
 )
@@ -69,10 +70,14 @@ func runSingleCheck(claimIdx, checkIdx int, checkResult checkResult) tea.Cmd {
 func runCheckDirectly(result checkResult) checkResult {
 	var hasError bool
 
+	log.Debugf("Running check: %s (%s)", result.Check.Name(), result.Check.UUID())
+
 	if result.Check.RequiresRoot() {
 		// Run as root using the runner
+		log.Debug("Check requires root privileges, using root runner")
 		status, err := runner.RunCheckViaRoot(result.Check.UUID())
 		if err != nil {
+			log.WithError(err).Errorf("Root check failed: %s", result.Check.Name())
 			result.Status = "Error"
 			result.HasError = true
 			result.Details = "Root check failed: " + err.Error()
@@ -83,13 +88,17 @@ func runCheckDirectly(result checkResult) checkResult {
 		result.Details = status.Details
 		if result.Passed {
 			result.Status = "Pass"
+			log.Infof("✓ Check passed: %s", result.Check.Name())
 		} else {
 			result.Status = "Fail"
+			log.Warnf("✗ Check failed: %s", result.Check.Name())
 		}
 	} else {
 		// Run check directly
+		log.Debug("Running check directly")
 		if err := result.Check.Run(); err != nil {
 			hasError = true
+			log.WithError(err).Errorf("Check execution failed: %s", result.Check.Name())
 			result.Status = "Error"
 			result.HasError = true
 			result.Details = "Check failed: " + err.Error()
@@ -101,9 +110,11 @@ func runCheckDirectly(result checkResult) checkResult {
 		if result.Passed {
 			result.Status = "Pass"
 			result.Details = result.Check.PassedMessage()
+			log.Infof("✓ Check passed: %s", result.Check.Name())
 		} else {
 			result.Status = "Fail"
 			result.Details = result.Check.FailedMessage()
+			log.Warnf("✗ Check failed: %s - %s", result.Check.Name(), result.Details)
 		}
 	}
 
@@ -124,6 +135,8 @@ func runAllChecks(checks []checkResult) tea.Cmd {
 	return func() tea.Msg {
 		var results []checkResult
 
+		log.Infof("Starting batch run of %d checks", len(checks))
+
 		for _, check := range checks {
 			result := check
 			result.LastRun = time.Now()
@@ -134,8 +147,10 @@ func runAllChecks(checks []checkResult) tea.Cmd {
 				result.HasError = false
 				if shared.IsCheckDisabled(result.Check.UUID()) {
 					result.Details = "Disabled by config"
+					log.Debugf("Check disabled by config: %s", result.Check.Name())
 				} else {
 					result.Details = result.Check.Status()
+					log.Debugf("Check not runnable: %s - %s", result.Check.Name(), result.Details)
 				}
 			} else {
 				// Run each check directly
@@ -149,8 +164,10 @@ func runAllChecks(checks []checkResult) tea.Cmd {
 		if err := shared.CommitLastState(); err != nil {
 			// If commit fails, don't fail the whole operation
 			// Just continue with the results we have
+			log.WithError(err).Error("Failed to commit state changes")
 		}
 
+		log.Infof("Batch run completed: %d checks processed", len(results))
 		return batchRunMsg{results: results}
 	}
 }

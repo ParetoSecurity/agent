@@ -1,10 +1,7 @@
-//go:build linux
-
 package tui
 
 import (
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/caarlos0/log"
@@ -13,10 +10,22 @@ import (
 
 // Run starts the TUI application
 func Run() {
-	// Redirect all logs to discard to prevent TUI scrambling
-	log.Log = log.New(io.Discard)
+	// Create initial model with log buffer
+	m := initialModel()
 
-	program := tea.NewProgram(initialModel(),
+	// Set up log writer to capture logs in the buffer
+	logWriter := newLogWriter(&m.logBuffer, 1000)
+	m.logWriter = logWriter
+
+	// Replace the global logger with one that writes to our buffer
+	log.Log = log.New(logWriter)
+	log.SetLevel(log.DebugLevel)
+
+	// Test that logging is working
+	log.Info("Starting Pareto Security TUI")
+	log.Debug("Debug logging enabled")
+
+	program := tea.NewProgram(m,
 		tea.WithAltScreen(),
 		tea.WithMouseCellMotion(),
 		tea.WithInput(os.Stdin),
