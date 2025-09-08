@@ -13,7 +13,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/kolide/toast v1.0.2
 	github.com/olekukonko/tablewriter v1.0.7
-	github.com/spf13/cobra v1.9.1
+	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.10.0
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.9
 	golang.org/x/crypto v0.39.0
@@ -99,7 +99,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/samber/lo v1.51.0
-	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/spf13/pflag v1.0.9 // indirect
 	go.uber.org/ratelimit v0.3.1
 )
 
