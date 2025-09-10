@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"runtime"
 	"strings"
@@ -112,17 +111,16 @@ func checkStatusNotifierSupport() bool {
 func handleSystrayError() {
 	errorMsg := `System tray error: StatusNotifierWatcher not found.
 
-This usually means your desktop environment doesn't support the modern system tray protocol.
+  This usually means your desktop environment doesn't support the modern system tray protocol.
 
-To fix this issue, you can:
-1. Install the gnome-shell-extension-appindicator (already recommended in the package)
-2. Install snixembed for compatibility with older desktop environments
-3. For NixOS users: Enable services.status-notifier-watcher in Home Manager
-4. For Wayland users: Use waybar with tray support enabled
+  To fix this issue, you can:
+    1. Install the gnome-shell-extension-appindicator (already recommended in the package)
+    2. Install snixembed for compatibility with older desktop environments
+    3. For NixOS users: Enable services.status-notifier-watcher in Home Manager
+    4. For Wayland users: Use waybar with tray support enabled
 `
 
 	log.Error(errorMsg)
-	fmt.Fprintln(os.Stderr, errorMsg)
 	os.Exit(1)
 }
 
