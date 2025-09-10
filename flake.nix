@@ -37,6 +37,7 @@
             firewall = pkgsOverlayed.testers.runNixOSTest ./test/integration/firewall.nix;
             help = pkgsOverlayed.testers.runNixOSTest ./test/integration/help.nix;
             luks = pkgsOverlayed.testers.runNixOSTest ./test/integration/luks.nix;
+            zfs = pkgsOverlayed.testers.runNixOSTest ./test/integration/zfs.nix;
             pwd-manager = pkgsOverlayed.testers.runNixOSTest ./test/integration/pwd-manager.nix;
             screenlock = pkgsOverlayed.testers.runNixOSTest ./test/integration/screenlock.nix;
             secureboot = pkgsOverlayed.testers.runNixOSTest ./test/integration/secureboot.nix;

@@ -186,3 +186,92 @@ func TestMaybeCryptoViaKernel(t *testing.T) {
 		})
 	}
 }
+
+func TestMaybeCryptoViaZFS(t *testing.T) {
+	tests := []struct {
+		name     string
+		mocks    []shared.RunCommandMock
+		expected bool
+	}{
+		{
+			name: "ZFS encryption detected with aes-256-gcm",
+			mocks: []shared.RunCommandMock{
+				{
+					Command: "zfs",
+					Args:    []string{"get", "-H", "-o", "name,value", "encryption"},
+					Out:     "zroot\taes-256-gcm\nzroot/ROOT\taes-256-gcm\nzroot/ROOT/nixos\taes-256-gcm\nzroot/home\taes-256-gcm",
+					Err:     nil,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "ZFS encryption detected with aes-128-ccm",
+			mocks: []shared.RunCommandMock{
+				{
+					Command: "zfs",
+					Args:    []string{"get", "-H", "-o", "name,value", "encryption"},
+					Out:     "zroot\taes-128-ccm\nzroot/data\taes-128-ccm",
+					Err:     nil,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "ZFS with no encryption",
+			mocks: []shared.RunCommandMock{
+				{
+					Command: "zfs",
+					Args:    []string{"get", "-H", "-o", "name,value", "encryption"},
+					Out:     "zroot\toff\nzroot/ROOT\toff\nzroot/home\toff",
+					Err:     nil,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "ZFS with mixed encryption (some encrypted, some not)",
+			mocks: []shared.RunCommandMock{
+				{
+					Command: "zfs",
+					Args:    []string{"get", "-H", "-o", "name,value", "encryption"},
+					Out:     "zroot\toff\nzroot/secure\taes-256-gcm\nzroot/home\toff",
+					Err:     nil,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "ZFS not installed or command error",
+			mocks: []shared.RunCommandMock{
+				{
+					Command: "zfs",
+					Args:    []string{"get", "-H", "-o", "name,value", "encryption"},
+					Out:     "",
+					Err:     assert.AnError,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "ZFS with inherit marker (-)",
+			mocks: []shared.RunCommandMock{
+				{
+					Command: "zfs",
+					Args:    []string{"get", "-H", "-o", "name,value", "encryption"},
+					Out:     "zroot\t-\nzroot/ROOT\t-\nzroot/home\t-",
+					Err:     nil,
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			shared.RunCommandMocks = tt.mocks
+			result := maybeCryptoViaZFS()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
