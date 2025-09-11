@@ -61,6 +61,11 @@ func (f *EncryptingFS) Run() error {
 		f.passed = true
 		return nil
 	}
+	// Check if the system is using ZFS encryption
+	if maybeCryptoViaZFS() {
+		f.passed = true
+		return nil
+	}
 
 	return nil
 }
@@ -110,5 +115,27 @@ func maybeCryptoViaKernel() bool {
 			}
 		}
 	}
+	return false
+}
+
+func maybeCryptoViaZFS() bool {
+	out, err := shared.RunCommand("zfs", "get", "-H", "-o", "name,value", "encryption")
+	if err != nil {
+		log.WithError(err).Debug("Failed to run zfs get encryption")
+		return false
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(out))
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) == 2 {
+			enc := fields[1]
+			if enc != "off" && enc != "-" {
+				log.WithField("dataset", fields[0]).WithField("enc", enc).Debug("ZFS encryption detected")
+				return true
+			}
+		}
+	}
+	log.WithField("output", out).Debug("No encrypted ZFS pools found")
 	return false
 }
