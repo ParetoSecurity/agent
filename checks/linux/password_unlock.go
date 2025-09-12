@@ -49,6 +49,39 @@ func (f *PasswordToUnlock) checkKDE5() bool {
 	return true // Default to true if config file not found or read error
 }
 
+func (f *PasswordToUnlock) checkSway() bool {
+	status, err := shared.RunCommand("systemctl", "--user", "show", "swayidle", "--no-pager")
+	if err != nil {
+		log.WithError(err).Debug("Failed to check Sway lock configuration, swayidle service not configured")
+
+		// Fallback: try to find swayidle service file
+		configPathOutput, err := shared.RunCommand("systemctl", "--user", "show", "-p", "FragmentPath", "swayidle")
+		if err != nil {
+			log.WithError(err).Debug("Failed to find Sway lock configuration via systemctl")
+			return false
+		}
+
+		// Extract path from output (format: FragmentPath=/path/to/file)
+		parts := strings.Split(strings.TrimSpace(configPathOutput), "=")
+		configPath := "/usr/lib/systemd/user/swayidle.service" // default fallback
+		if len(parts) >= 2 {
+			configPath = parts[1]
+		}
+
+		config, err := shared.ReadFile(configPath)
+		if err != nil {
+			log.WithError(err).Debug("Failed to read swayidle service file")
+			return false
+		}
+		status = string(config)
+	}
+
+	// Check if swaylock is configured in the service
+	result := strings.Contains(status, "swaylock")
+	log.WithField("has_swaylock", result).Debug("Sway lock configuration check")
+	return result
+}
+
 // Run executes the check
 func (f *PasswordToUnlock) Run() error {
 
@@ -56,7 +89,7 @@ func (f *PasswordToUnlock) Run() error {
 	if _, err := lookPath("gsettings"); err == nil {
 		f.passed = f.checkGnome()
 	} else {
-		log.Info("GNOME environment not detected for screensaver lock check")
+		log.Debug("GNOME environment not detected for screensaver lock check")
 	}
 
 	// Check if running KDE
@@ -64,6 +97,13 @@ func (f *PasswordToUnlock) Run() error {
 		f.passed = f.checkKDE5()
 	} else {
 		log.Debug("KDE environment(5) not detected for screensaver lock check")
+	}
+
+	// Check if running Sway
+	if _, err := lookPath("sway"); err == nil {
+		f.passed = f.checkSway()
+	} else {
+		log.Debug("Sway environment not detected for screensaver lock check")
 	}
 
 	return nil
