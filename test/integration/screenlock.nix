@@ -28,44 +28,28 @@
       {
         services.paretosecurity.enable = true;
 
-        # Enable Sway window manager
-        programs.sway = {
-          enable = true;
-          wrapperFeatures.gtk = true;
+        programs.sway.enable = true;
+        programs.sway.wrapperFeatures.gtk = true;
+
+        users.users.testuser.isNormalUser = true;
+        users.users.testuser.extraGroups = [
+          "wheel"
+          "video"
+          "input"
+        ];
+
+        # Autologin to Sway with testuser
+        services.greetd.enable = true;
+        services.greetd.settings.initial_session = {
+          user = "testuser";
+          command = "${pkgs.sway}/bin/sway";
         };
 
-        # Enable auto-login for the test user
-        services.getty.autologinUser = "testuser";
-
-        # Required for auto-login to work
-        services.getty.loginOptions = "-f testuser";
-
-        users.users.testuser = {
-          isNormalUser = true;
-          extraGroups = [
-            "wheel"
-            "video"
-            "input"
-          ];
-          password = "password";
-          uid = 1001;
-          shell = pkgs.bash;
-        };
-
-        # Create sway config that runs paretosecurity check on startup (NO swaylock configured)
+        # Run the check in the sway config on startup and log output.
+        # In nixos tests, getting sytemd user services to work is tricky,
+        # so we run graphical session and run the check directly from sway config
         environment.etc."sway/config.d/99-test.conf".text = ''
-          # Run paretosecurity check on startup and log output
-          exec paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8 > /tmp/paretosecurity-check.log 2>&1
-
-          # Exit sway after a short delay to complete the test
-          exec sleep 5 && swaymsg exit
-        '';
-
-        # Auto-start sway on login
-        programs.bash.loginShellInit = ''
-          if [ "$(tty)" = "/dev/tty1" ] && [ "$USER" = "testuser" ]; then
-            exec sway
-          fi
+          exec paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8 > /tmp/paretosecurity-check.log 2>&1; swaymsg exit
         '';
       };
 
@@ -74,61 +58,48 @@
       {
         services.paretosecurity.enable = true;
 
-        # Enable Sway window manager
-        programs.sway = {
-          enable = true;
-          wrapperFeatures.gtk = true;
+        programs.sway.enable = true;
+        programs.sway.wrapperFeatures.gtk = true;
+
+        users.users.testuser.isNormalUser = true;
+        users.users.testuser.extraGroups = [
+          "wheel"
+          "video"
+          "input"
+        ];
+
+        # Autologin to Sway with testuser
+        services.greetd.enable = true;
+        services.greetd.settings.initial_session = {
+          user = "testuser";
+          command = "${pkgs.sway}/bin/sway";
         };
 
-        # Enable auto-login for the test user
-        services.getty.autologinUser = "paretosecurity";
-
-        # Required for auto-login to work
-        services.getty.loginOptions = "-f paretosecurity";
-
-        users.users.paretosecurity = {
-          isNormalUser = true;
-          extraGroups = [
-            "wheel"
-            "video"
-            "input"
-          ];
-          password = "password";
-          uid = 1000;
-          shell = pkgs.bash;
-        };
-
-        # Create swayidle systemd user service
+        # Swayidle user service that locks/suspends using swaylock
         systemd.user.services.swayidle = {
           description = "Idle management daemon for Wayland";
           documentation = [ "man:swayidle(1)" ];
           wantedBy = [ "sway-session.target" ];
           partOf = [ "graphical-session.target" ];
+          after = [ "graphical-session.target" ];
           serviceConfig = {
             Type = "simple";
-            ExecStart = "${pkgs.swayidle}/bin/swayidle -w timeout 300 '${pkgs.swaylock}/bin/swaylock -f' timeout 600 'systemctl suspend' before-sleep '${pkgs.swaylock}/bin/swaylock -f' lock '${pkgs.swaylock}/bin/swaylock -f'";
+            ExecStart =
+              "${pkgs.swayidle}/bin/swayidle -w "
+              + "timeout 300 '${pkgs.swaylock}/bin/swaylock -f' "
+              + "timeout 600 'systemctl suspend' "
+              + "before-sleep '${pkgs.swaylock}/bin/swaylock -f' "
+              + "lock '${pkgs.swaylock}/bin/swaylock -f'";
             Restart = "on-failure";
             RestartSec = 1;
           };
         };
 
-        # Create sway config that runs paretosecurity check on startup
+        # Run the check in the sway config on startup and log output.
+        # In nixos tests, getting sytemd user services to work is tricky,
+        # so we run graphical session and run the check directly from sway config
         environment.etc."sway/config.d/99-test.conf".text = ''
-          # Run paretosecurity check on startup and log output
-          exec paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8 > /tmp/paretosecurity-check.log 2>&1
-
-          # Also start swayidle
-          exec systemctl --user start swayidle.service
-
-          # Exit sway after a short delay to complete the test
-          exec sleep 5 && swaymsg exit
-        '';
-
-        # Auto-start sway on login
-        programs.bash.loginShellInit = ''
-          if [ "$(tty)" = "/dev/tty1" ] && [ "$USER" = "paretosecurity" ]; then
-            exec sway
-          fi
+          exec paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8 > /tmp/paretosecurity-check.log 2>&1; swaymsg exit
         '';
       };
   };
