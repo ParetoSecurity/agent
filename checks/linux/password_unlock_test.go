@@ -227,3 +227,108 @@ func TestPasswordToUnlock_IsRunnable(t *testing.T) {
 	f := &PasswordToUnlock{}
 	assert.True(t, f.IsRunnable())
 }
+
+func TestPasswordToUnlock_checkSway(t *testing.T) {
+	tests := []struct {
+		name               string
+		initialCommandOut  string
+		initialCommandErr  error
+		fallbackCommandOut string
+		fallbackCommandErr error
+		configFileContent  string
+		configFileErr      error
+		expected           bool
+	}{
+		{
+			name:              "Swaylock configured in service",
+			initialCommandOut: "ExecStart=/usr/bin/swayidle -w timeout 300 'swaylock -f' timeout 600 'systemctl suspend'\n",
+			initialCommandErr: nil,
+			expected:          true,
+		},
+		{
+			name:              "Swaylock not configured",
+			initialCommandOut: "ActiveState=inactive\nFragmentPath=/usr/lib/systemd/user/swayidle.service\n",
+			initialCommandErr: nil,
+			expected:          false,
+		},
+		{
+			name:               "Fallback to config file with swaylock",
+			initialCommandOut:  "",
+			initialCommandErr:  assert.AnError,
+			fallbackCommandOut: "FragmentPath=/usr/lib/systemd/user/swayidle.service\n",
+			fallbackCommandErr: nil,
+			configFileContent:  "[Service]\nExecStart=/usr/bin/swayidle -w timeout 300 'swaylock -f'\n",
+			configFileErr:      nil,
+			expected:           true,
+		},
+		{
+			name:               "Fallback to config file without swaylock",
+			initialCommandOut:  "",
+			initialCommandErr:  assert.AnError,
+			fallbackCommandOut: "FragmentPath=/usr/lib/systemd/user/swayidle.service\n",
+			fallbackCommandErr: nil,
+			configFileContent:  "[Service]\nExecStart=/usr/bin/swayidle -w timeout 300 'systemctl suspend'\n",
+			configFileErr:      nil,
+			expected:           false,
+		},
+		{
+			name:               "Fallback to config file read error",
+			initialCommandOut:  "",
+			initialCommandErr:  assert.AnError,
+			fallbackCommandOut: "FragmentPath=/usr/lib/systemd/user/swayidle.service\n",
+			fallbackCommandErr: nil,
+			configFileContent:  "",
+			configFileErr:      assert.AnError,
+			expected:           false,
+		},
+		{
+			name:               "Fallback command fails",
+			initialCommandOut:  "",
+			initialCommandErr:  assert.AnError,
+			fallbackCommandOut: "",
+			fallbackCommandErr: assert.AnError,
+			expected:           false,
+		},
+		{
+			name:               "Fallback with default path",
+			initialCommandOut:  "",
+			initialCommandErr:  assert.AnError,
+			fallbackCommandOut: "InvalidFormat", // No '=' in output
+			fallbackCommandErr: nil,
+			configFileContent:  "[Service]\nExecStart=/usr/bin/swayidle -w timeout 300 'swaylock -f'\n",
+			configFileErr:      nil,
+			expected:           true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			shared.RunCommandMocks = []shared.RunCommandMock{
+				{
+					Command: "systemctl",
+					Args:    []string{"--user", "show", "swayidle", "--no-pager"},
+					Out:     tt.initialCommandOut,
+					Err:     tt.initialCommandErr,
+				},
+				{
+					Command: "systemctl",
+					Args:    []string{"--user", "show", "-p", "FragmentPath", "swayidle"},
+					Out:     tt.fallbackCommandOut,
+					Err:     tt.fallbackCommandErr,
+				},
+			}
+
+			// Mock file reading
+			shared.ReadFileMock = func(filename string) ([]byte, error) {
+				if tt.configFileErr != nil {
+					return nil, tt.configFileErr
+				}
+				return []byte(tt.configFileContent), nil
+			}
+
+			f := &PasswordToUnlock{}
+			result := f.checkSway()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
