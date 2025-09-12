@@ -40,7 +40,7 @@
 
         # Autologin to Sway with testuser
         services.greetd.enable = true;
-        services.greetd.settings.initial_session = {
+        services.greetd.settings.default_session = {
           user = "testuser";
           command = "${pkgs.sway}/bin/sway";
         };
@@ -70,7 +70,7 @@
 
         # Autologin to Sway with testuser
         services.greetd.enable = true;
-        services.greetd.settings.initial_session = {
+        services.greetd.settings.default_session = {
           user = "testuser";
           command = "${pkgs.sway}/bin/sway";
         };
