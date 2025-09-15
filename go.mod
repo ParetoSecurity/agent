@@ -17,7 +17,7 @@ require (
 	github.com/olekukonko/tablewriter v1.0.9
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.10.0
-	github.com/wailsapp/wails/v3 v3.0.0-alpha.9
+	github.com/wailsapp/wails/v3 v3.0.0-alpha.28
 	golang.org/x/crypto v0.42.0
 	golang.org/x/sys v0.36.0
 )
@@ -68,6 +68,7 @@ require (
 	github.com/olekukonko/errors v1.1.0 // indirect
 	github.com/olekukonko/ll v0.1.1 // indirect
 	github.com/pjbgf/sha1cd v0.5.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect

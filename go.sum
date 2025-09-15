@@ -201,6 +201,8 @@ github.com/wailsapp/mimetype v1.4.1 h1:pQN9ycO7uo4vsUUuPeHEYoUkLVkaRntMnHJxVwYhw
 github.com/wailsapp/mimetype v1.4.1/go.mod h1:9aV5k31bBOv5z6u+QP8TltzvNGJPmNJD4XlAL3U+j3o=
 github.com/wailsapp/wails/v3 v3.0.0-alpha.9 h1:b8CfRrhPno8Fra0xFp4Ifyj+ogmXBc35rsQWvcrHtsI=
 github.com/wailsapp/wails/v3 v3.0.0-alpha.9/go.mod h1:dSv6s722nSWaUyUiapAM1DHc5HKggNGY1a79shO85/g=
+github.com/wailsapp/wails/v3 v3.0.0-alpha.28 h1:N6U+o178bHOchBMt5IIy+O53+abzBhs+79qGRfMRwQM=
+github.com/wailsapp/wails/v3 v3.0.0-alpha.28/go.mod h1:UZpnhYuju4saspCJrIHAvC0H5XjtKnqd26FRxJLrQ0M=
 github.com/xanzy/ssh-agent v0.3.3 h1:+/15pJfg/RsTxqYcX6fHqOXZwwMP+2VyYWJeWM2qQFM=
 github.com/xanzy/ssh-agent v0.3.3/go.mod h1:6dzNDKs0J9rVPHPhaGCukekBHKqfl+L3KghI1Bc68Uw=
 github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e h1:JVG44RsyaB9T2KIHavMF/ppJZNG9ZpyihvCd0w101no=
