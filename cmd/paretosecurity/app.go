@@ -1,8 +1,11 @@
 package main
 
 import (
+	"os"
+
 	"github.com/ParetoSecurity/agent/cmd"
 	shared "github.com/ParetoSecurity/agent/shared"
+	"github.com/ParetoSecurity/agent/tui"
 	"github.com/caarlos0/log"
 )
 
@@ -41,6 +44,10 @@ func (a *App) Run() error {
 		if !a.config.IsRoot() {
 			log.WithError(err).Warn("failed to load config")
 		}
+	}
+	if len(os.Args) == 1 && os.Getenv("TERM") != "" && os.Getenv("TERM") != "dumb" {
+		tui.Run()
+		return nil
 	}
 	a.config.Execute()
 	return nil
