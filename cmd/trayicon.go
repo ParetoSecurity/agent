@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -22,8 +23,10 @@ var trayiconCmd = &cobra.Command{
 	Use:   "trayicon",
 	Short: "Display the status of the checks in the system tray",
 	Run: func(cc *cobra.Command, args []string) {
+		lockDir, _ := shared.UserHomeDir()
 
-		lockFile, err := singleinstance.CreateLockFile("paretosecurity-tray.lock")
+		// Ensure lock directory exists
+		lockFile, err := singleinstance.CreateLockFile(filepath.Join(lockDir, ".paretosecurity-tray.lock"))
 		if err != nil {
 			log.WithError(err).Fatal("An instance of ParetoSecurity tray application is already running.")
 			return
