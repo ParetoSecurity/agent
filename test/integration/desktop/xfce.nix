@@ -33,13 +33,11 @@ in
       services.paretosecurity = {
         enable = true;
         package = pkgs.paretosecurity.overrideAttrs (oldAttrs: {
-          postPatch =
-            oldAttrs.postPatch or ""
-            + ''
-              substituteInPlace team/report.go \
-                --replace-warn 'const reportURL = "https://cloud.paretosecurity.com"' \
-                               'const reportURL = "http://cloud"'
-            '';
+          postPatch = oldAttrs.postPatch or "" + ''
+            substituteInPlace team/report.go \
+              --replace-warn 'const reportURL = "https://cloud.paretosecurity.com"' \
+                             'const reportURL = "http://cloud"'
+          '';
         });
       };
 

@@ -101,13 +101,6 @@ in
     gofmt.enable = true;
     # golangci-lint.enable = true;
     # revive.enable = true;
-    vendor-hash = {
-      name = "Update vendorHash in flake.nix";
-      enable = true;
-      pass_filenames = false;
-      files = "go.(mod|sum)$";
-      entry = "update-vendor-hash";
-    };
   };
 
   # See full reference at https://devenv.sh/reference/options/

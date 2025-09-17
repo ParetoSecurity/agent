@@ -9,27 +9,26 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ParetoSecurity/agent/shared"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+var service = &WindowService{}
+
 // InstallerConfig holds the configuration for the installer application
 type InstallerConfig struct {
-	Args       []string
-	InstallApp func(bool) error
-	Exit       func(int)
-	NewApp     func(opts application.Options) *application.App
-	Assets     embed.FS
+	Args   []string
+	Exit   func(int)
+	NewApp func(opts application.Options) *application.App
+	Assets embed.FS
 }
 
 // DefaultInstallerConfig returns the default configuration
 func DefaultInstallerConfig(assets embed.FS) *InstallerConfig {
 	return &InstallerConfig{
-		Args:       os.Args[1:],
-		InstallApp: shared.InstallApp,
-		Exit:       os.Exit,
-		NewApp:     application.New,
-		Assets:     assets,
+		Args:   os.Args[1:],
+		Exit:   os.Exit,
+		NewApp: application.New,
+		Assets: assets,
 	}
 }
 
@@ -47,7 +46,7 @@ func NewInstallerApp(config *InstallerConfig) *InstallerApp {
 func (i *InstallerApp) Run() {
 	// Check for silent install arguments
 	if i.shouldInstallSilently() {
-		err := i.config.InstallApp(true)
+		err := service.InstallApp(true)
 		if err != nil {
 			slog.Error(err.Error())
 		}
@@ -95,14 +94,13 @@ func (i *InstallerApp) createGUIApp() *application.App {
 }
 
 func (i *InstallerApp) createMainWindow(app *application.App) {
-	app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
+	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:                      "Welcome to Pareto Security",
 		Width:                      360,
 		Height:                     580,
 		URL:                        "/",
 		AlwaysOnTop:                true,
 		DisableResize:              true,
-		FullscreenButtonEnabled:    false,
 		DefaultContextMenuDisabled: true,
 		MinimiseButtonState:        application.ButtonHidden,
 		MaximiseButtonState:        application.ButtonHidden,
