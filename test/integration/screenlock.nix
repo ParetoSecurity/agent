@@ -189,7 +189,7 @@
 
     # Wait for the log file to be created by Sway startup script
     sway.wait_for_file("/tmp/paretosecurity-check.log", timeout=30)
-    sway.sleep(3)
+    sway.wait_until_succeeds("test $(wc -l < /tmp/paretosecurity-check.log) -ge 3", timeout=30)
 
     # Read the log file
     out = sway.succeed("cat /tmp/paretosecurity-check.log")
@@ -205,7 +205,7 @@
 
     # Wait for the log file to be created by Sway startup script
     swaylock.wait_for_file("/tmp/paretosecurity-check.log", timeout=30)
-    sway.sleep(3)
+    swaylock.wait_until_succeeds("test $(wc -l < /tmp/paretosecurity-check.log) -ge 3", timeout=30)
 
     # Read the log file
     out = swaylock.succeed("cat /tmp/paretosecurity-check.log")
