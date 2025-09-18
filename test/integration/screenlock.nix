@@ -77,7 +77,7 @@
         # In nixos tests, getting systemd user services to work is tricky,
         # so we run graphical session and run the check directly from sway config
         environment.etc."sway/config.d/99-test.conf".text = ''
-          exec sh -c "paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8 > /tmp/paretosecurity-check.log 2>&1; touch /tmp/pareto-done; swaymsg exit"
+          exec sh -c "paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8 > /tmp/paretosecurity-check.log 2>&1; swaymsg exit"
         '';
       };
 
@@ -155,7 +155,7 @@
         # In nixos tests, getting systemd user services to work is tricky,
         # so we run graphical session and run the check directly from sway config
         environment.etc."sway/config.d/99-test.conf".text = ''
-          exec sh -c "paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8 > /tmp/paretosecurity-check.log 2>&1; touch /tmp/pareto-done; swaymsg exit"
+          exec sh -c "paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8 > /tmp/paretosecurity-check.log 2>&1; swaymsg exit"
         '';
       };
   };
@@ -188,9 +188,8 @@
     sway.wait_for_unit("multi-user.target")
 
     # Wait for the log file to be created by Sway startup script
-    sway.wait_for_file("/tmp/pareto-done", timeout=30)
     sway.wait_for_file("/tmp/paretosecurity-check.log", timeout=30)
-    sway.sleep(10)
+    sway.sleep(3)
 
     # Read the log file
     out = sway.succeed("cat /tmp/paretosecurity-check.log")
@@ -205,9 +204,8 @@
     swaylock.wait_for_unit("multi-user.target")
 
     # Wait for the log file to be created by Sway startup script
-    sway.wait_for_file("/tmp/pareto-done", timeout=30)
     swaylock.wait_for_file("/tmp/paretosecurity-check.log", timeout=30)
-    sway.sleep(10)
+    sway.sleep(3)
 
     # Read the log file
     out = swaylock.succeed("cat /tmp/paretosecurity-check.log")
