@@ -1,0 +1,69 @@
+name: Win11 VM
+description: Start a temporary Windows 11 VM in Azure, wait 45 minutes, then shut it down and reimage it to default state.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  manage-vm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Start VM
+      run: |
+        echo "Starting VM: pareto"
+        az vm start --resource-group pareto --name pareto
+
+        # Wait for VM to be fully running
+        echo "Waiting for VM to be fully started ..."
+        az vm wait --resource-group pareto --name pareto --updated
+
+    - name: Get VM Status
+      run: |
+        echo "VM Status:"
+        az vm get-instance-view \
+          --resource-group pareto \
+          --name pareto \
+          --query "instanceView.statuses[?starts_with(code, 'PowerState/')].displayStatus" \
+          --output tsv
+
+    - name: Wait 45 minutes
+      run: |
+        echo "VM is running. Waiting 45 minutes before shutdown..."
+        echo "Start time: $(date)"
+        # sleep 2700
+        sleep 60
+        echo "End time: $(date)"
+
+    - name: Deallocate VM
+      run: |
+        echo "Shutting down VM ..."
+        az vm deallocate --resource-group pareto --name pareto --no-wait
+
+    - name: Wait for Deallocation
+      run: |
+        echo "Waiting for VM to be fully shut down ..."
+        az vm wait --resource-group pareto --name pareto --updated
+
+    - name: Reimage VM
+      run: |
+        echo "Reimaging VM to default Win11 state ..."
+        az vm reimage --resource-group pareto --name pareto
+
+        echo "VM has been reimaged and is ready for next use"
+
+    - name: Final VM Status
+      if: always()
+      run: |
+        echo "Final VM Status:"
+        az vm get-instance-view \
+          --resource-group pareto \
+          --name pareto \
+          --query "instanceView.statuses[?starts_with(code, 'PowerState/')].displayStatus" \
+          --output tsv || echo "Unable to get VM status"
