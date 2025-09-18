@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -35,6 +36,22 @@ func CurrentReportingDevice() ReportingDevice {
 		if err != nil {
 			log.WithError(err).Warn("Failed to get Windows version")
 		}
+		buildNumber, err := RunCommand("powershell", "-Command", `(Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").CurrentBuildNumber`)
+		if err != nil {
+			log.WithError(err).Warn("Failed to get Windows build number")
+		}
+
+		// Windows 11 has build number 22000 or higher
+		// Build number may include dots like "26100.6584", so we parse just the major part
+		if lo.IsNotEmpty(buildNumber) {
+			buildParts := strings.Split(strings.TrimSpace(buildNumber), ".")
+			if len(buildParts) > 0 {
+				if majorBuild, err := strconv.Atoi(buildParts[0]); err == nil && majorBuild >= 22000 {
+					productName = strings.Replace(productName, "Windows 10", "Windows 11", 1)
+				}
+			}
+		}
+
 		if lo.IsNotEmpty(productName) && lo.IsNotEmpty(displayVersion) {
 			osVersion = SanitizeWithSpaces(strings.TrimSpace(productName + " " + displayVersion))
 		} else {
