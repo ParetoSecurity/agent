@@ -118,9 +118,9 @@ in
         ];
         services.paretosecurity.enable = true;
         services.xserver.enable = true;
-        services.xserver.desktopManager.plasma5.enable = true;
+        services.desktopManager.plasma6.enable = true;
         services.displayManager.sddm.enable = true;
-        services.displayManager.defaultSession = "plasma";
+        services.displayManager.defaultSession = "plasmax11";
         services.displayManager.autoLogin = {
           enable = true;
           user = "testuser";
