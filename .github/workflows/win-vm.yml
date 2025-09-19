@@ -35,10 +35,10 @@ jobs:
 
     - name: Wait 45 minutes
       run: |
-        echo "VM is running. Waiting 45 minutes before shutdown..."
+        echo "VM is running."
+        echo "Waiting 45 minutes before shutdown ..."
         echo "Start time: $(date)"
-        # sleep 2700
-        sleep 60
+        sleep 2700
         echo "End time: $(date)"
 
     - name: Deallocate VM
