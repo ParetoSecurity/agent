@@ -85,21 +85,10 @@ func TestWindowsVersionDetection(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Mock RunCommand to return our test values
-			originalRunCommand := RunCommandMock
-			defer func() { RunCommandMock = originalRunCommand }()
-
-			RunCommandMock = func(name string, args ...string) (string, error) {
-				if len(args) > 0 {
-					switch args[1] {
-					case `(Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ProductName`:
-						return tt.productName, nil
-					case `(Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").DisplayVersion`:
-						return tt.displayVersion, nil
-					case `(Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").CurrentBuildNumber`:
-						return tt.buildNumber, nil
-					}
-				}
-				return "", nil
+			RunCommandMocks = []RunCommandMock{
+				{Command: "powershell", Args: []string{"-Command", `(Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ProductName`}, Out: tt.productName},
+				{Command: "powershell", Args: []string{"-Command", `(Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").DisplayVersion`}, Out: tt.displayVersion},
+				{Command: "powershell", Args: []string{"-Command", `(Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").CurrentBuildNumber`}, Out: tt.buildNumber},
 			}
 
 			device := CurrentReportingDevice()
