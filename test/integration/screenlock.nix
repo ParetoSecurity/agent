@@ -8,19 +8,36 @@
       {
         services.paretosecurity.enable = true;
         # Install GNOME Desktop Environment
-        services.xserver.desktopManager.gnome.enable = true;
-        services.xserver.displayManager.gdm.enable = true;
+        services.desktopManager.gnome.enable = true;
+        services.displayManager.gdm.enable = true;
       };
 
     kde =
-      { ... }:
+      { pkgs, ... }:
       {
         services.paretosecurity.enable = true;
-        # Install KDE Plasma 5 Desktop Environment
+        # Install KDE Plasma 6 Desktop Environment
         services.xserver.enable = true;
-        services.xserver.desktopManager.plasma5.enable = true;
-        services.xserver.displayManager.sddm.enable = true;
+        services.desktopManager.plasma6.enable = true;
+        services.displayManager.sddm.enable = true;
+        services.displayManager.autoLogin.enable = true;
+        services.displayManager.autoLogin.user = "alice";
         services.colord.enable = false;
+
+        # Increase memory for Plasma 6
+        virtualisation.memorySize = 2048;
+
+        # Create alice user
+        users.users.alice = {
+          isNormalUser = true;
+          extraGroups = [ "wheel" ];
+          password = "alice";
+        };
+
+        # Add kconfig package which includes kwriteconfig6 and kreadconfig6
+        environment.systemPackages = with pkgs; [
+          kdePackages.kconfig
+        ];
       };
 
     sway =
@@ -171,15 +188,23 @@
     status, out = gnome.execute("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
     assert "[FAIL] Password after sleep or screensaver is off" in out, f"Expected check to fail, got \n{out}"
 
-    # Test KDE
-    # Test 1: Check passes with lock enabled
-    kde.succeed("kwriteconfig5 --file kscreenlockerrc --group Daemon --key LockOnResume true")
-    out = kde.succeed("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
+    # Test KDE Plasma 6
+    # Wait for KDE to start and alice to be logged in
+    kde.wait_for_unit("graphical.target")
+
+    # First ensure lock is enabled (Plasma 6 might have different defaults)
+    # Run as alice user
+    kde.succeed("su - alice -c 'kwriteconfig6 --file kscreenlockerrc --group Daemon --key LockOnResume true'")
+    kde.succeed("su - alice -c 'kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock true'")
+
+    # Test 1: Check passes with lock enabled (run as alice)
+    out = kde.succeed("su - alice -c 'paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8'")
     assert "[OK] Password after sleep or screensaver is on" in out, f"Expected check to pass, got \n{out}"
 
     # Test 2: Check fails when lock is disabled
-    kde.succeed("kwriteconfig5 --file kscreenlockerrc --group Daemon --key LockOnResume false")
-    status, out = kde.execute("paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8")
+    kde.succeed("su - alice -c 'kwriteconfig6 --file kscreenlockerrc --group Daemon --key LockOnResume false'")
+    kde.succeed("su - alice -c 'kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock false'")
+    status, out = kde.execute("su - alice -c 'paretosecurity check --only 37dee029-605b-4aab-96b9-5438e5aa44d8'")
     assert "[FAIL] Password after sleep or screensaver is off" in out, f"Expected check to fail, got \n{out}"
 
     # Test Sway

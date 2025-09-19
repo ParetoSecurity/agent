@@ -93,10 +93,14 @@ func (f *PasswordToUnlock) Run() error {
 	}
 
 	// Check if running KDE
-	if _, err := lookPath("kreadconfig5"); err == nil {
+	if _, err := lookPath("kreadconfig6"); err == nil {
+		// Plasma 6 detected
+		f.passed = f.checkKDE5() // Same config format, just different tools
+	} else if _, err := lookPath("kreadconfig5"); err == nil {
+		// Plasma 5 detected
 		f.passed = f.checkKDE5()
 	} else {
-		log.Debug("KDE environment(5) not detected for screensaver lock check")
+		log.Debug("KDE environment not detected for screensaver lock check")
 	}
 
 	// Check if running Sway
