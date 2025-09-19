@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -50,7 +51,7 @@ func TestOnlyInstance(t *testing.T) {
 		}
 
 		expectedMsg := "another instance is already running"
-		if !containsString(err.Error(), expectedMsg) {
+		if !strings.Contains(err.Error(), expectedMsg) {
 			t.Fatalf("expected error containing '%s', got '%s'", expectedMsg, err.Error())
 		}
 	})
@@ -128,22 +129,4 @@ func TestOnlyInstance(t *testing.T) {
 			t.Fatal("expected error when cannot create lock file")
 		}
 	})
-}
-
-func containsString(s, substr string) bool {
-	return len(s) >= len(substr) &&
-		(s == substr ||
-			(len(s) > len(substr) &&
-				(s[:len(substr)] == substr ||
-					s[len(s)-len(substr):] == substr ||
-					searchInString(s, substr))))
-}
-
-func searchInString(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
