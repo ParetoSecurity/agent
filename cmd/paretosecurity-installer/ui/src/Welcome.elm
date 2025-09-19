@@ -54,7 +54,7 @@ type alias Model =
 
 init : () -> ( Model, Cmd msg )
 init _ =
-    ( { screen = WelcomeScreen, withStartup = False, message = Nothing }
+    ( { screen = WelcomeScreen, withStartup = True, message = Nothing }
     , Cmd.none
     )
 
