@@ -25,7 +25,6 @@ var trayiconCmd = &cobra.Command{
 		lockDir, _ := shared.UserHomeDir()
 		if err := shared.OnlyInstance(filepath.Join(lockDir, ".paretosecurity-tray.lock")); err != nil {
 			log.WithError(err).Fatal("An instance of ParetoSecurity tray application is already running.")
-			os.Exit(1) // just in case Fatal doesn't
 			return
 		}
 
