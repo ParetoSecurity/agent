@@ -4,17 +4,19 @@
 package main
 
 import (
-	"github.com/allan-simon/go-singleinstance"
+	"path/filepath"
+
+	"github.com/ParetoSecurity/agent/shared"
 	"github.com/caarlos0/log"
 )
 
 func main() {
-	lockFile, err := singleinstance.CreateLockFile("paretosecurity-tray.lock")
-	if err != nil {
+
+	lockDir, _ := shared.UserHomeDir()
+	if err := shared.OnlyInstance(filepath.Join(lockDir, ".paretosecurity-tray.lock")); err != nil {
 		log.WithError(err).Fatal("An instance of ParetoSecurity tray application is already running.")
 		return
 	}
-	defer lockFile.Close()
 
 	app := NewTrayApp(nil)
 	app.Run()

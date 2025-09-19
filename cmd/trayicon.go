@@ -13,7 +13,6 @@ import (
 	"fyne.io/systray"
 	"github.com/ParetoSecurity/agent/shared"
 	"github.com/ParetoSecurity/agent/trayapp"
-	"github.com/allan-simon/go-singleinstance"
 	"github.com/caarlos0/log"
 	"github.com/godbus/dbus/v5"
 	"github.com/spf13/cobra"
@@ -24,14 +23,10 @@ var trayiconCmd = &cobra.Command{
 	Short: "Display the status of the checks in the system tray",
 	Run: func(cc *cobra.Command, args []string) {
 		lockDir, _ := shared.UserHomeDir()
-
-		// Ensure lock directory exists
-		lockFile, err := singleinstance.CreateLockFile(filepath.Join(lockDir, ".paretosecurity-tray.lock"))
-		if err != nil {
+		if err := shared.OnlyInstance(filepath.Join(lockDir, ".paretosecurity-tray.lock")); err != nil {
 			log.WithError(err).Fatal("An instance of ParetoSecurity tray application is already running.")
 			return
 		}
-		defer lockFile.Close()
 
 		onExit := func() {
 			log.Info("Exiting...")
