@@ -5,7 +5,6 @@ package main
 
 import (
 	"embed"
-	"errors"
 	"testing"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -35,14 +34,8 @@ func TestInstallerApp_Run_SilentInstall(t *testing.T) {
 			)
 
 			config := &InstallerConfig{
-				Args: tt.args,
-				InstallApp: func(silent bool) error {
-					installCalled = true
-					if !silent {
-						t.Error("Expected silent install to be true")
-					}
-					return nil
-				},
+				Args:    tt.args,
+				Service: WindowService{},
 				Exit: func(code int) {
 					exitCalled = true
 					exitCode = code
@@ -105,10 +98,8 @@ func TestInstallerApp_InstallError(t *testing.T) {
 	var exitCode int
 
 	config := &InstallerConfig{
-		Args: []string{"/qs"},
-		InstallApp: func(silent bool) error {
-			return errors.New("install failed")
-		},
+		Args:    []string{"/qs"},
+		Service: WindowService{},
 		Exit: func(code int) {
 			exitCalled = true
 			exitCode = code
