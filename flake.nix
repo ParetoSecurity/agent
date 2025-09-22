@@ -24,7 +24,7 @@
                   rev = final.lib.substring 0 8 (builtins.hashFile "sha256" ./go.sum);
                 };
                 version = "${builtins.hashFile "sha256" "${toString ./go.sum}"}";
-                vendorHash = "sha256-y9x5RplVOr4mIOPTg86VvFWXkvZ1FTc9Ulc/yXb9/WU=";
+                vendorHash = "sha256-b+PmTUWt8rj69IlC+MAgnrCquoUyvY1ei0HNEhBX9lM=";
               });
             }
           );
