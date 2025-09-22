@@ -25,7 +25,6 @@ type Report struct {
 	DisabledCount     int                         `json:"disabledCount"`
 	Device            shared.ReportingDevice      `json:"device"`
 	Version           string                      `json:"version"`
-	LastCheck         string                      `json:"lastCheck"`
 	SignificantChange string                      `json:"significantChange"`
 	State             map[string]check.CheckState `json:"state"`
 }
@@ -75,7 +74,6 @@ func NowReport(all []claims.Claim) Report {
 		DisabledCount:     disabled,
 		Device:            shared.CurrentReportingDevice(),
 		Version:           shared.Version,
-		LastCheck:         time.Now().Format(time.RFC3339),
 		SignificantChange: hex.EncodeToString(significantChange[:]),
 		State:             checkStates,
 	}
