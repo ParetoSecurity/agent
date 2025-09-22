@@ -36,7 +36,7 @@ in
         "  • Access Security: SSH keys have password protection > [DISABLED] No private keys found in ~/.ssh directory\n"
         "  • Access Security: SSH keys have sufficient algorithm strength > [DISABLED] No private keys found in the ~/.ssh directory\n"
         "  • System Integrity: SecureBoot is enabled > [FAIL] System is not running in UEFI mode\n"
-        "  • Application Updates: Apps are up to date > [OK] All packages are up to date\n"
+        "  • [root] Application Updates: Apps are up to date > [OK] All packages are up to date\n"
         "  • Firewall & Sharing: Sharing printers is off > [OK] Sharing printers is off\n"
         "  • [root] System Integrity: Filesystem encryption is enabled > [FAIL] Block device encryption is disabled\n"
         "  • Firewall & Sharing: Remote login is disabled > [OK] No remote access services found running\n"

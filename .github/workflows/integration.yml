@@ -20,6 +20,7 @@ jobs:
             pwd-manager,
             firewall,
             screenlock,
+            screenlock-plasma5,
             secureboot,
             luks,
             zfs,
