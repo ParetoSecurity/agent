@@ -81,7 +81,8 @@ in
 
         # Test trayicon command fails gracefully and shows error message
         minimal.execute("su - alice -c 'DISPLAY=:0 ${bus} systemctl --user stop paretosecurity-tray.service'")
-        minimal.execute("su - alice -c 'pkill -9 paretosecurity-tray || true'")
+        minimal.execute("systemctl stop paretosecurity.service")
+        minimal.execute("pkill -9 paretosecurity-tray")
         print(minimal.execute("sleep 5 && ps axf")) # give some time to shutdown
         status, out = minimal.execute("su - alice -c 'DISPLAY=:0 ${bus} paretosecurity trayicon 2>&1'")
         assert status != 0, f"Trayicon command should fail in minimal environment, but got exit code: {status}"
