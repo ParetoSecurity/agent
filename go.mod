@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 require (
 	github.com/allan-simon/go-singleinstance v0.0.0-20210120080615-d0997106ab37
-	github.com/charmbracelet/bubbletea v1.3.7
+	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fatih/color v1.18.0
@@ -19,7 +19,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.9
 	golang.org/x/crypto v0.39.0
-	golang.org/x/sys v0.34.0
+	golang.org/x/sys v0.36.0
 )
 
 require (
