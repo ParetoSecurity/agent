@@ -19,6 +19,23 @@ func (f *DockerAccess) Name() string {
 
 // Run executes the check
 func (f *DockerAccess) Run() error {
+	// First check if Docker is installed
+	versionOut, versionErr := shared.RunCommand("docker", "version")
+	if versionErr != nil || !strings.Contains(versionOut, "Version") {
+		// Docker is not installed - this is a secure state
+		f.passed = true
+		f.status = "Docker is not installed"
+		return nil
+	}
+
+	// Check if the user has access to the Docker daemon
+	if strings.Contains(versionOut, "Cannot connect to the Docker daemon") {
+		// No access to Docker daemon - this is also a secure state
+		f.passed = true
+		f.status = "No access to Docker daemon with the current user"
+		return nil
+	}
+
 	// Check if we deprecate packages installed via apt
 	// https://docs.docker.com/engine/install/ubuntu/#uninstall-old-versions
 	if _, err := shared.RunCommand("which", "dpkg-query"); err == nil {
@@ -34,7 +51,7 @@ func (f *DockerAccess) Run() error {
 	if err != nil || lo.IsEmpty(output) {
 		f.passed = false
 		f.status = "Failed to get Docker info"
-		return err
+		return nil
 	}
 
 	if !strings.Contains(output, "rootless") {
@@ -44,6 +61,7 @@ func (f *DockerAccess) Run() error {
 	}
 
 	f.passed = true
+	f.status = f.PassedMessage()
 
 	return nil
 }
@@ -55,22 +73,7 @@ func (f *DockerAccess) Passed() bool {
 
 // CanRun returns whether the check can run
 func (f *DockerAccess) IsRunnable() bool {
-
-	// Check if Docker is installed
-	out, _ := shared.RunCommand("docker", "version")
-	if !strings.Contains(out, "Version") {
-		f.status = "Docker is not installed"
-		return false
-	}
-
-	// Check if the user has access to the Docker daemon
-	// This is a workaround for the issue where the Docker daemon is running as manager only (via systemd)
-	// and the user does not access to the Docker daemon
-	if strings.Contains(out, "Cannot connect to the Docker daemon") {
-		f.status = "No access to Docker daemon, with the current user"
-		return false
-	}
-
+	// This check is always runnable - we'll determine the Docker state in Run()
 	return true
 }
 

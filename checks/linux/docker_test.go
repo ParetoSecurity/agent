@@ -10,35 +10,53 @@ import (
 func TestDockerAccess_Run(t *testing.T) {
 	tests := []struct {
 		name           string
-		commandOutput  string
+		versionOutput  string
+		infoOutput     string
 		expectedPassed bool
 		expectedStatus string
 	}{
 		{
+			name:           "Docker not installed",
+			versionOutput:  "",
+			infoOutput:     "",
+			expectedPassed: true,
+			expectedStatus: "Docker is not installed",
+		},
+		{
+			name:           "Docker installed but no daemon access",
+			versionOutput:  "Docker Version 20.10.7\nCannot connect to the Docker daemon",
+			infoOutput:     "",
+			expectedPassed: true,
+			expectedStatus: "No access to Docker daemon with the current user",
+		},
+		{
 			name:           "Docker info command fails",
-			commandOutput:  "",
+			versionOutput:  "Docker Version 20.10.7",
+			infoOutput:     "",
 			expectedPassed: false,
 			expectedStatus: "Failed to get Docker info",
 		},
 		{
 			name:           "Docker not running in rootless mode",
-			commandOutput:  "seccomp",
+			versionOutput:  "Docker Version 20.10.7",
+			infoOutput:     "seccomp",
 			expectedPassed: false,
 			expectedStatus: "Docker is not running in rootless mode",
 		},
 		{
 			name:           "Docker running in rootless mode",
-			commandOutput:  "rootless",
+			versionOutput:  "Docker Version 20.10.7",
+			infoOutput:     "rootless",
 			expectedPassed: true,
-			expectedStatus: "",
+			expectedStatus: "Docker is running in rootless mode",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			shared.RunCommandMocks = convertCommandMapToMocks(map[string]string{
-				"docker version": "1.0.0",
-				"docker info --format {{.SecurityOptions}}": tt.commandOutput,
+				"docker version": tt.versionOutput,
+				"docker info --format {{.SecurityOptions}}": tt.infoOutput,
 			})
 			dockerAccess := &DockerAccess{}
 			err := dockerAccess.Run()
@@ -53,40 +71,10 @@ func TestDockerAccess_Run(t *testing.T) {
 }
 
 func TestDockerAccess_IsRunnable(t *testing.T) {
-	tests := []struct {
-		name           string
-		commandOutput  string
-		expectedResult bool
-		expectedStatus string
-	}{
-		{
-			name:           "Docker is installed",
-			commandOutput:  "Docker Version 20.10.7, build f0df350",
-			expectedResult: true,
-		},
-		{
-			name:           "Docker is installed, but failed to connect",
-			commandOutput:  "Docker Version 20.10.7, Cannot connect to the Docker daemon",
-			expectedResult: false,
-		},
-		{
-			name:           "Docker is not installed",
-			commandOutput:  "",
-			expectedResult: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			shared.RunCommandMocks = convertCommandMapToMocks(map[string]string{
-				"docker version": tt.commandOutput,
-			})
-			dockerAccess := &DockerAccess{}
-			result := dockerAccess.IsRunnable()
-
-			assert.Equal(t, tt.expectedResult, result)
-		})
-	}
+	// IsRunnable should always return true now
+	dockerAccess := &DockerAccess{}
+	result := dockerAccess.IsRunnable()
+	assert.True(t, result, "IsRunnable should always return true")
 }
 
 func TestDockerAccess_Name(t *testing.T) {
@@ -140,9 +128,11 @@ func TestDockerAccess_PassedMessage(t *testing.T) {
 func TestDockerAccess_DeprecatedDockerPackage(t *testing.T) {
 	// Mock shared.RunCommand
 	shared.RunCommandMocks = []shared.RunCommandMock{
+		// Mock "docker version" to show Docker is installed
+		{Command: "docker", Args: []string{"version"}, Out: "Docker Version 20.10.7", Err: nil},
 		// Mock "which dpkg-query" to succeed
 		{Command: "which", Args: []string{"dpkg-query"}, Out: "/usr/bin/dpkg-query", Err: nil},
-		// Mock "dpkg-query -W -f='${Package}\n' docker.io" to return a deprecated package
+		// Mock "dpkg-query -W -f='${Package}' docker.io" to return a deprecated package
 		{Command: "dpkg-query", Args: []string{"-W", "-f='${Package}'", "docker.io"}, Out: "docker.io", Err: nil},
 	}
 
