@@ -30,7 +30,7 @@
         app.ports.linkDeviceCallback.send("ok");
       } catch (err) {
         console.error("LinkDevice error:", err);
-        app.ports.linkDeviceCallback.send(err?.message || "Failed to link device");
+        app.ports.linkDeviceCallback.send(err?.message || "Unable to link device - please check your connection and try again");
       }
     });
 
