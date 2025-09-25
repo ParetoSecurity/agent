@@ -36,3 +36,4 @@ paretosecurity
 
 # AI
 .claude/
+cmd/paretosecurity-tray/ui/src/wails

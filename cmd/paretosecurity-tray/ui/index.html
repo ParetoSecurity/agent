@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="/src/Link.css" />
+  <script type="module">
+    import { Elm } from "/src/Link.elm";
+    import { LinkService } from "/src/index.js";
+
+    // Parse URL parameters to get inviteId and host
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteId = urlParams.get('inviteId') || '';
+    const host = urlParams.get('host') || null;
+
+    const app = Elm.Link.init({
+      node: document.querySelector("body"),
+      flags: {
+        inviteId: inviteId,
+        host: host
+      }
+    });
+
+    app.ports.linkDevice.subscribe(async ({ inviteId, host }) => {
+      try {
+        const result = await LinkService.LinkDevice(inviteId, host || "");
+        console.log("LinkDevice result:", result);
+        app.ports.linkDeviceCallback.send("ok");
+      } catch (err) {
+        console.error("LinkDevice error:", err);
+        app.ports.linkDeviceCallback.send(err?.message || "Unable to link device - please check your connection and try again");
+      }
+    });
+
+    app.ports.quitApp.subscribe(async () => {
+      try {
+        await LinkService.QuitApp();
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  </script>
+</head>
+
+<body>
+
+</body>
+
+</html>
