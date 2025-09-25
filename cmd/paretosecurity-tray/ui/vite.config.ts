@@ -5,9 +5,7 @@ import { resolve } from 'node:path'
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-  plugins: [elmPlugin({
-
-  }), tailwindcss()],
+  plugins: [elmPlugin(), tailwindcss()],
   build: {
     rollupOptions: {
       external: ['@wailsio/runtime', '/wails/runtime.js'],
