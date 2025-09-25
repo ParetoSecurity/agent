@@ -47,9 +47,6 @@ func (l *LinkService) LinkDevice(inviteID string, host string) error {
 	}
 
 	// Convert empty string host to empty for team.EnrollDevice
-	if host == "" {
-		host = ""
-	}
 
 	// Enroll the device
 	err := team.EnrollDevice(inviteID, host)
