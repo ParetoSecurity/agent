@@ -94,22 +94,15 @@ func (i *InstallerApp) createGUIApp() *application.App {
 }
 
 func (i *InstallerApp) createMainWindow(app *application.App) {
-	app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
+	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:                      "Welcome to Pareto Security",
 		Width:                      360,
 		Height:                     580,
 		URL:                        "/",
 		AlwaysOnTop:                true,
 		DisableResize:              true,
-		FullscreenButtonEnabled:    false,
 		DefaultContextMenuDisabled: true,
 		MinimiseButtonState:        application.ButtonHidden,
 		MaximiseButtonState:        application.ButtonHidden,
-		Mac: application.MacWindow{
-			Backdrop:                application.MacBackdropTranslucent,
-			TitleBar:                application.MacTitleBarHiddenInsetUnified,
-			InvisibleTitleBarHeight: 50,
-			WindowLevel:             application.MacWindowLevelFloating,
-		},
 	})
 }

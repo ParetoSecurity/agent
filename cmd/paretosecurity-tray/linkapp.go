@@ -43,26 +43,16 @@ func createLinkApp(inviteID, host string) *application.App {
 	}
 
 	// Create the main window
-	app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
+	app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:                      "Link Device - Pareto Security",
 		Width:                      360,
 		Height:                     580,
 		URL:                        windowURL,
 		AlwaysOnTop:                true,
 		DisableResize:              true,
-		FullscreenButtonEnabled:    false,
 		DefaultContextMenuDisabled: true,
 		MinimiseButtonState:        application.ButtonHidden,
 		MaximiseButtonState:        application.ButtonHidden,
-		Mac: application.MacWindow{
-			Backdrop:                application.MacBackdropTranslucent,
-			TitleBar:                application.MacTitleBarHiddenInsetUnified,
-			InvisibleTitleBarHeight: 50,
-			WindowLevel:             application.MacWindowLevelFloating,
-		},
-		Windows: application.WindowsWindow{
-			Theme: application.SystemDefault,
-		},
 	})
 
 	return app
