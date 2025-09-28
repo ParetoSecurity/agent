@@ -38,6 +38,13 @@ func (d *WindowsDefender) Name() string {
 func (d *WindowsDefender) getEDRProducts() []EDRProduct {
 	return []EDRProduct{
 		{
+			Name:         "ESET Internet Security",
+			Processes:    []string{"ekrn", "egui", "EHttpSrv"},
+			Services:     []string{"ESET Service", "ESET HTTP Server"},
+			RegistryKeys: []string{"HKLM:\\SOFTWARE\\ESET"},
+			InstallPaths: []string{"%ProgramFiles%\\ESET"},
+		},
+		{
 			Name:         "CrowdStrike Falcon",
 			Processes:    []string{"CSFalconService", "CSFalconContainer"},
 			Services:     []string{"CSAgent", "CSFalconService"},
