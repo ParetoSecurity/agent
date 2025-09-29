@@ -63,3 +63,175 @@ func TestCheckFirewallProfile(t *testing.T) {
 		})
 	}
 }
+
+func TestWindowsFirewall_Run(t *testing.T) {
+	tests := []struct {
+		name           string
+		mockCommands   []shared.RunCommandMock
+		expectedPassed bool
+		expectedStatus string
+	}{
+		{
+			name: "Windows Firewall enabled for both Public and Private",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-NetFirewallProfile -Name 'Public' | Select-Object -ExpandProperty Enabled"},
+					Out:     "True",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-NetFirewallProfile -Name 'Private' | Select-Object -ExpandProperty Enabled"},
+					Out:     "True",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true,
+			expectedStatus: "Firewall is active",
+		},
+		{
+			name: "Windows Firewall disabled, ESET firewall active",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-NetFirewallProfile -Name 'Public' | Select-Object -ExpandProperty Enabled"},
+					Out:     "False",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-NetFirewallProfile -Name 'Private' | Select-Object -ExpandProperty Enabled"},
+					Out:     "False",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Service -Name 'ESET Service' -ErrorAction SilentlyContinue | Select-Object Status"},
+					Out:     "Status\n------\nRunning",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Test-Path 'HKLM:\\SOFTWARE\\ESET'"},
+					Out:     "True",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true,
+			expectedStatus: "ESET firewall is active",
+		},
+		{
+			name: "Windows Firewall disabled, ESET service not running",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-NetFirewallProfile -Name 'Public' | Select-Object -ExpandProperty Enabled"},
+					Out:     "False",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-NetFirewallProfile -Name 'Private' | Select-Object -ExpandProperty Enabled"},
+					Out:     "False",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Service -Name 'ESET Service' -ErrorAction SilentlyContinue | Select-Object Status"},
+					Out:     "Status\n------\nStopped",
+					Err:     nil,
+				},
+			},
+			expectedPassed: false,
+			expectedStatus: "Windows Firewall is not enabled for Public profile",
+		},
+		{
+			name: "Windows Firewall disabled, ESET not installed",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-NetFirewallProfile -Name 'Public' | Select-Object -ExpandProperty Enabled"},
+					Out:     "False",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-NetFirewallProfile -Name 'Private' | Select-Object -ExpandProperty Enabled"},
+					Out:     "False",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Service -Name 'ESET Service' -ErrorAction SilentlyContinue | Select-Object Status"},
+					Out:     "",
+					Err:     assert.AnError,
+				},
+			},
+			expectedPassed: false,
+			expectedStatus: "Windows Firewall is not enabled for Public profile",
+		},
+		{
+			name: "Windows Firewall enabled for Public only (still fails)",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-NetFirewallProfile -Name 'Public' | Select-Object -ExpandProperty Enabled"},
+					Out:     "True",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-NetFirewallProfile -Name 'Private' | Select-Object -ExpandProperty Enabled"},
+					Out:     "False",
+					Err:     nil,
+				},
+			},
+			expectedPassed: false,
+			expectedStatus: "Windows Firewall is not enabled for Private profile",
+		},
+		{
+			name: "ESET service running but registry key missing",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-NetFirewallProfile -Name 'Public' | Select-Object -ExpandProperty Enabled"},
+					Out:     "False",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-NetFirewallProfile -Name 'Private' | Select-Object -ExpandProperty Enabled"},
+					Out:     "False",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Service -Name 'ESET Service' -ErrorAction SilentlyContinue | Select-Object Status"},
+					Out:     "Status\n------\nRunning",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Test-Path 'HKLM:\\SOFTWARE\\ESET'"},
+					Out:     "False",
+					Err:     nil,
+				},
+			},
+			expectedPassed: false,
+			expectedStatus: "Windows Firewall is not enabled for Public profile",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			shared.RunCommandMocks = tt.mockCommands
+
+			firewall := &WindowsFirewall{}
+			err := firewall.Run()
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedPassed, firewall.Passed())
+			assert.Equal(t, tt.expectedStatus, firewall.Status())
+		})
+	}
+}

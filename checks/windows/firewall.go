@@ -26,12 +26,47 @@ func (f *WindowsFirewall) checkFirewallProfile(profile string) bool {
 	return false
 }
 
+func (f *WindowsFirewall) checkESETFirewall() bool {
+	// Check if ESET firewall service is running
+	out, err := shared.RunCommand("powershell", "-Command", "Get-Service -Name 'ESET Service' -ErrorAction SilentlyContinue | Select-Object Status")
+	if err != nil {
+		return false
+	}
+	if !strings.Contains(string(out), "Running") {
+		return false
+	}
+
+	// Check if ESET registry key exists (indicates ESET is installed)
+	out, err = shared.RunCommand("powershell", "-Command", "Test-Path 'HKLM:\\SOFTWARE\\ESET'")
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(out)) == "True"
+}
+
 func (f *WindowsFirewall) Name() string {
-	return "Windows Firewall is enabled"
+	return "Firewall is enabled"
 }
 
 func (f *WindowsFirewall) Run() error {
-	f.passed = f.checkFirewallProfile("Public") && f.checkFirewallProfile("Private")
+	// First check if Windows Firewall is enabled
+	windowsFirewallEnabled := f.checkFirewallProfile("Public") && f.checkFirewallProfile("Private")
+
+	// If Windows Firewall is not enabled, check for ESET firewall
+	if !windowsFirewallEnabled {
+		esetFirewallEnabled := f.checkESETFirewall()
+		if esetFirewallEnabled {
+			f.passed = true
+			f.status = "ESET firewall is active"
+			return nil
+		}
+	} else {
+		f.passed = true
+		f.status = ""
+		return nil
+	}
+
+	f.passed = false
 	return nil
 }
 
@@ -45,16 +80,19 @@ func (f *WindowsFirewall) UUID() string {
 	return "e632fdd2-b939-4aeb-9a3e-5df2d67d3110"
 }
 func (f *WindowsFirewall) PassedMessage() string {
-	return "Windows Firewall is on"
+	return "Firewall is active"
 }
 func (f *WindowsFirewall) FailedMessage() string {
-	return "Windows Firewall is off"
+	return "No firewall detected"
 }
 func (f *WindowsFirewall) RequiresRoot() bool {
 	return false
 }
 func (f *WindowsFirewall) Status() string {
 	if f.Passed() {
+		if f.status != "" {
+			return f.status
+		}
 		return f.PassedMessage()
 	}
 	if f.status != "" {

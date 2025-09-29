@@ -234,6 +234,118 @@ func TestWindowsDefender_Run(t *testing.T) {
 			expectedStatus: "Antivirus or EDR software is active",
 		},
 		{
+			name: "ESET Internet Security detected via process",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     "",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Process -Name ekrn -ErrorAction SilentlyContinue | Select-Object Name"},
+					Out:     "Name\n----\nekrn",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true,
+			expectedStatus: "Antivirus or EDR software is active",
+		},
+		{
+			name: "ESET Internet Security detected via service",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     "",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Process -Name ekrn -ErrorAction SilentlyContinue | Select-Object Name"},
+					Out:     "",
+					Err:     errors.New("process not found"),
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Service -Name 'ESET Service' -ErrorAction SilentlyContinue | Select-Object Status"},
+					Out:     "Status\n------\nRunning",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true,
+			expectedStatus: "Antivirus or EDR software is active",
+		},
+		{
+			name: "ESET Internet Security detected via registry",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     "",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Process -Name ekrn -ErrorAction SilentlyContinue | Select-Object Name"},
+					Out:     "",
+					Err:     errors.New("process not found"),
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Service -Name 'ESET Service' -ErrorAction SilentlyContinue | Select-Object Status"},
+					Out:     "",
+					Err:     errors.New("service not found"),
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Test-Path 'HKLM:\\SOFTWARE\\ESET'"},
+					Out:     "True",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true,
+			expectedStatus: "Antivirus or EDR software is active",
+		},
+		{
+			name: "ESET Internet Security detected via install path",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct | ConvertTo-Json"},
+					Out:     "",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Process -Name ekrn -ErrorAction SilentlyContinue | Select-Object Name"},
+					Out:     "",
+					Err:     errors.New("process not found"),
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-Service -Name 'ESET Service' -ErrorAction SilentlyContinue | Select-Object Status"},
+					Out:     "",
+					Err:     errors.New("service not found"),
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Test-Path 'HKLM:\\SOFTWARE\\ESET'"},
+					Out:     "False",
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Test-Path '$env:ProgramFiles\\ESET'"},
+					Out:     "True",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true,
+			expectedStatus: "Antivirus or EDR software is active",
+		},
+		{
 			name: "No antivirus or EDR detected (comprehensive check)",
 			mockCommands: []shared.RunCommandMock{
 				{
@@ -244,25 +356,25 @@ func TestWindowsDefender_Run(t *testing.T) {
 				},
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-Process -Name CSFalconService -ErrorAction SilentlyContinue | Select-Object Name"},
+					Args:    []string{"-Command", "Get-Process -Name ekrn -ErrorAction SilentlyContinue | Select-Object Name"},
 					Out:     "",
 					Err:     errors.New("process not found"),
 				},
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-Service -Name 'CSAgent' -ErrorAction SilentlyContinue | Select-Object Status"},
+					Args:    []string{"-Command", "Get-Service -Name 'ESET Service' -ErrorAction SilentlyContinue | Select-Object Status"},
 					Out:     "",
 					Err:     errors.New("service not found"),
 				},
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Test-Path 'HKLM:\\SYSTEM\\CrowdStrike'"},
+					Args:    []string{"-Command", "Test-Path 'HKLM:\\SOFTWARE\\ESET'"},
 					Out:     "False",
 					Err:     nil,
 				},
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Test-Path '$env:ProgramFiles\\CrowdStrike'"},
+					Args:    []string{"-Command", "Test-Path '$env:ProgramFiles\\ESET'"},
 					Out:     "False",
 					Err:     nil,
 				},
