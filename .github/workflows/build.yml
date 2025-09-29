@@ -302,9 +302,7 @@ jobs:
 
       - name: Run installer
         run: |
-          INSTALL=$(sudo incus exec pareto -- bash /opt/install.sh 2>&1)
-          echo "### 🔧 Pareto Security Install" >> $GITHUB_STEP_SUMMARY
-          echo "${INSTALL}" >> $GITHUB_STEP_SUMMARY
+          sudo incus exec pareto -- bash /opt/install.sh
           sudo incus exec pareto -- sudo systemctl daemon-reload
           sudo incus exec pareto -- sudo systemctl enable paretosecurity.service
           sudo incus exec pareto -- sudo systemctl enable paretosecurity.socket
