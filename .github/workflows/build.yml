@@ -190,6 +190,63 @@ jobs:
               console.log('Created new Windows screenshots comment with embedded images.');
             }
 
+  dev-build-notify:
+    name: Notify about dev builds
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment on PR about dev builds
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const body = `## 🚀 Dev Builds Available
+
+            Development builds for this PR are available in the [workflow artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+
+            Available builds:
+            - Windows (agent, installer, tray)
+            - Linux (agent)
+            - macOS (agent)
+
+            Download the \`build\` artifact to test the latest changes.
+            `;
+
+            // Get all comments on the PR
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+
+            // Look for an existing dev builds comment
+            const existingComment = comments.data.find(comment => 
+              comment.body.includes('## 🚀 Dev Builds Available')
+            );
+
+            if (existingComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: body
+              });
+              console.log('Updated existing dev builds comment.');
+            } else {
+              // Post new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+              console.log('Created new dev builds comment.');
+            }
+
   checks-on-linux:
     name: "Install and Run on ${{ matrix.distribution }}"
     runs-on: ubuntu-latest
@@ -296,3 +353,4 @@ jobs:
         with:
           name: build
           path: dist
+
