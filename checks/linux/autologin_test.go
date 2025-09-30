@@ -1,12 +1,45 @@
 package checks
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/ParetoSecurity/agent/shared"
+	"github.com/pelletier/go-toml"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestIsGreeterCommand(t *testing.T) {
+	tests := []struct {
+		name     string
+		command  string
+		expected bool
+	}{
+		{"tuigreet", "tuigreet --cmd sway", true},
+		{"gtkgreet", "/usr/bin/gtkgreet", true},
+		{"agreety", "agreety --cmd /bin/bash", true},
+		{"regreet", "regreet", true},
+		{"greetd-mini-greeter", "greetd-mini-greeter", true},
+		{"greetd-gtkgreet", "/usr/bin/greetd-gtkgreet", true},
+		{"sway with greet config", "sway --config /etc/greetd/sway-greet.conf", true},
+		{"cage with greet", "cage -s -- gtkgreet", true},
+		{"sway session", "sway", false},
+		{"gnome session", "gnome-session", false},
+		{"kde plasma", "startplasma-x11", false},
+		{"bash", "/bin/bash", false},
+		{"mixed case", "TuiGreet --cmd sway", true},
+		{"false positive my-greetd-session", "my-greetd-session", false},
+		{"false positive greetd-in-middle", "my-app-greetd-mini-greeter-launcher", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isGreeterCommand(tt.command)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
 
 func TestAutologin_Run(t *testing.T) {
 	tests := []struct {
@@ -183,6 +216,76 @@ func TestAutologin_Run(t *testing.T) {
 			expectedPassed: false,
 			expectedStatus: "LightDM autologin session is configured",
 		},
+		{
+			name: "greetd initial_session autologin to sway",
+			mockFiles: map[string]string{
+				"/etc/greetd/config.toml": `[initial_session]
+command = "sway"
+user = "jane"
+
+[default_session]
+command = "tuigreet --cmd sway"`,
+			},
+			mockOsStat: map[string]bool{
+				"/etc/greetd/config.toml": true,
+			},
+			expectedPassed: false,
+			expectedStatus: "greetd initial_session autologin is configured",
+		},
+		{
+			name: "greetd default_session autologin to sway",
+			mockFiles: map[string]string{
+				"/etc/greetd/config.toml": `[default_session]
+command = "sway"
+user = "jane"`,
+			},
+			mockOsStat: map[string]bool{
+				"/etc/greetd/config.toml": true,
+			},
+			expectedPassed: false,
+			expectedStatus: "greetd default_session autologin is configured",
+		},
+		{
+			name: "greetd with greeter user (no autologin)",
+			mockFiles: map[string]string{
+				"/etc/greetd/config.toml": `[default_session]
+command = "sway --config /etc/greetd/sway-config"
+user = "greeter"`,
+			},
+			mockOsStat: map[string]bool{
+				"/etc/greetd/config.toml": true,
+			},
+			expectedPassed: true,
+			expectedStatus: "Automatic login is off",
+		},
+		{
+			name: "greetd with tuigreet (no autologin)",
+			mockFiles: map[string]string{
+				"/etc/greetd/config.toml": `[default_session]
+command = "tuigreet --cmd sway"`,
+			},
+			mockOsStat: map[string]bool{
+				"/etc/greetd/config.toml": true,
+			},
+			expectedPassed: true,
+			expectedStatus: "Automatic login is off",
+		},
+		{
+			name: "greetd initial_session with greeter command",
+			mockFiles: map[string]string{
+				"/etc/greetd/config.toml": `[initial_session]
+command = "agreety --cmd /bin/bash"
+user = "alice"
+
+[default_session]
+command = "tuigreet --cmd sway"`,
+			},
+			mockOsStat: map[string]bool{
+				"/etc/greetd/config.toml": true,
+			},
+			expectedPassed: true,
+			expectedStatus: "Automatic login is off",
+		},
 	}
 
 	for _, tt := range tests {
@@ -193,6 +296,25 @@ func TestAutologin_Run(t *testing.T) {
 					return []byte(content), nil
 				}
 				return nil, nil // Return nil if file not found
+			}
+
+			// Mock shared.GetTOMLSectionKey
+			shared.GetTOMLSectionKeyMock = func(filepath, section, key string) (string, bool) {
+				if content, ok := tt.mockFiles[filepath]; ok {
+					// Parse TOML content
+					tree, err := toml.Load(content)
+					if err != nil {
+						return "", false
+					}
+					fullPath := fmt.Sprintf("%s.%s", section, key)
+					if tree.Has(fullPath) {
+						value := tree.Get(fullPath)
+						if value != nil {
+							return fmt.Sprintf("%v", value), true
+						}
+					}
+				}
+				return "", false
 			}
 
 			// Mock filepath.Glob

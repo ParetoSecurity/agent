@@ -126,6 +126,48 @@ in
           user = "testuser";
         };
       };
+
+    # Greetd with tuigreet (no autologin) - should pass
+    greetdnoautologin =
+      { pkgs, ... }:
+      {
+        imports = [
+          (testUser { })
+        ];
+        services.paretosecurity.enable = true;
+        services.greetd = {
+          enable = true;
+          settings = {
+            default_session = {
+              command = "${pkgs.greetd.tuigreet}/bin/tuigreet --cmd sway";
+              user = "greeter";
+            };
+          };
+        };
+      };
+
+    # Greetd with autologin - should fail
+    greetdautologin =
+      { pkgs, ... }:
+      {
+        imports = [
+          (testUser { })
+        ];
+        services.paretosecurity.enable = true;
+        services.greetd = {
+          enable = true;
+          settings = {
+            initial_session = {
+              command = "sway";
+              user = "testuser";
+            };
+            default_session = {
+              command = "${pkgs.greetd.tuigreet}/bin/tuigreet --cmd sway";
+              user = "greeter";
+            };
+          };
+        };
+      };
   };
 
   testScript = ''
@@ -262,5 +304,37 @@ in
         )
         assert out == expected, f"Test 8 failed: {expected} did not match actual, got \n{out}"
         sddmautologin.shutdown()
+
+    # Test 9: Greetd without autologin - should pass
+    with subtest("Greetd without autologin"):
+        greetdnoautologin.start()
+        greetdnoautologin.systemctl("start network-online.target")
+        greetdnoautologin.wait_for_unit("network-online.target")
+        greetdnoautologin.wait_for_unit("multi-user.target")
+
+        out = greetdnoautologin.succeed("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
+        expected = (
+            "  • Starting checks...\n"
+            "  • Access Security: Automatic login is disabled > [OK] Automatic login is off\n"
+            "  • Checks completed.\n"
+        )
+        assert out == expected, f"Test 9 failed: {expected} did not match actual, got \n{out}"
+        greetdnoautologin.shutdown()
+
+    # Test 10: Greetd with autologin - should fail
+    with subtest("Greetd with autologin"):
+        greetdautologin.start()
+        greetdautologin.systemctl("start network-online.target")
+        greetdautologin.wait_for_unit("network-online.target")
+        greetdautologin.wait_for_unit("multi-user.target")
+
+        out = greetdautologin.fail("paretosecurity check --only f962c423-fdf5-428a-a57a-816abc9b253e")
+        expected = (
+            "  • Starting checks...\n"
+            "  • Access Security: Automatic login is disabled > [FAIL] greetd initial_session autologin is configured\n"
+            "  • Checks completed.\n"
+        )
+        assert out == expected, f"Test 10 failed: {expected} did not match actual, got \n{out}"
+        greetdautologin.shutdown()
   '';
 }
