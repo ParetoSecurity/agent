@@ -6,12 +6,122 @@ import (
 	"strings"
 
 	"github.com/ParetoSecurity/agent/shared"
+	"github.com/samber/lo"
 )
 
 // Autologin checks for autologin misconfiguration.
 type Autologin struct {
 	passed bool
 	status string
+}
+
+// isGreeterCommand checks if a command is a greeter (login screen) rather than a desktop session
+func isGreeterCommand(cmd string) bool {
+	greeters := []string{
+		"agreety",
+		"cosmic-greeter",
+		"ddlm",
+		"emptty",
+		"greetd-egui",
+		"greetd-gtkgreet",
+		"greetd-mini-greeter",
+		"greetd-mini-wl-greeter",
+		"greetly",
+		"gtkgreet",
+		"iced-greet",
+		"ly",
+		"marine_greetdm",
+		"meow-greeter",
+		"ncgreet",
+		"nwg-hello",
+		"nyow-greeter",
+		"octobacillus",
+		"qmlgreet",
+		"qtgreet",
+		"regreet",
+		"salut",
+		"tuigreet",
+		"waygreet",
+		"waycratedm",
+		"wlgreet",
+	}
+
+	cmdLower := strings.ToLower(cmd)
+
+	// Split by whitespace and check each part
+	parts := strings.Fields(cmdLower)
+	foundGreeter := lo.ContainsBy(parts, func(part string) bool {
+		// Remove path if present
+		// /usr/bin/tuigreet -> tuigreet
+		if idx := strings.LastIndex(part, "/"); idx != -1 {
+			part = part[idx+1:]
+		}
+		return lo.Contains(greeters, part)
+	})
+
+	if foundGreeter {
+		return true
+	}
+
+	// Also check if it's starting sway/cage with a greeter config
+	// (common pattern for gtkgreet/regreet)
+	if strings.Contains(cmdLower, "sway") && strings.Contains(cmdLower, "greet") {
+		return true
+	}
+	if strings.Contains(cmdLower, "cage") && strings.Contains(cmdLower, "greet") {
+		return true
+	}
+
+	return false
+}
+
+// checkGreetdSessionAutologin checks if a greetd session has autologin configured
+func checkGreetdSessionAutologin(configPath, sessionName string) bool {
+	cmd, cmdExists := shared.GetTOMLSectionKey(configPath, sessionName, "command")
+	if !cmdExists {
+		return false
+	}
+
+	user, userExists := shared.GetTOMLSectionKey(configPath, sessionName, "user")
+
+	// Autologin is configured if:
+	// 1. Command is not a greeter AND
+	// 2. User is specified and not "greeter"
+	return !isGreeterCommand(cmd) && userExists && user != "" && user != "greeter"
+}
+
+// getGreetdConfigPaths finds greetd config paths
+func getGreetdConfigPaths() []string {
+	candidates := []string{
+		"/etc/greetd/config.toml",
+		"/etc/greetd/greetd.toml",
+	}
+
+	// Try to get config path from systemd service (for NixOS)
+	if output, err := shared.RunCommand("systemctl", "cat", "greetd.service"); err == nil {
+		// Look for ExecStart line with config path
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			if strings.Contains(line, "ExecStart=") {
+				// Extract config path from command line args
+				if strings.Contains(line, "--config") {
+					parts := regexp.MustCompile(`--config\s+([^\s]+)`).FindStringSubmatch(line)
+					if len(parts) > 1 {
+						candidates = append([]string{parts[1]}, candidates...)
+					}
+				}
+			}
+		}
+	}
+
+	var existingPaths []string
+	for _, path := range candidates {
+		if _, err := osStat(path); err == nil {
+			existingPaths = append(existingPaths, path)
+		}
+	}
+
+	return existingPaths
 }
 
 // Name returns the name of the check
@@ -144,6 +254,24 @@ func (f *Autologin) Run() error {
 				f.status = "LightDM autologin session is configured"
 				return nil
 			}
+		}
+	}
+
+	// Check greetd autologin
+	greetdConfigPaths := getGreetdConfigPaths()
+	for _, configPath := range greetdConfigPaths {
+		// Check initial_session (autologin on first boot)
+		if checkGreetdSessionAutologin(configPath, "initial_session") {
+			f.passed = false
+			f.status = "greetd initial_session autologin is configured"
+			return nil
+		}
+
+		// Check default_session (autologin after logout)
+		if checkGreetdSessionAutologin(configPath, "default_session") {
+			f.passed = false
+			f.status = "greetd default_session autologin is configured"
+			return nil
 		}
 	}
 
