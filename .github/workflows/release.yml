@@ -24,7 +24,7 @@ jobs:
       - name: Run Windows schema
         run: agent_windows_amd64_v1/paretosecurity schema > windows.json
       - name: Upload Windows schema
-        uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7
+        uses: softprops/action-gh-release@aec2ec56f94eb8180ceec724245f64ef008b89f5
         with:
           files: windows.json
         env:
@@ -51,13 +51,13 @@ jobs:
       - name: Create ZIP package (x64)
         run: Compress-Archive -Path paretosecurity-tray.exe, paretosecurity.exe -DestinationPath paretosecurity_windows_amd64.zip
       - name: Upload Windows Installer (x64)
-        uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7
+        uses: softprops/action-gh-release@aec2ec56f94eb8180ceec724245f64ef008b89f5
         with:
           files: paretosecurity-installer-amd64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload Windows ZIP Package (x64)
-        uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7
+        uses: softprops/action-gh-release@aec2ec56f94eb8180ceec724245f64ef008b89f5
         with:
           files: paretosecurity_windows_amd64.zip
         env:
@@ -80,7 +80,7 @@ jobs:
         run: agent_linux_amd64_v1/paretosecurity schema > linux.json
 
       - name: Upload Linux schema
-        uses: softprops/action-gh-release@62c96d0c4e8a889135c1f3a25910db8dbe0e85f7
+        uses: softprops/action-gh-release@aec2ec56f94eb8180ceec724245f64ef008b89f5
         with:
           files: linux.json
         env:
