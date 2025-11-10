@@ -1,6 +1,63 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
-  ]
+    "config:recommended",
+    ":semanticCommits"
+  ],
+  "timezone": "UTC",
+  "schedule": [
+    "before 6am on Monday"
+  ],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "packageRules": [
+    {
+      "description": "Group all Go module dependencies",
+      "matchManagers": ["gomod"],
+      "groupName": "Go dependencies",
+      "semanticCommitType": "build",
+      "semanticCommitScope": "go"
+    },
+    {
+      "description": "Group all npm/yarn dependencies",
+      "matchManagers": ["npm"],
+      "groupName": "npm dependencies",
+      "semanticCommitType": "build",
+      "semanticCommitScope": "npm"
+    },
+    {
+      "description": "Group all GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "semanticCommitType": "ci",
+      "semanticCommitScope": "actions"
+    },
+    {
+      "description": "Group all Python pip dependencies",
+      "matchManagers": ["pip_requirements"],
+      "groupName": "Python dependencies",
+      "semanticCommitType": "build",
+      "semanticCommitScope": "python"
+    },
+    {
+      "description": "Automerge minor and patch updates for non-major versions",
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash"
+    },
+    {
+      "description": "Require approval for major updates",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "automerge": true,
+    "automergeType": "pr",
+    "automergeStrategy": "squash"
+  },
+  "labels": ["dependencies", "renovate"]
 }
