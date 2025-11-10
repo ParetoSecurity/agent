@@ -39,18 +39,6 @@
       "semanticCommitType": "build",
       "semanticCommitScope": "python"
     },
-    {
-      "description": "Automerge minor and patch updates for non-major versions",
-      "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true,
-      "automergeType": "pr",
-      "automergeStrategy": "squash"
-    },
-    {
-      "description": "Require approval for major updates",
-      "matchUpdateTypes": ["major"],
-      "automerge": false
-    }
   ],
   "vulnerabilityAlerts": {
     "enabled": true,
