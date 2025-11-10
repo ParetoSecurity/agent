@@ -25,7 +25,7 @@ jobs:
   windows:
     name: Windows Test of a Build
     runs-on: windows-2025
-    needs: [ build ]
+    needs: [build]
     steps:
       - name: Download build
         uses: actions/download-artifact@v5
@@ -250,12 +250,12 @@ jobs:
   checks-on-linux:
     name: "Install and Run on ${{ matrix.distribution }}"
     runs-on: ubuntu-latest
-    needs: [ build ]
+    needs: [build]
     strategy:
       fail-fast: false
       matrix:
         # https://images.linuxcontainers.org/
-        distribution: [ubuntu/22.04, ubuntu/24.04, fedora/42, archlinux, debian/12, debian/13]
+        distribution: [debian/13, debian/12, ubuntu/25.10, ubuntu/25.04, ubuntu/24.04, ubuntu/22.04, fedora/42, fedora/41, archlinux]
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -283,7 +283,7 @@ jobs:
           sudo nft flush ruleset
           sudo apt install -y incus
           sudo chmod 666 /var/lib/incus/unix.socket
-      
+
       - name: Prepare image
         run: |
           sudo incus admin init --auto
@@ -291,7 +291,7 @@ jobs:
           sudo incus launch images:${{ matrix.distribution }} pareto
           sudo incus file push agent_linux_amd64_v1/paretosecurity pareto/opt/paretosecurity
           sudo incus file push apt/install.sh pareto/opt/install.sh
-          
+
       - name: Wait for network
         run: |
           sleep 10
@@ -306,11 +306,11 @@ jobs:
           sudo incus exec pareto -- sudo systemctl daemon-reload
           sudo incus exec pareto -- sudo systemctl enable paretosecurity.service
           sudo incus exec pareto -- sudo systemctl enable paretosecurity.socket
-        
+
       - name: Verify CLI is installed
         run: |
           sudo incus exec pareto -- paretosecurity info
-      
+
       - name: Run Linux tests
         run: |
           sudo incus exec pareto -- /opt/paretosecurity check || true
@@ -323,7 +323,7 @@ jobs:
         run: |
           sudo incus exec pareto -- /opt/paretosecurity status
 
-    
+
   build:
     name: Unstable build
     runs-on: ubuntu-latest

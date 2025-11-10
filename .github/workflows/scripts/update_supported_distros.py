@@ -5,10 +5,11 @@ import re
 from typing import List, Dict, Any, Optional, Tuple
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import LiteralScalarString, DoubleQuotedScalarString
+from ruamel.yaml.comments import CommentedSeq
 
 """
 This script checks the currently supported versions of ubuntu, debian and fedora on https://endoflife.date/ 
-and updates the .github/workflows/distro.yml file accordingly.
+and updates the .github/workflows/distro.yml and .github/workflows/build.yml files accordingly.
 
 It automatically runs every Monday at 8:30 AM CEST, via a Github Action, which creates a pull request if any changes have been made.
 It can also be run manually.
@@ -265,6 +266,37 @@ def add_distro(distro: str) -> None:
         yaml.dump(data, f)
 
 
+def update_build_yml(supported_distros: List[str]) -> None:
+    """ Update the distribution matrix in the build.yml file. """
+
+    current = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(current, "..", "build.yml")
+    
+    new_matrix = []
+    for d in supported_distros:
+        new_matrix.append(d.replace('-', '/'))
+    
+    new_matrix.append('archlinux')
+    
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    yaml.default_flow_style = None
+    yaml.width = 4096
+    yaml.indent(mapping=2, sequence=4, offset=2)
+    
+    with open(path, 'r') as f:
+        data = yaml.load(f)
+        
+    inline_matrix = CommentedSeq(new_matrix)
+    inline_matrix.fa.set_flow_style()
+    
+    data['jobs']['checks-on-linux']['strategy']['matrix']['distribution'] = inline_matrix
+    
+    with open(path, 'w') as f:
+        yaml.dump(data, f)
+    
+    print(f"Updated build.yml matrix.")
+
 
 def set_github_output(name: str, value: str) -> None:
     """
@@ -295,8 +327,8 @@ def main() -> None:
     Main entry point for the distro update script.
     
     Compares currently supported distros from endoflife.date with the
-    distro.yml matrix and updates it as needed. Creates GitHub Actions
-    outputs for the workflow to use.
+    distro.yml matrix and updates it as needed. Also updates the build.yml
+    matrix. Creates GitHub Actions outputs for the workflow to use.
     """
 
     supported_distros = get_supported_distros()
@@ -320,7 +352,10 @@ def main() -> None:
                 print(f"Adding new distro version: {distro} to the matrix.")
                 added_distros.append(distro)
                 add_distro(distro)
-        
+
+        print("Updating supported distros in .github/workflows/build.yml")
+        update_build_yml(supported_distros)
+
         set_github_output("changes_made", "true")
         
         pr_description = "Update supported Linux distribution versions based on https://endoflife.date/\n\n"
