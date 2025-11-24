@@ -11,7 +11,7 @@ require (
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/fyne-io/image v0.1.1
-	github.com/godbus/dbus/v5 v5.1.0
+	github.com/godbus/dbus/v5 v5.2.0
 	github.com/kolide/toast v1.0.2
 	github.com/olekukonko/tablewriter v1.1.0
 	github.com/spf13/cobra v1.10.1
