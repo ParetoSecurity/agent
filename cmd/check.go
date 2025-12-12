@@ -93,7 +93,9 @@ func runCheckCommand(config *CheckConfig, skipUUIDs []string, onlyUUID string) {
 					config.LogErrorf("Failed check: %s (UUID: %s)", check.Name, check.UUID)
 				}
 			}
-			config.LogFatal("You can use `paretosecurity check --verbose` to get a detailed report.")
+			if !verbose {
+				config.LogFatal("You can use `paretosecurity check --verbose` to get a detailed report.")
+			}
 		}
 
 	case <-ctx.Done():
