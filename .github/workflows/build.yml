@@ -28,7 +28,7 @@ jobs:
     needs: [build]
     steps:
       - name: Download build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: build
       - name: Display structure of downloaded files
@@ -111,13 +111,13 @@ jobs:
       pull-requests: write # Explicitly set permissions for creating/updating PR comments
     steps:
       - name: Download installer screenshot artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: installer-screenshot
           # Defaults to downloading to the workspace root, e.g., installer_screenshot.png
 
       - name: Download tray screenshot artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: tray-screenshot
           # Defaults to downloading to the workspace root, e.g., tray_screenshot.png
@@ -260,7 +260,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Download build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: build
       - name: Install Incus
