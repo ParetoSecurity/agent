@@ -96,7 +96,7 @@ func Test_runCheckCommand_IsRoot(t *testing.T) {
 	assert.True(t, logWarnCalled)
 }
 
-func Test_runCheckCommand_ChecksFailed(t *testing.T) {
+func Test_runCheckCommand_ChecksFailed_Verbose(t *testing.T) {
 	var logFatalCalled bool
 	var logErrorfCalled bool
 
@@ -132,8 +132,47 @@ func Test_runCheckCommand_ChecksFailed(t *testing.T) {
 
 	runCheckCommand(config, []string{}, "")
 
-	assert.True(t, logFatalCalled)
+	assert.False(t, logFatalCalled) // verbose is true, so LogFatal should not be called
 	assert.True(t, logErrorfCalled)
+}
+
+func Test_runCheckCommand_ChecksFailed_NotVerbose(t *testing.T) {
+	var logFatalCalled bool
+	var logErrorfCalled bool
+
+	// Ensure verbose is false for this test
+	oldVerbose := verbose
+	verbose = false
+	defer func() { verbose = oldVerbose }()
+
+	config := &CheckConfig{
+		IsRoot:          func() bool { return false },
+		IsLinked:        func() bool { return false },
+		AllChecksPassed: func() bool { return false },
+		GetFailedChecks: func() []shared.LastState {
+			return []shared.LastState{
+				{Name: "Test Check", UUID: "test-uuid"},
+			}
+		},
+		ReportToTeam: func(bool) error { return nil },
+		RunnerCheck:  func(ctx context.Context, claims []claims.Claim, skipUUIDs []string, onlyUUID string) {},
+		LogFatal: func(msg string) {
+			logFatalCalled = true
+			assert.Equal(t, "You can use `paretosecurity check --verbose` to get a detailed report.", msg)
+		},
+		LogWarn: func(msg string) {},
+		LogErrorf: func(format string, args ...interface{}) {
+			logErrorfCalled = true
+		},
+		LogWithError: func(err error) *log.Entry {
+			return log.WithError(err)
+		},
+	}
+
+	runCheckCommand(config, []string{}, "")
+
+	assert.True(t, logFatalCalled)   // suggests using --verbose when not in verbose mode
+	assert.False(t, logErrorfCalled) // failed checks are not logged without verbose
 }
 
 func Test_runCheckCommand_NotLinked(t *testing.T) {
