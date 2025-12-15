@@ -50,7 +50,7 @@ jobs:
         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
     - run: devenv test -d
     - name: Archive code coverage results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: code-coverage
         path: coverage.txt # Make sure to use the same file name you chose for the "-coverprofile" in the "Test" step
