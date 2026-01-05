@@ -11,12 +11,12 @@ in
 {
   packages = [
     upstream.goreleaser
-    upstream.go_1_24
+    upstream.go_1_25
   ];
 
   languages.nix.enable = true;
 
-  env.GOROOT = upstream.go_1_24 + "/share/go/";
+  env.GOROOT = upstream.go_1_25 + "/share/go/";
   env.GOPATH = config.env.DEVENV_STATE + "/go";
   env.GOTOOLCHAIN = "local";
 
