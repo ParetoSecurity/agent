@@ -302,7 +302,8 @@ jobs:
 
       - name: Run installer
         run: |
-          sudo incus exec pareto -- bash /opt/install.sh
+          # Skip recommended packages in CI to avoid pulling in desktop dependencies
+          sudo incus exec pareto -- env PARETO_APT_OPTS="--no-install-recommends" PARETO_DNF_OPTS="--setopt=install_weak_deps=False" bash /opt/install.sh
           sudo incus exec pareto -- sudo systemctl daemon-reload
           sudo incus exec pareto -- sudo systemctl enable paretosecurity.service
           sudo incus exec pareto -- sudo systemctl enable paretosecurity.socket

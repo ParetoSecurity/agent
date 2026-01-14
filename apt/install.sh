@@ -49,7 +49,7 @@ main() {
         echo 'deb [signed-by=/usr/share/keyrings/paretosecurity.gpg] https://pkg.paretosecurity.com/debian stable main' |\
             show $sudo install -DTm644 /dev/stdin /etc/apt/sources.list.d/pareto.list
         show $sudo apt-get update
-        show $sudo apt-get install -y paretosecurity
+        show $sudo apt-get install -y ${PARETO_APT_OPTS:-} paretosecurity
 
     elif available dnf; then
         if dnf --version|grep -q dnf5; then
@@ -64,7 +64,7 @@ main() {
         if which paretosecurity >/dev/null 2>&1; then
             show $sudo dnf upgrade -y paretosecurity
         else
-            show $sudo dnf install -y paretosecurity
+            show $sudo dnf install -y ${PARETO_DNF_OPTS:-} paretosecurity
         fi
         
     elif available pacman; then
