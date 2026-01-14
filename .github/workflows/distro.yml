@@ -78,12 +78,19 @@ jobs:
             verify_package: "rpm -q paretosecurity"
           - distro: fedora-43
             image: jrei/systemd-fedora:43
+            # noscripts: workaround for broken udisks2 scriptlet in containers
             setup: |
-              dnf -y update
-              dnf -y upgrade
-              dnf -y install which
-            installer: "dnf -y install"
+              dnf -y --setopt=tsflags=noscripts update
+              dnf -y --setopt=tsflags=noscripts upgrade
+              dnf -y --setopt=tsflags=noscripts install which
+              rpm --import https://pkg.paretosecurity.com/paretosecurity.asc
+              dnf config-manager addrepo --overwrite --from-repofile=https://pkg.paretosecurity.com/rpm/paretosecurity.repo
+              dnf -y --setopt=tsflags=noscripts install paretosecurity
+              systemctl daemon-reload
+              systemctl enable --now paretosecurity.socket
+            installer: "dnf -y --setopt=tsflags=noscripts install"
             verify_package: "rpm -q paretosecurity"
+            skip_install_sh: true
           - distro: arch
             image: carlodepieri/docker-archlinux-systemd
             setup: |
@@ -129,6 +136,7 @@ jobs:
           docker exec -u alice runner mkdir -p /home/alice/.config
 
       - name: Install ParetoSecurity
+        if: ${{ matrix.skip_install_sh != true }}
         run: |
           docker exec runner bash /workspace/apt/install.sh
 
