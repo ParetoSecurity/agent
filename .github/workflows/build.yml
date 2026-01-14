@@ -304,7 +304,6 @@ jobs:
         run: |
           sudo incus exec pareto -- bash /opt/install.sh
           sudo incus exec pareto -- sudo systemctl daemon-reload
-          sudo incus exec pareto -- sudo systemctl enable paretosecurity.service
           sudo incus exec pareto -- sudo systemctl enable paretosecurity.socket
 
       - name: Verify CLI is installed
