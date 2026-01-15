@@ -18,7 +18,7 @@ func (pmc *PasswordManagerCheck) Name() string {
 }
 
 func (pmc *PasswordManagerCheck) isManagerInstalled() bool {
-	passwordManagers := []string{"1password", "bitwarden", "dashlane", "keepassx", "keepassxc", "gnome-keyring"}
+	passwordManagers := []string{"1password", "bitwarden", "dashlane", "keepassx", "keepassxc", "gnome-keyring", "rbw"}
 
 	for _, pwdManager := range passwordManagers {
 		if isPackageInstalled(pwdManager) {
