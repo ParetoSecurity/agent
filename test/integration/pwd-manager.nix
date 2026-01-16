@@ -3,12 +3,21 @@
   interactive.sshBackdoor.enable = true;
 
   nodes = {
-    withPwdManager =
+    bitwarden =
       { pkgs, ... }:
       {
         services.paretosecurity.enable = true;
         environment.systemPackages = with pkgs; [
           bitwarden
+        ];
+      };
+
+    rbw =
+      { pkgs, ... }:
+      {
+        services.paretosecurity.enable = true;
+        environment.systemPackages = with pkgs; [
+          rbw
         ];
       };
 
@@ -21,8 +30,8 @@
   };
 
   testScript = ''
-    # Test 1: Check passes with password managers installed
-    out = withPwdManager.succeed("paretosecurity check --only f962c423-fdf5-428a-a57a-827abc9b253e")
+    # Test 1: Check passes with bitwarden installed
+    out = bitwarden.succeed("paretosecurity check --only f962c423-fdf5-428a-a57a-827abc9b253e")
     expected = (
         "  • Starting checks...\n"
         "  • Access Security: Password Manager Presence > [OK] Password manager is present\n"
@@ -30,7 +39,16 @@
     )
     assert out == expected, f"Expected did not match actual, got \n{out}"
 
-    # Test 2: Check fails without password manager
+    # Test 2: Check passes with rbw installed
+    out = rbw.succeed("paretosecurity check --only f962c423-fdf5-428a-a57a-827abc9b253e")
+    expected = (
+        "  • Starting checks...\n"
+        "  • Access Security: Password Manager Presence > [OK] Password manager is present\n"
+        "  • Checks completed.\n"
+    )
+    assert out == expected, f"Expected did not match actual, got \n{out}"
+
+    # Test 3: Check fails without password manager
     status, out = noPwdManager.execute("paretosecurity check --only f962c423-fdf5-428a-a57a-827abc9b253e")
     expected = (
         "  • Starting checks...\n"
