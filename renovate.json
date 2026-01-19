@@ -10,6 +10,7 @@
   ],
   "prConcurrentLimit": 5,
   "prHourlyLimit": 2,
+  "minimumReleaseAge": "7 days",
   "packageRules": [
     {
       "description": "Group all Go module dependencies - major updates only",
