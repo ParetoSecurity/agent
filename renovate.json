@@ -12,11 +12,12 @@
   "prHourlyLimit": 2,
   "packageRules": [
     {
-      "description": "Group all Go module dependencies",
+      "description": "Group all Go module dependencies - major updates only",
       "matchManagers": ["gomod"],
       "groupName": "Go dependencies",
       "semanticCommitType": "build",
-      "semanticCommitScope": "go"
+      "semanticCommitScope": "go",
+      "matchUpdateTypes": ["major"]
     },
     {
       "description": "Group all npm/yarn dependencies",
@@ -38,7 +39,7 @@
       "groupName": "Python dependencies",
       "semanticCommitType": "build",
       "semanticCommitScope": "python"
-    },
+    }
   ],
   "vulnerabilityAlerts": {
     "enabled": true,
