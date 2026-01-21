@@ -1,5 +1,4 @@
 //go:build toast
-// +build toast
 
 package cmd
 

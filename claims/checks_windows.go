@@ -9,6 +9,8 @@ import (
 var All = []Claim{
 	{"Access Security", []check.Check{
 		&checks.PasswordManagerCheck{},
+		&checks.ScreensaverTimeout{},
+		&checks.ScreensaverPassword{},
 	}},
 	{"Application Updates", []check.Check{
 		&shared.ParetoUpdated{},
