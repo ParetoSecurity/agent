@@ -7,6 +7,68 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Sample powercfg output for testing
+const powercfgVideoIdleOutput = `
+Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)
+  GUID Alias: SCHEME_BALANCED
+  Subgroup GUID: 7516b95f-f776-4464-8c53-06167f40cc99  (Display)
+    GUID Alias: SUB_VIDEO
+    Power Setting GUID: 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e  (Turn off display after)
+      GUID Alias: VIDEOIDLE
+      Minimum Possible Setting: 0x00000000
+      Maximum Possible Setting: 0xffffffff
+      Possible Settings increment: 0x00000001
+      Possible Settings units: Seconds
+    Current AC Power Setting Index: 0x00000708
+    Current DC Power Setting Index: 0x00000384
+`
+
+// Slovenian localized output
+const powercfgVideoIdleSlovenian = `
+Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Uravnoteženo)
+  GUID Alias: SCHEME_BALANCED
+  Subgroup GUID: 7516b95f-f776-4464-8c53-06167f40cc99  (Zaslon)
+    GUID Alias: SUB_VIDEO
+    Power Setting GUID: 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e  (Izklop zaslona po)
+      GUID Alias: VIDEOIDLE
+      Minimum Possible Setting: 0x00000000
+      Maximum Possible Setting: 0xffffffff
+      Possible Settings increment: 0x00000001
+      Possible Settings units: sekunde
+    Current AC Power Setting Index: 0x00000000
+    Current DC Power Setting Index: 0x00000e10
+`
+
+const powercfgConsoleLockEnabled = `
+Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)
+  GUID Alias: SCHEME_BALANCED
+  Subgroup GUID: fea3413e-7e05-4911-9a71-700331f1c294  (No subgroup)
+    GUID Alias: SUB_NONE
+    Power Setting GUID: 0e796bdb-100d-47d6-a2d5-f7d2daa51f51  (Require a password on wakeup)
+      GUID Alias: CONSOLELOCK
+      Minimum Possible Setting: 0x00000000
+      Maximum Possible Setting: 0x00000001
+      Possible Settings increment: 0x00000001
+      Possible Settings units:
+      Current AC Power Setting Index: 0x00000001
+      Current DC Power Setting Index: 0x00000001
+`
+
+const powercfgConsoleLockDisabled = `
+Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)
+  GUID Alias: SCHEME_BALANCED
+  Subgroup GUID: fea3413e-7e05-4911-9a71-700331f1c294  (No subgroup)
+    GUID Alias: SUB_NONE
+    Power Setting GUID: 0e796bdb-100d-47d6-a2d5-f7d2daa51f51  (Require a password on wakeup)
+      GUID Alias: CONSOLELOCK
+      Minimum Possible Setting: 0x00000000
+      Maximum Possible Setting: 0x00000001
+      Possible Settings increment: 0x00000001
+      Possible Settings units:
+      Current AC Power Setting Index: 0x00000000
+      Current DC Power Setting Index: 0x00000000
+`
+
 func TestScreensaverTimeout_Run(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -15,8 +77,254 @@ func TestScreensaverTimeout_Run(t *testing.T) {
 		expectedStatus string
 	}{
 		{
-			name: "Screensaver active with timeout under 20 minutes",
+			name: "Desktop with display timeout under 20 minutes",
 			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "0",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_VIDEO", "VIDEOIDLE"},
+					Out: `Current AC Power Setting Index: 0x00000258
+Current DC Power Setting Index: 0x00000258`,
+					Err: nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
+					Out:     "0",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true, // 0x258 = 600 seconds = 10 minutes
+			expectedStatus: "Screensaver or screen lock shows in under 20min",
+		},
+		{
+			name: "Desktop with display timeout exactly 20 minutes",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "0",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_VIDEO", "VIDEOIDLE"},
+					Out: `Current AC Power Setting Index: 0x000004b0
+Current DC Power Setting Index: 0x000004b0`,
+					Err: nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
+					Out:     "0",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true, // 0x4b0 = 1200 seconds = 20 minutes
+			expectedStatus: "Screensaver or screen lock shows in under 20min",
+		},
+		{
+			name: "Desktop with display timeout over 20 minutes, no screensaver",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "0",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_VIDEO", "VIDEOIDLE"},
+					Out: `Current AC Power Setting Index: 0x00000708
+Current DC Power Setting Index: 0x00000708`,
+					Err: nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
+					Out:     "0",
+					Err:     nil,
+				},
+			},
+			expectedPassed: false, // 0x708 = 1800 seconds = 30 minutes, no screensaver
+			expectedStatus: "Screen timeout exceeds 20 minutes",
+		},
+		{
+			name: "Desktop with display set to Never, no screensaver",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "0",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_VIDEO", "VIDEOIDLE"},
+					Out: `Current AC Power Setting Index: 0x00000000
+Current DC Power Setting Index: 0x00000000`,
+					Err: nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
+					Out:     "0",
+					Err:     nil,
+				},
+			},
+			expectedPassed: false, // Display set to Never, no screensaver
+			expectedStatus: "Screen timeout exceeds 20 minutes",
+		},
+		{
+			name: "Laptop with AC timeout over 20 minutes, no screensaver",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "1",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_VIDEO", "VIDEOIDLE"},
+					Out: `Current AC Power Setting Index: 0x00000708
+Current DC Power Setting Index: 0x000004b0`,
+					Err: nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
+					Out:     "0",
+					Err:     nil,
+				},
+			},
+			expectedPassed: false, // AC: 30 min, DC: 20 min, no screensaver
+			expectedStatus: "Screen timeout exceeds 20 minutes when plugged in",
+		},
+		{
+			name: "Laptop with DC timeout over 20 minutes, no screensaver",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "1",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_VIDEO", "VIDEOIDLE"},
+					Out: `Current AC Power Setting Index: 0x000004b0
+Current DC Power Setting Index: 0x00000708`,
+					Err: nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
+					Out:     "0",
+					Err:     nil,
+				},
+			},
+			expectedPassed: false, // AC: 20 min, DC: 30 min, no screensaver
+			expectedStatus: "Screen timeout exceeds 20 minutes on battery",
+		},
+		{
+			name: "Laptop with both AC and DC over 20 minutes, no screensaver",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "1",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_VIDEO", "VIDEOIDLE"},
+					Out: `Current AC Power Setting Index: 0x00000708
+Current DC Power Setting Index: 0x00000708`,
+					Err: nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
+					Out:     "0",
+					Err:     nil,
+				},
+			},
+			expectedPassed: false,
+			expectedStatus: "Screen timeout exceeds 20 minutes on both AC and battery",
+		},
+		{
+			name: "Laptop with both timeouts under 20 minutes",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "1",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_VIDEO", "VIDEOIDLE"},
+					Out: `Current AC Power Setting Index: 0x00000258
+Current DC Power Setting Index: 0x0000012c`,
+					Err: nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
+					Out:     "0",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true, // AC: 10 min, DC: 5 min
+			expectedStatus: "Screensaver or screen lock shows in under 20min",
+		},
+		{
+			name: "Laptop with localized Windows (Slovenian) - AC Never, DC 60 min, no screensaver",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "1",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_VIDEO", "VIDEOIDLE"},
+					Out:     powercfgVideoIdleSlovenian,
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
+					Out:     "0",
+					Err:     nil,
+				},
+			},
+			expectedPassed: false, // AC: Never (0), DC: 60 min (0xe10 = 3600), screensaver disabled
+			expectedStatus: "Screen timeout exceeds 20 minutes on both AC and battery",
+		},
+		{
+			name: "Desktop with display Never and screensaver at 10 min - fails (display must be set)",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "0",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_VIDEO", "VIDEOIDLE"},
+					Out: `Current AC Power Setting Index: 0x00000000
+Current DC Power Setting Index: 0x00000000`,
+					Err: nil,
+				},
 				{
 					Command: "powershell",
 					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
@@ -30,12 +338,25 @@ func TestScreensaverTimeout_Run(t *testing.T) {
 					Err:     nil,
 				},
 			},
-			expectedPassed: true,
-			expectedStatus: "Screensaver or screen lock shows in under 20min",
+			expectedPassed: false, // Display Never - both display AND screensaver must be OK
+			expectedStatus: "Screen timeout exceeds 20 minutes",
 		},
 		{
-			name: "Screensaver active with timeout exactly 20 minutes",
+			name: "Desktop with display 10 min and screensaver at 15 min - passes",
 			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "0",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_VIDEO", "VIDEOIDLE"},
+					Out: `Current AC Power Setting Index: 0x00000258
+Current DC Power Setting Index: 0x00000258`,
+					Err: nil,
+				},
 				{
 					Command: "powershell",
 					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
@@ -45,16 +366,29 @@ func TestScreensaverTimeout_Run(t *testing.T) {
 				{
 					Command: "powershell",
 					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveTimeOut' -ErrorAction SilentlyContinue"},
-					Out:     "1200",
+					Out:     "900",
 					Err:     nil,
 				},
 			},
-			expectedPassed: true,
+			expectedPassed: true, // Both display (10 min) and screensaver (15 min) under 20 min
 			expectedStatus: "Screensaver or screen lock shows in under 20min",
 		},
 		{
-			name: "Screensaver active with timeout over 20 minutes",
+			name: "Desktop with display 10 min but screensaver over 20 min - fails",
 			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "0",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_VIDEO", "VIDEOIDLE"},
+					Out: `Current AC Power Setting Index: 0x00000258
+Current DC Power Setting Index: 0x00000258`,
+					Err: nil,
+				},
 				{
 					Command: "powershell",
 					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
@@ -68,38 +402,25 @@ func TestScreensaverTimeout_Run(t *testing.T) {
 					Err:     nil,
 				},
 			},
-			expectedPassed: false,
-			expectedStatus: "Screensaver timeout is set to more than 20 minutes",
+			expectedPassed: false, // Display OK but screensaver (30 min) over 20 min
+			expectedStatus: "Screensaver timeout exceeds 20 minutes",
 		},
 		{
-			name: "Screensaver not active",
+			name: "Desktop with both display and screensaver over 20 min",
 			mockCommands: []shared.RunCommandMock{
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
 					Out:     "0",
 					Err:     nil,
 				},
-			},
-			expectedPassed: false,
-			expectedStatus: "Screensaver is not enabled",
-		},
-		{
-			name: "Failed to query screensaver status",
-			mockCommands: []shared.RunCommandMock{
 				{
-					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
-					Out:     "",
-					Err:     assert.AnError,
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_VIDEO", "VIDEOIDLE"},
+					Out: `Current AC Power Setting Index: 0x00000708
+Current DC Power Setting Index: 0x00000708`,
+					Err: nil,
 				},
-			},
-			expectedPassed: false,
-			expectedStatus: "Failed to query screensaver status",
-		},
-		{
-			name: "Failed to query timeout",
-			mockCommands: []shared.RunCommandMock{
 				{
 					Command: "powershell",
 					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
@@ -109,12 +430,12 @@ func TestScreensaverTimeout_Run(t *testing.T) {
 				{
 					Command: "powershell",
 					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveTimeOut' -ErrorAction SilentlyContinue"},
-					Out:     "",
-					Err:     assert.AnError,
+					Out:     "1800",
+					Err:     nil,
 				},
 			},
-			expectedPassed: false,
-			expectedStatus: "Failed to query screensaver timeout",
+			expectedPassed: false, // Both display (30 min) and screensaver (30 min) over 20 min
+			expectedStatus: "Screensaver timeout exceeds 20 minutes",
 		},
 	}
 
@@ -144,6 +465,31 @@ func TestScreensaverTimeout_Metadata(t *testing.T) {
 	assert.True(t, check.IsRunnable())
 }
 
+func TestScreensaverTimeout_ParsePowerSettingValue(t *testing.T) {
+	check := &ScreensaverTimeout{}
+
+	// Test parsing AC value
+	acValue := check.parsePowerSettingValue(powercfgVideoIdleOutput, "AC")
+	assert.Equal(t, 1800, acValue) // 0x708 = 1800
+
+	// Test parsing DC value
+	dcValue := check.parsePowerSettingValue(powercfgVideoIdleOutput, "DC")
+	assert.Equal(t, 900, dcValue) // 0x384 = 900
+
+	// Test parsing localized (Slovenian) output
+	acValueSlovenian := check.parsePowerSettingValue(powercfgVideoIdleSlovenian, "AC")
+	assert.Equal(t, 0, acValueSlovenian) // 0x00000000 = Never
+
+	dcValueSlovenian := check.parsePowerSettingValue(powercfgVideoIdleSlovenian, "DC")
+	assert.Equal(t, 3600, dcValueSlovenian) // 0xe10 = 3600 (60 min)
+}
+
+// Minimal powercfg output for modern Windows where CONSOLELOCK is not exposed
+const powercfgConsoleLockNotAvailable = `
+Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)
+  GUID Alias: SCHEME_BALANCED
+`
+
 func TestScreensaverPassword_Run(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -152,23 +498,29 @@ func TestScreensaverPassword_Run(t *testing.T) {
 		expectedStatus string
 	}{
 		{
-			name: "Screensaver password enabled (desktop)",
+			name: "Desktop - sleep password OK, no screensaver",
 			mockCommands: []shared.RunCommandMock{
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaverIsSecure' -ErrorAction SilentlyContinue"},
-					Out:     "1",
-					Err:     nil,
-				},
-				{
-					Command: "powershell",
-					Args:    []string{"-Command", "(Get-WmiObject -Class Win32_Battery | Measure-Object).Count"},
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
 					Out:     "0",
 					Err:     nil,
 				},
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\0e796bdb-100d-47d6-a2d5-f7d2daa51f51' -Name 'ACSettingIndex' -ErrorAction SilentlyContinue"},
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaverIsSecure' -ErrorAction SilentlyContinue"},
+					Out:     "0",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_NONE", "CONSOLELOCK"},
+					Out:     powercfgConsoleLockEnabled,
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
 					Out:     "0",
 					Err:     nil,
 				},
@@ -177,29 +529,29 @@ func TestScreensaverPassword_Run(t *testing.T) {
 			expectedStatus: "Password after sleep or screensaver is on",
 		},
 		{
-			name: "Sleep password enabled (AC and DC) on laptop",
+			name: "Desktop - sleep password OK, screensaver enabled and secure",
 			mockCommands: []shared.RunCommandMock{
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaverIsSecure' -ErrorAction SilentlyContinue"},
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
 					Out:     "0",
 					Err:     nil,
 				},
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "(Get-WmiObject -Class Win32_Battery | Measure-Object).Count"},
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaverIsSecure' -ErrorAction SilentlyContinue"},
 					Out:     "1",
 					Err:     nil,
 				},
 				{
-					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\0e796bdb-100d-47d6-a2d5-f7d2daa51f51' -Name 'ACSettingIndex' -ErrorAction SilentlyContinue"},
-					Out:     "1",
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_NONE", "CONSOLELOCK"},
+					Out:     powercfgConsoleLockEnabled,
 					Err:     nil,
 				},
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\0e796bdb-100d-47d6-a2d5-f7d2daa51f51' -Name 'DCSettingIndex' -ErrorAction SilentlyContinue"},
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
 					Out:     "1",
 					Err:     nil,
 				},
@@ -208,8 +560,14 @@ func TestScreensaverPassword_Run(t *testing.T) {
 			expectedStatus: "Password after sleep or screensaver is on",
 		},
 		{
-			name: "Sleep password enabled (AC only) on desktop",
+			name: "Desktop - sleep password OK, screensaver enabled but NOT secure",
 			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "0",
+					Err:     nil,
+				},
 				{
 					Command: "powershell",
 					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaverIsSecure' -ErrorAction SilentlyContinue"},
@@ -217,24 +575,30 @@ func TestScreensaverPassword_Run(t *testing.T) {
 					Err:     nil,
 				},
 				{
-					Command: "powershell",
-					Args:    []string{"-Command", "(Get-WmiObject -Class Win32_Battery | Measure-Object).Count"},
-					Out:     "0",
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_NONE", "CONSOLELOCK"},
+					Out:     powercfgConsoleLockEnabled,
 					Err:     nil,
 				},
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\0e796bdb-100d-47d6-a2d5-f7d2daa51f51' -Name 'ACSettingIndex' -ErrorAction SilentlyContinue"},
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
 					Out:     "1",
 					Err:     nil,
 				},
 			},
-			expectedPassed: true,
-			expectedStatus: "Password after sleep or screensaver is on",
+			expectedPassed: false,
+			expectedStatus: "Password not required after screensaver",
 		},
 		{
-			name: "Both screensaver and sleep password enabled on laptop",
+			name: "Desktop - sleep password NOT OK, screensaver enabled and secure",
 			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "0",
+					Err:     nil,
+				},
 				{
 					Command: "powershell",
 					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaverIsSecure' -ErrorAction SilentlyContinue"},
@@ -242,30 +606,30 @@ func TestScreensaverPassword_Run(t *testing.T) {
 					Err:     nil,
 				},
 				{
-					Command: "powershell",
-					Args:    []string{"-Command", "(Get-WmiObject -Class Win32_Battery | Measure-Object).Count"},
-					Out:     "1",
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_NONE", "CONSOLELOCK"},
+					Out:     powercfgConsoleLockDisabled,
 					Err:     nil,
 				},
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\0e796bdb-100d-47d6-a2d5-f7d2daa51f51' -Name 'ACSettingIndex' -ErrorAction SilentlyContinue"},
-					Out:     "1",
-					Err:     nil,
-				},
-				{
-					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\0e796bdb-100d-47d6-a2d5-f7d2daa51f51' -Name 'DCSettingIndex' -ErrorAction SilentlyContinue"},
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
 					Out:     "1",
 					Err:     nil,
 				},
 			},
-			expectedPassed: true,
-			expectedStatus: "Password after sleep or screensaver is on",
+			expectedPassed: false,
+			expectedStatus: "Password not required on wake from sleep",
 		},
 		{
-			name: "No password protection enabled on desktop",
+			name: "Desktop - neither sleep nor screensaver password enabled",
 			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "0",
+					Err:     nil,
+				},
 				{
 					Command: "powershell",
 					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaverIsSecure' -ErrorAction SilentlyContinue"},
@@ -273,24 +637,61 @@ func TestScreensaverPassword_Run(t *testing.T) {
 					Err:     nil,
 				},
 				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_NONE", "CONSOLELOCK"},
+					Out:     powercfgConsoleLockDisabled,
+					Err:     nil,
+				},
+				{
 					Command: "powershell",
-					Args:    []string{"-Command", "(Get-WmiObject -Class Win32_Battery | Measure-Object).Count"},
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
+					Out:     "1",
+					Err:     nil,
+				},
+			},
+			expectedPassed: false,
+			expectedStatus: "Password not required on wake or screensaver",
+		},
+		{
+			name: "Desktop - sleep password NOT OK, no screensaver",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
 					Out:     "0",
 					Err:     nil,
 				},
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\0e796bdb-100d-47d6-a2d5-f7d2daa51f51' -Name 'ACSettingIndex' -ErrorAction SilentlyContinue"},
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaverIsSecure' -ErrorAction SilentlyContinue"},
+					Out:     "0",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_NONE", "CONSOLELOCK"},
+					Out:     powercfgConsoleLockDisabled,
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
 					Out:     "0",
 					Err:     nil,
 				},
 			},
 			expectedPassed: false,
-			expectedStatus: "Password protection is not configured for screensaver or sleep",
+			expectedStatus: "Password not required on wake from sleep",
 		},
 		{
-			name: "Only AC sleep password enabled on laptop (fails - missing DC)",
+			name: "Modern Windows - CONSOLELOCK not available, lock screen enabled, no screensaver",
 			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "0",
+					Err:     nil,
+				},
 				{
 					Command: "powershell",
 					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaverIsSecure' -ErrorAction SilentlyContinue"},
@@ -298,71 +699,21 @@ func TestScreensaverPassword_Run(t *testing.T) {
 					Err:     nil,
 				},
 				{
-					Command: "powershell",
-					Args:    []string{"-Command", "(Get-WmiObject -Class Win32_Battery | Measure-Object).Count"},
-					Out:     "1",
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_NONE", "CONSOLELOCK"},
+					Out:     powercfgConsoleLockNotAvailable,
 					Err:     nil,
 				},
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\0e796bdb-100d-47d6-a2d5-f7d2daa51f51' -Name 'ACSettingIndex' -ErrorAction SilentlyContinue"},
-					Out:     "1",
-					Err:     nil,
-				},
-				{
-					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\0e796bdb-100d-47d6-a2d5-f7d2daa51f51' -Name 'DCSettingIndex' -ErrorAction SilentlyContinue"},
-					Out:     "0",
-					Err:     nil,
-				},
-			},
-			expectedPassed: false,
-			expectedStatus: "Password protection is not configured for screensaver or sleep",
-		},
-		{
-			name: "All queries fail on desktop",
-			mockCommands: []shared.RunCommandMock{
-				{
-					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaverIsSecure' -ErrorAction SilentlyContinue"},
-					Out:     "",
-					Err:     assert.AnError,
-				},
-				{
-					Command: "powershell",
-					Args:    []string{"-Command", "(Get-WmiObject -Class Win32_Battery | Measure-Object).Count"},
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon' -Name 'DisableLockWorkstation' -ErrorAction SilentlyContinue"},
 					Out:     "0",
 					Err:     nil,
 				},
 				{
 					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\0e796bdb-100d-47d6-a2d5-f7d2daa51f51' -Name 'ACSettingIndex' -ErrorAction SilentlyContinue"},
-					Out:     "",
-					Err:     assert.AnError,
-				},
-			},
-			expectedPassed: false,
-			expectedStatus: "Password protection is not configured for screensaver or sleep",
-		},
-		{
-			name: "Battery detection fails (assumes desktop)",
-			mockCommands: []shared.RunCommandMock{
-				{
-					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaverIsSecure' -ErrorAction SilentlyContinue"},
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
 					Out:     "0",
-					Err:     nil,
-				},
-				{
-					Command: "powershell",
-					Args:    []string{"-Command", "(Get-WmiObject -Class Win32_Battery | Measure-Object).Count"},
-					Out:     "",
-					Err:     assert.AnError,
-				},
-				{
-					Command: "powershell",
-					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\0e796bdb-100d-47d6-a2d5-f7d2daa51f51' -Name 'ACSettingIndex' -ErrorAction SilentlyContinue"},
-					Out:     "1",
 					Err:     nil,
 				},
 			},
@@ -389,10 +740,29 @@ func TestScreensaverPassword_Run(t *testing.T) {
 func TestScreensaverPassword_Metadata(t *testing.T) {
 	check := &ScreensaverPassword{}
 
-	assert.Equal(t, "Password after sleep or screensaver is on", check.Name())
+	assert.Equal(t, "Password after sleep or screensaver", check.Name())
 	assert.Equal(t, "Password after sleep or screensaver is on", check.PassedMessage())
 	assert.Equal(t, "Password after sleep or screensaver is off", check.FailedMessage())
 	assert.Equal(t, "37dee029-605b-4aab-96b9-5438e5aa44d8", check.UUID())
 	assert.False(t, check.RequiresRoot())
 	assert.True(t, check.IsRunnable())
+}
+
+func TestScreensaverPassword_ParseConsoleLockValue(t *testing.T) {
+	check := &ScreensaverPassword{}
+
+	// Test enabled
+	assert.True(t, check.parseConsoleLockValue(powercfgConsoleLockEnabled, "AC"))
+	assert.True(t, check.parseConsoleLockValue(powercfgConsoleLockEnabled, "DC"))
+
+	// Test disabled
+	assert.False(t, check.parseConsoleLockValue(powercfgConsoleLockDisabled, "AC"))
+	assert.False(t, check.parseConsoleLockValue(powercfgConsoleLockDisabled, "DC"))
+
+	// Test empty output
+	assert.False(t, check.parseConsoleLockValue("", "AC"))
+
+	// Test minimal output (CONSOLELOCK not available)
+	assert.False(t, check.parseConsoleLockValue(powercfgConsoleLockNotAvailable, "AC"))
+	assert.False(t, check.parseConsoleLockValue(powercfgConsoleLockNotAvailable, "DC"))
 }
