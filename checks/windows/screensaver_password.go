@@ -180,7 +180,7 @@ func (s *ScreensaverTimeout) parsePowerSettingValue(output, powerSource string) 
 	for _, line := range lines {
 		matches := re.FindStringSubmatch(line)
 		if len(matches) == 2 {
-			value, err := strconv.ParseInt(matches[1], 16, 64)
+			value, err := strconv.ParseInt(matches[1], 16, strconv.IntSize)
 			if err != nil {
 				return 0
 			}
