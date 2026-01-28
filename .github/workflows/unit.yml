@@ -44,7 +44,7 @@ jobs:
     name: Tests
     runs-on: namespace-profile-pareto-linux
     steps:
-    - uses: namespacelabs/nscloud-checkout-action@63d206913f44274099615dc3bc9bc1dfa3040e43 # v6
+    - uses: namespacelabs/nscloud-checkout-action@99724ed126229e8e2a9cecf3a11c82611024862a # v6
     - uses: ./.github/actions/devenv
       with:
         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
