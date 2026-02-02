@@ -22,5 +22,6 @@ var All = []Claim{
 	}},
 	{"System Integrity", []check.Check{
 		&checks.WindowsDefender{},
+		&checks.DiskEncryption{},
 	}},
 }
