@@ -1,45 +1,11 @@
 package shared
 
 import (
-	"fmt"
-	"net"
 	"os"
 	"testing"
 
 	"strings"
-
-	"github.com/google/uuid"
 )
-
-// systemUUID generates a unique system identifier based on the first available
-// network interface's hardware address (MAC address). It iterates through all
-// network interfaces, skips loopback interfaces, and uses the first interface
-// with a valid hardware address (at least 6 bytes) to generate a SHA1-based
-// UUID using the hardware address as input. Returns an error if no suitable
-// network interface is found.
-func systemUUID() (string, error) {
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		return "", err
-	}
-
-	for _, iface := range interfaces {
-
-		// Skip loopback interfaces
-		if iface.Flags&net.FlagLoopback != 0 {
-			continue
-		}
-
-		if len(iface.HardwareAddr) >= 6 {
-			hwAddr := iface.HardwareAddr
-			// Create a namespace UUID from hardware address
-			nsUUID := uuid.NewSHA1(uuid.NameSpaceOID, hwAddr)
-			return nsUUID.String(), nil
-		}
-	}
-
-	return "", fmt.Errorf("no network interface found")
-}
 
 // IsRoot returns true if the current process is running with root privileges.
 // When running tests, it always returns true to avoid permission-related test failures.
