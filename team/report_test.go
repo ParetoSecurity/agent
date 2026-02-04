@@ -168,13 +168,19 @@ func TestReportToTeam(t *testing.T) {
 
 	// Save original config
 	originalTeamAPI := shared.Config.TeamAPI
+	originalConfigPath := shared.ConfigPath
 	defer func() {
 		shared.Config.TeamAPI = originalTeamAPI
+		shared.ConfigPath = originalConfigPath
 	}()
+
+	tempDir := t.TempDir()
+	shared.ConfigPath = tempDir + "/pareto.toml"
 
 	shared.Config.TeamID = "testTeam"
 	shared.Config.AuthToken = "testToken"
 	shared.Config.TeamAPI = ""
+	shared.Config.LastTeamReportSuccess = 0
 
 	// Test initial report (PUT request).
 	gock.New(defaultReportURL).
@@ -185,6 +191,9 @@ func TestReportToTeam(t *testing.T) {
 	err := ReportToTeam(true)
 	if err != nil {
 		t.Fatalf("ReportToTeam (initial) failed: %v", err)
+	}
+	if shared.Config.LastTeamReportSuccess == 0 {
+		t.Fatalf("expected LastTeamReportSuccess to be set after initial report")
 	}
 
 	if !gock.IsDone() {
@@ -202,6 +211,9 @@ func TestReportToTeam(t *testing.T) {
 	err = ReportToTeam(false)
 	if err != nil {
 		t.Fatalf("ReportToTeam (subsequent) failed: %v", err)
+	}
+	if shared.Config.LastTeamReportSuccess == 0 {
+		t.Fatalf("expected LastTeamReportSuccess to be set after subsequent report")
 	}
 
 	if !gock.IsDone() {

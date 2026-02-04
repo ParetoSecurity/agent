@@ -19,11 +19,13 @@ var ConfigPath string
 var CheckTimeout = 5 * time.Minute
 
 type ParetoConfig struct {
-	TeamID        string
-	AuthToken     string
-	TeamAPI       string
-	SystemUUID    string
-	DisableChecks []string
+	TeamID    string
+	AuthToken string
+	TeamAPI   string
+	// LastTeamReportSuccess stores Unix time in milliseconds of the last successful team report.
+	LastTeamReportSuccess int64
+	SystemUUID            string
+	DisableChecks         []string
 }
 
 // init initializes the configuration path based on the user's operating system
@@ -82,11 +84,12 @@ func LoadConfig() error {
 // ResetConfig clears all configuration values to defaults
 func ResetConfig() {
 	Config = ParetoConfig{
-		TeamID:        "",
-		AuthToken:     "",
-		TeamAPI:       "",
-		SystemUUID:    "",
-		DisableChecks: []string{},
+		TeamID:                "",
+		AuthToken:             "",
+		TeamAPI:               "",
+		LastTeamReportSuccess: 0,
+		SystemUUID:            "",
+		DisableChecks:         []string{},
 	}
 	SaveConfig()
 }
