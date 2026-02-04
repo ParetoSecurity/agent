@@ -29,7 +29,7 @@ func TestDiskEncryption_Run(t *testing.T) {
 			systemDrive:    "C:",
 			statusByDrive:  map[string]int{"C:": 0},
 			expectedPassed: false,
-			expectedStatus: "BitLocker is not enabled on OS volume C:",
+			expectedStatus: "BitLocker is not enabled on OS volume C: (status: 0 (Unknown Status))",
 		},
 		{
 			name:           "Multiple volumes, OS volume encrypted",
@@ -43,7 +43,7 @@ func TestDiskEncryption_Run(t *testing.T) {
 			systemDrive:    "C:",
 			statusByDrive:  map[string]int{"C:": 0, "D:": 1},
 			expectedPassed: false,
-			expectedStatus: "BitLocker is not enabled on OS volume C:",
+			expectedStatus: "BitLocker is not enabled on OS volume C: (status: 0 (Unknown Status))",
 		},
 		{
 			name:           "No OS volume, but data volume encrypted",
@@ -59,7 +59,7 @@ func TestDiskEncryption_Run(t *testing.T) {
 			fixedDrives:    []string{"D:"},
 			statusByDrive:  map[string]int{"D:": 0},
 			expectedPassed: false,
-			expectedStatus: "No encrypted volumes found",
+			expectedStatus: "No encrypted volumes found (last checked D:: status 0 (Unknown Status))",
 		},
 		{
 			name:           "Empty output",
