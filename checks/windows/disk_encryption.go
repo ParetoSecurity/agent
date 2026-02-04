@@ -1,10 +1,9 @@
 package checks
 
 import (
-	"encoding/json"
+	"fmt"
 	"strings"
 
-	"github.com/ParetoSecurity/agent/shared"
 	"github.com/caarlos0/log"
 )
 
@@ -13,11 +12,11 @@ type DiskEncryption struct {
 	status string
 }
 
-type bitlockerVolume struct {
-	MountPoint       string `json:"MountPoint"`
-	ProtectionStatus int    `json:"ProtectionStatus"`
-	VolumeType       int    `json:"VolumeType"`
-}
+var (
+	bitLockerSystemDrive        = defaultSystemDrive
+	bitLockerListFixedDrives    = defaultListFixedDrives
+	bitLockerProtectionStatusFn = defaultGetBitLockerProtectionStatus
+)
 
 // Name returns the name of the check
 func (d *DiskEncryption) Name() string {
@@ -28,64 +27,81 @@ func (d *DiskEncryption) Name() string {
 func (d *DiskEncryption) Run() error {
 	d.passed = false
 
-	// Query BitLocker status for all volumes
-	out, err := shared.RunCommand("powershell", "-Command",
-		"Get-BitLockerVolume | Select-Object MountPoint, ProtectionStatus, VolumeType | ConvertTo-Json")
+	systemDrive := strings.TrimRight(bitLockerSystemDrive(), "\\")
+	if systemDrive != "" {
+		status, err := bitLockerProtectionStatusFn(systemDrive)
+		if err != nil {
+			log.WithError(err).Warn("Failed to query BitLocker status")
+			d.status = "Failed to query BitLocker status"
+			return nil
+		}
+		if isBitLockerProtected(status) {
+			d.passed = true
+			d.status = "BitLocker is enabled on " + systemDrive
+			return nil
+		}
+		d.status = fmt.Sprintf("BitLocker is not enabled on OS volume %s (status: %d %s)", systemDrive, status, bitLockerStatusDescription(status))
+		return nil
+	}
+
+	drives, err := bitLockerListFixedDrives()
 	if err != nil {
 		log.WithError(err).Warn("Failed to query BitLocker status")
 		d.status = "Failed to query BitLocker status"
 		return nil
 	}
-
-	trimmed := strings.TrimSpace(out)
-	if trimmed == "" {
+	if len(drives) == 0 {
 		d.status = "No BitLocker volumes found"
 		return nil
 	}
 
-	var volumes []bitlockerVolume
-
-	// PowerShell returns a single object (not array) when there's one volume
-	if strings.HasPrefix(trimmed, "[") {
-		if err := json.Unmarshal([]byte(trimmed), &volumes); err != nil {
-			log.WithError(err).Warn("Failed to parse BitLocker output")
-			d.status = "Failed to parse BitLocker status"
+	lastDrive := ""
+	lastStatus := 0
+	for _, drive := range drives {
+		status, err := bitLockerProtectionStatusFn(drive)
+		if err != nil {
+			log.WithError(err).Warn("Failed to query BitLocker status")
+			d.status = "Failed to query BitLocker status"
 			return nil
 		}
-	} else {
-		var single bitlockerVolume
-		if err := json.Unmarshal([]byte(trimmed), &single); err != nil {
-			log.WithError(err).Warn("Failed to parse BitLocker output")
-			d.status = "Failed to parse BitLocker status"
-			return nil
-		}
-		volumes = append(volumes, single)
-	}
-
-	// Check that the OS volume (VolumeType 1) has protection enabled (ProtectionStatus 1)
-	for _, vol := range volumes {
-		if vol.VolumeType == 1 {
-			if vol.ProtectionStatus == 1 {
-				d.passed = true
-				d.status = "BitLocker is enabled on " + vol.MountPoint
-				return nil
-			}
-			d.status = "BitLocker is not enabled on OS volume " + vol.MountPoint
-			return nil
-		}
-	}
-
-	// No OS volume found, check if any volume is protected
-	for _, vol := range volumes {
-		if vol.ProtectionStatus == 1 {
+		lastDrive = drive
+		lastStatus = status
+		if isBitLockerProtected(status) {
 			d.passed = true
-			d.status = "BitLocker is enabled on " + vol.MountPoint
+			d.status = "BitLocker is enabled on " + drive
 			return nil
 		}
 	}
 
+	if lastDrive != "" {
+		d.status = fmt.Sprintf("No encrypted volumes found (last checked %s: status %d %s)", lastDrive, lastStatus, bitLockerStatusDescription(lastStatus))
+		return nil
+	}
 	d.status = "No encrypted volumes found"
 	return nil
+}
+
+func isBitLockerProtected(status int) bool {
+	switch status {
+	// 1 = Protection On, 3 = Unknown, 5 = Decryption in Progress
+	case 1, 3, 5:
+		return true
+	default:
+		return false
+	}
+}
+
+func bitLockerStatusDescription(status int) string {
+	switch status {
+	case 1:
+		return "(Protection On)"
+	case 3:
+		return "(Unknown)"
+	case 5:
+		return "(Decryption in Progress)"
+	default:
+		return "(Unknown Status)"
+	}
 }
 
 // Passed returns the status of the check
@@ -115,7 +131,7 @@ func (d *DiskEncryption) FailedMessage() string {
 
 // RequiresRoot returns whether the check requires root access
 func (d *DiskEncryption) RequiresRoot() bool {
-	return true
+	return false
 }
 
 // Status returns the status of the check

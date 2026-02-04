@@ -20,6 +20,9 @@ in
   env.GOPATH = config.env.DEVENV_STATE + "/go";
   env.GOTOOLCHAIN = "local";
 
+  # Use prek (Rust-based) instead of pre-commit (Python-based) for faster git hooks
+  git-hooks.package = pkgs.prek;
+
   # apple.sdk = null; # use installed apple sdk, fixes broken nix ui skd packages on darwin, but breaks debugger
 
   scripts.help-scripts.description = "List all available scripts";
@@ -99,6 +102,10 @@ in
     deadnix.enable = true;
     statix.enable = true;
     gofmt.enable = true;
+    staticcheck = {
+      enable = true;
+      excludes = [ "^cmd/paretosecurity-tray/" ];
+    };
     # golangci-lint.enable = true;
     # revive.enable = true;
     vendor-hash = {

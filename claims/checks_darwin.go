@@ -18,5 +18,7 @@ var All = []Claim{
 	{"Firewall & Sharing", []check.Check{
 		&shared.RemoteLogin{},
 	}},
-	{"System Integrity", []check.Check{}},
+	{"System Integrity", []check.Check{
+		&shared.TeamReportSentCheck{},
+	}},
 }

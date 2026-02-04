@@ -20,7 +20,7 @@ func CurrentReportingDevice() ReportingDevice {
 		log.WithError(err).Fatal("Failed to get device information")
 	}
 
-	osVersion := device.OS
+	var osVersion string
 
 	// Format OS version based on platform requirements
 	switch runtime.GOOS {

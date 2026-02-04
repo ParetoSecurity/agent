@@ -133,5 +133,10 @@ func ReportToTeam(initial bool) error {
 		return err
 	}
 	log.WithField("response", res).Debug("API Response")
+
+	shared.Config.LastTeamReportSuccess = time.Now().UnixMilli()
+	if err := shared.SaveConfig(); err != nil {
+		log.WithError(err).Warn("failed to save last team report success timestamp")
+	}
 	return nil
 }
