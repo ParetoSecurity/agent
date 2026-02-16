@@ -21,8 +21,8 @@ github.com/benbjohnson/clock v1.3.5 h1:VvXlSJBzZpA/zum6Sj74hxwYI2DIxRWuNIoXAzHZz
 github.com/benbjohnson/clock v1.3.5/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
 github.com/bep/debounce v1.2.1 h1:v67fRdBA9UQu2NhLFXrSg0Brw7CexQekrBwDMM8bzeY=
 github.com/bep/debounce v1.2.1/go.mod h1:H8yggRPQKLUhUoqrJC1bO2xNya7vanpDl7xR3ISbCJ0=
-github.com/caarlos0/log v0.5.4 h1:4DJwTt8MvvRF8BM4I3j2sbmdf4DYY0HVqKpg09cAgaU=
-github.com/caarlos0/log v0.5.4/go.mod h1:iAv3N3ZkiEQUmZ8fGdD8bMA4zq6jMSlnz9D87333Gi0=
+github.com/caarlos0/log v0.6.0 h1:iS+oZ7DB8wpJxOjA4+BHkZQtrx8sMu8AYNZVQukmEtw=
+github.com/caarlos0/log v0.6.0/go.mod h1:iAv3N3ZkiEQUmZ8fGdD8bMA4zq6jMSlnz9D87333Gi0=
 github.com/carlmjohnson/requests v0.25.1 h1:17zNRLecxtAjhtdEIV+F+wrYfe+AGZUjWJtpndcOUYA=
 github.com/carlmjohnson/requests v0.25.1/go.mod h1:z3UEf8IE4sZxZ78spW6/tLdqBkfCu1Fn4RaYMnZ8SRM=
 github.com/charmbracelet/bubbletea v1.3.10 h1:otUDHWMMzQSB0Pkc87rm691KZ3SWa4KUlvF9nRvCICw=

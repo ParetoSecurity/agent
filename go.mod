@@ -97,7 +97,7 @@ require (
 
 require (
 	fyne.io/systray v1.12.0
-	github.com/caarlos0/log v0.5.4
+	github.com/caarlos0/log v0.6.0
 	github.com/carlmjohnson/requests v0.25.1
 	github.com/elastic/go-sysinfo v1.15.4
 	github.com/google/uuid v1.6.0
