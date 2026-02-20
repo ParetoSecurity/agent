@@ -306,6 +306,15 @@ func (t *TrayApp) addHelpMenu() {
 			}
 		}
 	}()
+
+	// Console option - all OSes
+	mConsole := mHelp.AddSubMenuItem("Console", "Run checks in a terminal window")
+	go func() {
+		for range mConsole.ClickedCh() {
+			log.Info("Opening console...")
+			t.openConsole()
+		}
+	}()
 }
 
 // lastUpdated returns the last updated time as a formatted string
