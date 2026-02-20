@@ -332,8 +332,8 @@ func (p *ScreensaverPassword) getConsoleLockSettings() (bool, bool, bool) {
 	}
 
 	output := string(out)
-	// Locale-independent availability check: a full setting block always contains at least
-	// 5 hex values (min, max, increment, AC index, DC index). Minimal/unavailable output has none.
+	// Locale-independent availability check: need at least 2 hex values (AC and DC).
+	// Unavailable/minimal output has none; a full block has 5 (min, max, increment, AC, DC).
 	re := regexp.MustCompile(`0x[0-9a-fA-F]+\s*$`)
 	hexCount := 0
 	for _, line := range strings.Split(output, "\n") {
@@ -341,7 +341,7 @@ func (p *ScreensaverPassword) getConsoleLockSettings() (bool, bool, bool) {
 			hexCount++
 		}
 	}
-	if hexCount < 5 {
+	if hexCount < 2 {
 		return false, false, false
 	}
 
@@ -402,7 +402,7 @@ func parsePowercfgHexValue(output, powerSource string) int {
 		hexStr = hexValues[len(hexValues)-1]
 	}
 
-	value, err := strconv.ParseInt(hexStr, 16, 64)
+	value, err := strconv.ParseInt(hexStr, 16, strconv.IntSize)
 	if err != nil {
 		return 0
 	}
