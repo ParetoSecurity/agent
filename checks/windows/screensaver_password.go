@@ -164,31 +164,11 @@ func (s *ScreensaverTimeout) getPowerSettingSeconds(subgroup, setting, powerSour
 	return s.parsePowerSettingValue(string(out), powerSource)
 }
 
-// parsePowerSettingValue extracts AC or DC power setting value from powercfg output
+// parsePowerSettingValue extracts AC or DC power setting value from powercfg output.
+// Uses a locale-independent approach: powercfg always outputs hex values in the order
+// min, max, increment, AC index, DC index — regardless of system language.
 func (s *ScreensaverTimeout) parsePowerSettingValue(output, powerSource string) int {
-	lines := strings.Split(output, "\n")
-
-	var pattern string
-	if powerSource == "AC" {
-		pattern = `Current AC Power Setting Index:\s*0x([0-9a-fA-F]+)`
-	} else {
-		pattern = `Current DC Power Setting Index:\s*0x([0-9a-fA-F]+)`
-	}
-
-	re := regexp.MustCompile(pattern)
-
-	for _, line := range lines {
-		matches := re.FindStringSubmatch(line)
-		if len(matches) == 2 {
-			value, err := strconv.ParseInt(matches[1], 16, strconv.IntSize)
-			if err != nil {
-				return 0
-			}
-			return int(value)
-		}
-	}
-
-	return 0
+	return parsePowercfgHexValue(output, powerSource)
 }
 
 // hasBattery detects if the system has a battery (laptop) or not (desktop)
@@ -352,9 +332,16 @@ func (p *ScreensaverPassword) getConsoleLockSettings() (bool, bool, bool) {
 	}
 
 	output := string(out)
-	// Check if the output contains the actual setting values
-	// On modern Windows, CONSOLELOCK may not be exposed and returns minimal output
-	if !strings.Contains(output, "Current AC Power Setting Index") {
+	// Locale-independent availability check: a full setting block always contains at least
+	// 5 hex values (min, max, increment, AC index, DC index). Minimal/unavailable output has none.
+	re := regexp.MustCompile(`0x[0-9a-fA-F]+\s*$`)
+	hexCount := 0
+	for _, line := range strings.Split(output, "\n") {
+		if re.MatchString(strings.TrimSpace(line)) {
+			hexCount++
+		}
+	}
+	if hexCount < 5 {
 		return false, false, false
 	}
 
@@ -380,32 +367,46 @@ func (p *ScreensaverPassword) isLockScreenEnabled() bool {
 	return value == "0"
 }
 
-// parseConsoleLockValue extracts AC or DC console lock setting from powercfg output
+// parseConsoleLockValue extracts AC or DC console lock setting from powercfg output.
+// Uses a locale-independent approach: see parsePowercfgHexValue.
 func (p *ScreensaverPassword) parseConsoleLockValue(output, powerSource string) bool {
-	lines := strings.Split(output, "\n")
+	value := parsePowercfgHexValue(output, powerSource)
+	// 1 = password required, 0 = not required
+	return value == 1
+}
 
-	var pattern string
-	if powerSource == "AC" {
-		pattern = `Current AC Power Setting Index:\s*0x([0-9a-fA-F]+)`
-	} else {
-		pattern = `Current DC Power Setting Index:\s*0x([0-9a-fA-F]+)`
-	}
-
-	re := regexp.MustCompile(pattern)
-
-	for _, line := range lines {
-		matches := re.FindStringSubmatch(line)
+// parsePowercfgHexValue extracts the AC or DC index value from powercfg /query output
+// in a locale-independent way. Powercfg always outputs hex values in this order:
+// minimum possible, maximum possible, increment, current AC index, current DC index.
+// We find all lines ending with a 0x hex value and take the second-to-last (AC) or
+// last (DC), which is reliable regardless of the system language.
+func parsePowercfgHexValue(output, powerSource string) int {
+	re := regexp.MustCompile(`0x([0-9a-fA-F]+)\s*$`)
+	var hexValues []string
+	for _, line := range strings.Split(output, "\n") {
+		matches := re.FindStringSubmatch(strings.TrimSpace(line))
 		if len(matches) == 2 {
-			value, err := strconv.ParseInt(matches[1], 16, 64)
-			if err != nil {
-				return false
-			}
-			// 1 = password required, 0 = not required
-			return value == 1
+			hexValues = append(hexValues, matches[1])
 		}
 	}
 
-	return false
+	// Need at least 2 values (AC and DC are the last two)
+	if len(hexValues) < 2 {
+		return 0
+	}
+
+	var hexStr string
+	if powerSource == "AC" {
+		hexStr = hexValues[len(hexValues)-2]
+	} else {
+		hexStr = hexValues[len(hexValues)-1]
+	}
+
+	value, err := strconv.ParseInt(hexStr, 16, 64)
+	if err != nil {
+		return 0
+	}
+	return int(value)
 }
 
 // hasBattery detects if the system has a battery (laptop) or not (desktop)

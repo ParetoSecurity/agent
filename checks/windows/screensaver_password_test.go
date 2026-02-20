@@ -39,6 +39,22 @@ Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Uravnoteženo)
     Current DC Power Setting Index: 0x00000e10
 `
 
+// French localized output (fully translated including AC/DC index labels)
+const powercfgVideoIdleFrench = `
+GUID du mode de gestion de l'alimentation: 381b4222-f694-41f0-9685-ff5bb260df2e (Utilisation normale)
+Alias de GUID: SCHEME_BALANCED
+  GUID du sous-groupe: 7516b95f-f776-4464-8c53-06167f40cc99 (Affichage)
+  Alias de GUID: SUB_VIDEO
+    GUID du paramètre d'alimentation: 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e (Mettre l'écran en veille après)
+    Alias de GUID: VIDEOIDLE
+    Valeur minimale possible: 0x00000000
+    Valeur maximale possible: 0xffffffff
+    Incrément possible des paramètres: 0x00000001
+    Unités possibles des paramètres: secondes
+    Index actuel du paramètre de courant alternatif: 0x0000012c
+    Index actuel du paramètre de courant continu: 0x000000b4
+`
+
 const powercfgConsoleLockEnabled = `
 Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)
   GUID Alias: SCHEME_BALANCED
@@ -406,6 +422,31 @@ Current DC Power Setting Index: 0x00000258`,
 			expectedStatus: "Screensaver timeout exceeds 20 minutes",
 		},
 		{
+			name: "Laptop with localized Windows (French) - AC 5 min, DC 3 min, no screensaver",
+			mockCommands: []shared.RunCommandMock{
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "(Get-CimInstance -ClassName Win32_Battery | Measure-Object).Count"},
+					Out:     "1",
+					Err:     nil,
+				},
+				{
+					Command: "powercfg",
+					Args:    []string{"/query", "SCHEME_CURRENT", "SUB_VIDEO", "VIDEOIDLE"},
+					Out:     powercfgVideoIdleFrench,
+					Err:     nil,
+				},
+				{
+					Command: "powershell",
+					Args:    []string{"-Command", "Get-ItemPropertyValue -Path 'HKCU:\\Control Panel\\Desktop' -Name 'ScreenSaveActive' -ErrorAction SilentlyContinue"},
+					Out:     "0",
+					Err:     nil,
+				},
+			},
+			expectedPassed: true, // AC: 5 min (0x12c=300s), DC: 3 min (0xb4=180s)
+			expectedStatus: "Screensaver or screen lock shows in under 20min",
+		},
+		{
 			name: "Desktop with both display and screensaver over 20 min",
 			mockCommands: []shared.RunCommandMock{
 				{
@@ -482,7 +523,30 @@ func TestScreensaverTimeout_ParsePowerSettingValue(t *testing.T) {
 
 	dcValueSlovenian := check.parsePowerSettingValue(powercfgVideoIdleSlovenian, "DC")
 	assert.Equal(t, 3600, dcValueSlovenian) // 0xe10 = 3600 (60 min)
+
+	// Test parsing localized (French) output — AC/DC index labels are fully translated
+	acValueFrench := check.parsePowerSettingValue(powercfgVideoIdleFrench, "AC")
+	assert.Equal(t, 300, acValueFrench) // 0x12c = 300 seconds = 5 min
+
+	dcValueFrench := check.parsePowerSettingValue(powercfgVideoIdleFrench, "DC")
+	assert.Equal(t, 180, dcValueFrench) // 0xb4 = 180 seconds = 3 min
 }
+
+// French localized CONSOLELOCK output (password required on wakeup)
+const powercfgConsoleLockEnabledFrench = `
+GUID du mode de gestion de l'alimentation: 381b4222-f694-41f0-9685-ff5bb260df2e (Utilisation normale)
+Alias de GUID: SCHEME_BALANCED
+  GUID du sous-groupe: fea3413e-7e05-4911-9a71-700331f1c294 (Aucun sous-groupe)
+  Alias de GUID: SUB_NONE
+    GUID du paramètre d'alimentation: 0e796bdb-100d-47d6-a2d5-f7d2daa51f51 (Exiger un mot de passe à la sortie de veille)
+    Alias de GUID: CONSOLELOCK
+    Valeur minimale possible: 0x00000000
+    Valeur maximale possible: 0x00000001
+    Incrément possible des paramètres: 0x00000001
+    Unités possibles des paramètres:
+    Index actuel du paramètre de courant alternatif: 0x00000001
+    Index actuel du paramètre de courant continu: 0x00000001
+`
 
 // Minimal powercfg output for modern Windows where CONSOLELOCK is not exposed
 const powercfgConsoleLockNotAvailable = `
@@ -751,13 +815,17 @@ func TestScreensaverPassword_Metadata(t *testing.T) {
 func TestScreensaverPassword_ParseConsoleLockValue(t *testing.T) {
 	check := &ScreensaverPassword{}
 
-	// Test enabled
+	// Test enabled (English)
 	assert.True(t, check.parseConsoleLockValue(powercfgConsoleLockEnabled, "AC"))
 	assert.True(t, check.parseConsoleLockValue(powercfgConsoleLockEnabled, "DC"))
 
-	// Test disabled
+	// Test disabled (English)
 	assert.False(t, check.parseConsoleLockValue(powercfgConsoleLockDisabled, "AC"))
 	assert.False(t, check.parseConsoleLockValue(powercfgConsoleLockDisabled, "DC"))
+
+	// Test enabled (French — fully localized AC/DC labels)
+	assert.True(t, check.parseConsoleLockValue(powercfgConsoleLockEnabledFrench, "AC"))
+	assert.True(t, check.parseConsoleLockValue(powercfgConsoleLockEnabledFrench, "DC"))
 
 	// Test empty output
 	assert.False(t, check.parseConsoleLockValue("", "AC"))
