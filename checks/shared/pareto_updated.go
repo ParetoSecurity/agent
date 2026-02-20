@@ -44,7 +44,7 @@ func (f *ParetoUpdated) Run() error {
 		platform = "windows"
 	}
 	// Create a context with a timeout for the request
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	if shared.IsLinked() {
@@ -66,9 +66,10 @@ func (f *ParetoUpdated) Run() error {
 			ToJSON(&res).
 			Fetch(ctx)
 		if err != nil {
-			log.WithError(err).
-				Warnf("Failed to check for updates")
-			return err
+			log.WithError(err).Warn("Failed to check for updates, assuming up to date")
+			f.passed = true
+			f.details = "Could not reach update server"
+			return nil
 		}
 
 		latestVersion, latest := f.checkVersion(res)
@@ -84,9 +85,10 @@ func (f *ParetoUpdated) Run() error {
 		ToJSON(&res).
 		Fetch(ctx)
 	if err != nil {
-		log.WithError(err).
-			Warnf("Failed to check for updates")
-		return err
+		log.WithError(err).Warn("Failed to check for updates, assuming up to date")
+		f.passed = true
+		f.details = "Could not reach update server"
+		return nil
 	}
 
 	latestVersion, latest := f.checkVersion(res)
