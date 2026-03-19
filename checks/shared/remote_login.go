@@ -2,7 +2,9 @@ package shared
 
 import (
 	"fmt"
+	"strings"
 
+	sharedG "github.com/ParetoSecurity/agent/shared"
 	"github.com/caarlos0/log"
 )
 
@@ -14,6 +16,28 @@ type RemoteLogin struct {
 // Name returns the name of the check
 func (f *RemoteLogin) Name() string {
 	return "Remote login is disabled"
+}
+
+// isSSHConfigSecure checks if the SSH server is configured securely (key-only access)
+func (f *RemoteLogin) isSSHConfigSecure() bool {
+	configRaw, err := sharedG.RunCommand("sshd", "-T")
+	log.WithField("check", f.Name()).Debugf("sshd -T output: %s", configRaw)
+	config := strings.ToLower(string(configRaw))
+	if err != nil {
+		return false
+	}
+
+	if strings.Contains(config, "passwordauthentication yes") {
+		return false
+	}
+	if strings.Contains(config, "permitrootlogin yes") {
+		return false
+	}
+	if strings.Contains(config, "permitemptypasswords yes") {
+		return false
+	}
+
+	return true
 }
 
 // Run executes the check
@@ -31,6 +55,10 @@ func (f *RemoteLogin) Run() error {
 
 	for port, service := range portsToCheck {
 		if CheckPort(port, "tcp") {
+			if port == 22 && f.isSSHConfigSecure() {
+				log.WithField("check", f.Name()).Debug("SSH is enabled but secure (key-only access)")
+				continue
+			}
 			log.WithField("check", f.Name()).WithField("port", port).WithField("service", service).Debug("Remote access service found")
 			f.passed = false
 			f.ports[port] = service
