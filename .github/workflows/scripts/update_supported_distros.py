@@ -2,6 +2,7 @@ import requests
 import os
 import yaml
 import re
+import time
 from typing import List, Dict, Any, Optional, Tuple
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import LiteralScalarString, DoubleQuotedScalarString
@@ -17,42 +18,54 @@ It can also be run manually.
 
 IGNORED_DISTROS: List[str] = ['arch']
 
-def get_supported_distros() -> List[str]:
+MAX_RETRIES = 3
+RETRY_DELAY = 10
+
+def get_supported_distros() -> Tuple[List[str], List[str]]:
     """
     Fetch currently supported distribution versions from endoflife.date API.
-    
+    Retries failed API calls up to MAX_RETRIES times with RETRY_DELAY seconds between attempts.
+
     Returns:
-        List[str]: List of supported distros in format "distro-version" (e.g., "ubuntu-24.04")
+        Tuple containing:
+        - List[str]: List of supported distros in format "distro-version" (e.g., "ubuntu-24.04")
+        - List[str]: List of distro families where the API call failed after all retries
     """
     distros = ['debian', 'ubuntu', 'fedora']
     supported = []
+    failed = []
 
     for distro in distros:
+        last_error = None
 
-        try:
-            response = requests.get(f'https://endoflife.date/api/v1/products/{distro}', timeout=10)
-            response.raise_for_status()
-            releases = response.json()['result']['releases']
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                response = requests.get(f'https://endoflife.date/api/v1/products/{distro}', timeout=10)
+                response.raise_for_status()
+                releases = response.json()['result']['releases']
 
-            for release in releases:
-                if release['isEol'] is False:
-                    supported.append(f"{distro}-{release['name']}")
+                for release in releases:
+                    if release['isEol'] is False:
+                        supported.append(f"{distro}-{release['name']}")
 
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching data for {distro}: {e}")
-            continue
+                last_error = None
+                break
 
-    return supported
+            except (requests.exceptions.RequestException, KeyError, TypeError) as e:
+                last_error = e
+                if attempt < MAX_RETRIES:
+                    print(f"Error fetching data for {distro} (attempt {attempt}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY}s...")
+                    time.sleep(RETRY_DELAY)
+
+        if last_error is not None:
+            print(f"Error fetching data for {distro}: failed after {MAX_RETRIES} attempts: {last_error}")
+            failed.append(distro)
+
+    return supported, failed
 
 
 def get_current_distros() -> Optional[List[Dict[str, Any]]]:
-    """
-    Read the current distribution configurations from distro.yml file.
-    
-    Returns:
-        Optional[List[Dict[str, Any]]]: List of distro configurations from the matrix,
-                                        excluding ignored distros. Returns None on error.
-    """
+    """Read the current distribution configurations from distro.yml file."""
     try:
         current = os.path.dirname(os.path.abspath(__file__))
         path = os.path.join(current, "..", "distro.yml")
@@ -76,12 +89,7 @@ def fix_cleanup_run_field(content: str) -> str:
     
     The YAML formatter adds a '|-' in the run field in the Cleanup step,
     so this function replaces it with a '|' to preserve the original format.
-    
-    Args:
-        content (str): The YAML file content
-        
-    Returns:
-        str: Fixed YAML content with proper run field formatting
+
     """
     pattern = r'(- name: Cleanup\s*\n\s*if: always\(\)\s*\n\s*run:\s*)(\|-)'
     return re.sub(pattern, r'\1|', content)
@@ -93,13 +101,6 @@ def extract_distro_template(distro_name: str) -> Optional[Dict[str, str]]:
     
     Finds the first entry for the specified distro type and creates a template
     by replacing the version number with a placeholder.
-    
-    Args:
-        distro_name (str): The distribution name (e.g., 'ubuntu', 'debian', 'fedora')
-        
-    Returns:
-        Optional[Dict[str, str]]: Template dict with 'image', 'setup', 'installer',
-                                  and 'verify_package' fields. Returns None if not found.
     """
     try:
         current = os.path.dirname(os.path.abspath(__file__))
@@ -135,12 +136,7 @@ def extract_distro_template(distro_name: str) -> Optional[Dict[str, str]]:
 
 
 def remove_distro(distro: str) -> None:
-    """
-    Remove a distribution entry from the distro.yml matrix.
-    
-    Args:
-        distro (str): The distro identifier to remove (e.g., 'ubuntu-23.10')
-    """
+    """Remove a distribution entry from the distro.yml matrix."""
     current = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(current, "..", "distro.yml")
     
@@ -182,9 +178,6 @@ def add_distro(distro: str) -> None:
     
     Extracts a template from existing entries of the same distro type and
     inserts the new entry in the appropriate position to maintain ordering.
-    
-    Args:
-        distro (str): The distro identifier to add (e.g., 'ubuntu-24.10')
     """
     current = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(current, "..", "distro.yml")
@@ -298,16 +291,21 @@ def update_build_yml(supported_distros: List[str]) -> None:
     print(f"Updated build.yml matrix.")
 
 
+def preserve_failed_families(supported_distros: List[str], failed_families: List[str], current_distro_names: List[str]) -> None:
+    """Preserve current distro entries for families where the API call failed."""
+    print(f"Warning: API calls failed for: {', '.join(failed_families)}. Preserving current entries.")
+    for distro in current_distro_names:
+        family = distro.split('-')[0]
+        if family in failed_families and distro not in supported_distros:
+            supported_distros.append(distro)
+
+
 def set_github_output(name: str, value: str) -> None:
     """
     Set output variables for GitHub Actions.
     
     Writes output variables to the GITHUB_OUTPUT file in the format expected
     by GitHub Actions. Handles multi-line values using delimiters.
-    
-    Args:
-        name (str): The output variable name
-        value (str): The output variable value
     """
     
     github_output = os.environ.get('GITHUB_OUTPUT')
@@ -331,10 +329,13 @@ def main() -> None:
     matrix. Creates GitHub Actions outputs for the workflow to use.
     """
 
-    supported_distros = get_supported_distros()
+    supported_distros, failed_families = get_supported_distros()
     current_distros = get_current_distros()
     current_distro_names = [d['distro'] for d in current_distros]
-    
+
+    if failed_families:
+        preserve_failed_families(supported_distros, failed_families, current_distro_names)
+
     if set(supported_distros) != set(current_distro_names):
         print("Updating supported distros in .github/workflows/distro.yml")
         
