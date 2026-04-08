@@ -30,9 +30,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   windows-sign-x64:
-    runs-on: windows-pareto
+    runs-on: windows-2025
     name: Windows Sign (x64)
     needs: [ build ]
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_CODESIGN_ENDPOINT: https://weu.codesigning.azure.net/
+      AZURE_CODESIGN_ACCOUNT_NAME: paretoapp
+      AZURE_CODESIGN_PROFILE_NAME: public-profile-pareto-app
     steps:
       - name: Download release
         uses: actions/download-artifact@v5
@@ -43,11 +50,46 @@ jobs:
           mv installer_windows_amd64_v1/paretosecurity-installer.exe paretosecurity-installer-amd64.exe
           mv tray_windows_amd64_v1/paretosecurity-tray.exe paretosecurity-tray.exe
           mv agent_windows_amd64_v1/paretosecurity.exe paretosecurity.exe
-      - name: Sign Windows installer (x64)
+      - name: Sign Windows artifacts (x64)
+        uses: azure/artifact-signing-action@v1
+        with:
+          azure-client-id: ${{ env.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ env.AZURE_CLIENT_SECRET }}
+          azure-tenant-id: ${{ env.AZURE_TENANT_ID }}
+          endpoint: ${{ env.AZURE_CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ env.AZURE_CODESIGN_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ env.AZURE_CODESIGN_PROFILE_NAME }}
+          correlation-id: ${{ github.repository }}-${{ github.run_id }}-${{ github.run_attempt }}
+          files: |
+            ${{ github.workspace }}\paretosecurity-installer-amd64.exe
+            ${{ github.workspace }}\paretosecurity-tray.exe
+            ${{ github.workspace }}\paretosecurity.exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          exclude-environment-credential: false
+          exclude-workload-identity-credential: true
+          exclude-managed-identity-credential: true
+          exclude-shared-token-cache-credential: true
+          exclude-visual-studio-credential: true
+          exclude-visual-studio-code-credential: true
+          exclude-azure-cli-credential: true
+          exclude-azure-powershell-credential: true
+          exclude-azure-developer-cli-credential: true
+          exclude-interactive-browser-credential: true
+      - name: Verify Windows signatures (x64)
         run: |
-          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign /sha1 "2198c6a91da7f1b54cef66da7754c78bf78031a6" /tr http://time.certum.pl /td sha256 /fd sha256 /v paretosecurity-installer-amd64.exe
-          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign /sha1 "2198c6a91da7f1b54cef66da7754c78bf78031a6" /tr http://time.certum.pl /td sha256 /fd sha256 /v paretosecurity-tray.exe
-          & "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\signtool.exe" sign /sha1 "2198c6a91da7f1b54cef66da7754c78bf78031a6" /tr http://time.certum.pl /td sha256 /fd sha256 /v paretosecurity.exe
+          $artifacts = @(
+            "paretosecurity-installer-amd64.exe",
+            "paretosecurity-tray.exe",
+            "paretosecurity.exe"
+          )
+          foreach ($artifact in $artifacts) {
+            $signature = Get-AuthenticodeSignature -FilePath $artifact
+            if ($signature.Status -ne "Valid") {
+              throw "Signature verification failed for ${artifact}: $($signature.Status)"
+            }
+          }
       - name: Create ZIP package (x64)
         run: Compress-Archive -Path paretosecurity-tray.exe, paretosecurity.exe -DestinationPath paretosecurity_windows_amd64.zip
       - name: Upload Windows Installer (x64)
