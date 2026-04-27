@@ -47,6 +47,14 @@ jobs:
               apt-get install -y nftables
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
+          - distro: ubuntu-26.04
+            image: jrei/systemd-ubuntu:26.04
+            setup: |
+              apt-get update
+              apt-get upgrade -y
+              apt-get install -y nftables
+            installer: "apt-get install -y"
+            verify_package: "dpkg -l paretosecurity"
           - distro: debian-12
             image: jrei/systemd-debian:12
             setup: |
