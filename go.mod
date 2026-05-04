@@ -96,7 +96,7 @@ require (
 )
 
 require (
-	fyne.io/systray v1.12.0
+	fyne.io/systray v1.12.1
 	github.com/caarlos0/log v0.5.4
 	github.com/carlmjohnson/requests v0.25.1
 	github.com/elastic/go-sysinfo v1.15.4
