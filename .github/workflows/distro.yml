@@ -47,6 +47,14 @@ jobs:
               apt-get install -y nftables
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
+          - distro: ubuntu-26.04
+            image: jrei/systemd-ubuntu:26.04
+            setup: |
+              apt-get update
+              apt-get upgrade -y
+              apt-get install -y nftables
+            installer: "apt-get install -y"
+            verify_package: "dpkg -l paretosecurity"
           - distro: debian-12
             image: jrei/systemd-debian:12
             setup: |
@@ -71,6 +79,14 @@ jobs:
             verify_package: "rpm -q paretosecurity"
           - distro: fedora-43
             image: jrei/systemd-fedora:43
+            setup: |
+              dnf -y update
+              dnf -y upgrade
+              dnf -y install which
+            installer: "dnf -y install"
+            verify_package: "rpm -q paretosecurity"
+          - distro: fedora-44
+            image: jrei/systemd-fedora:44
             setup: |
               dnf -y update
               dnf -y upgrade
