@@ -7,7 +7,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fatih/color v1.18.0
-	github.com/fsnotify/fsnotify v1.9.0
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/fyne-io/image v0.1.1
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/kolide/toast v1.0.2
