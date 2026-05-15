@@ -51,7 +51,7 @@ jobs:
           mv tray_windows_amd64_v1/paretosecurity-tray.exe paretosecurity-tray.exe
           mv agent_windows_amd64_v1/paretosecurity.exe paretosecurity.exe
       - name: Sign Windows artifacts (x64)
-        uses: azure/artifact-signing-action@v1
+        uses: azure/artifact-signing-action@v2
         with:
           azure-client-id: ${{ env.AZURE_CLIENT_ID }}
           azure-client-secret: ${{ env.AZURE_CLIENT_SECRET }}
