@@ -28,6 +28,7 @@ var All = []Claim{
 	{"System Integrity", []check.Check{
 		&checks.SecureBoot{},
 		&checks.EncryptingFS{},
+		&shared.PackageManagerSupplyChain{},
 		&shared.TeamReportSentCheck{},
 	}},
 }
