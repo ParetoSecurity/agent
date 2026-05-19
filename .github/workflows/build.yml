@@ -28,7 +28,7 @@ jobs:
     needs: [build]
     steps:
       - name: Download build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: build
       - name: Display structure of downloaded files
@@ -36,7 +36,7 @@ jobs:
       - name: Run Windows schema
         run: agent_windows_amd64_v1/paretosecurity schema > windows.json
       - name: Upload Windows schema
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           path: windows.json
           name: windows.json
@@ -78,7 +78,7 @@ jobs:
           $bitmap.Save("installer_screenshot.png")
         shell: pwsh
       - name: Upload Screenshot
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: installer-screenshot
           path: installer_screenshot.png
@@ -96,7 +96,7 @@ jobs:
           $bitmap.Save("tray_screenshot.png")
         shell: pwsh
       - name: Upload Screenshot
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tray-screenshot
           path: tray_screenshot.png
@@ -111,13 +111,13 @@ jobs:
       pull-requests: write # Explicitly set permissions for creating/updating PR comments
     steps:
       - name: Download installer screenshot artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: installer-screenshot
           # Defaults to downloading to the workspace root, e.g., installer_screenshot.png
 
       - name: Download tray screenshot artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: tray-screenshot
           # Defaults to downloading to the workspace root, e.g., tray_screenshot.png
@@ -258,9 +258,9 @@ jobs:
         distribution: [debian/13, debian/12, ubuntu/25.10, ubuntu/24.04, ubuntu/22.04, fedora/43, fedora/42, archlinux]
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Download build
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: build
       - name: Install Incus
@@ -330,7 +330,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
       - name: Set up Go
@@ -338,7 +338,7 @@ jobs:
         with:
           go-version: stable
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@e24998b8b67b290c2fa8b7c14fcfa7de2c5c9b8c # v7.1.0
+        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
         with:
           # either 'goreleaser' (default) or 'goreleaser-pro'
           distribution: goreleaser
@@ -347,7 +347,7 @@ jobs:
           args: release --skip=publish --clean --snapshot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         name: Upload build
         with:
           name: build

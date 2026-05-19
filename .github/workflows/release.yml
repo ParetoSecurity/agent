@@ -18,13 +18,13 @@ jobs:
     needs: [ build ]
     steps:
       - name: Download release
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: release
       - name: Run Windows schema
         run: agent_windows_amd64_v1/paretosecurity schema > windows.json
       - name: Upload Windows schema
-        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda
         with:
           files: windows.json
         env:
@@ -42,7 +42,7 @@ jobs:
       AZURE_CODESIGN_PROFILE_NAME: public-profile-pareto-app
     steps:
       - name: Download release
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: release
       - name: Rename Windows installer (x64)
@@ -51,7 +51,7 @@ jobs:
           mv tray_windows_amd64_v1/paretosecurity-tray.exe paretosecurity-tray.exe
           mv agent_windows_amd64_v1/paretosecurity.exe paretosecurity.exe
       - name: Sign Windows artifacts (x64)
-        uses: azure/artifact-signing-action@v1
+        uses: azure/artifact-signing-action@v2
         with:
           azure-client-id: ${{ env.AZURE_CLIENT_ID }}
           azure-client-secret: ${{ env.AZURE_CLIENT_SECRET }}
@@ -93,13 +93,13 @@ jobs:
       - name: Create ZIP package (x64)
         run: Compress-Archive -Path paretosecurity-tray.exe, paretosecurity.exe -DestinationPath paretosecurity_windows_amd64.zip
       - name: Upload Windows Installer (x64)
-        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda
         with:
           files: paretosecurity-installer-amd64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload Windows ZIP Package (x64)
-        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda
         with:
           files: paretosecurity_windows_amd64.zip
         env:
@@ -111,7 +111,7 @@ jobs:
     needs: [ build ]
     steps:
       - name: Download release
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: release
       
@@ -122,7 +122,7 @@ jobs:
         run: agent_linux_amd64_v1/paretosecurity schema > linux.json
 
       - name: Upload Linux schema
-        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda
         with:
           files: linux.json
         env:
@@ -133,7 +133,7 @@ jobs:
     name: Build Release
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
       - name: Set up Go
@@ -141,7 +141,7 @@ jobs:
         with:
           go-version: stable
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@e24998b8b67b290c2fa8b7c14fcfa7de2c5c9b8c # v7.1.0
+        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
         with:
           # either 'goreleaser' (default) or 'goreleaser-pro'
           distribution: goreleaser
@@ -150,14 +150,14 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         name: Upload release
         with:
           name: release
           path: dist
 
       - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec # v6.3.0
+        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
