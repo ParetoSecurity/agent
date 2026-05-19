@@ -19,6 +19,7 @@ var All = []Claim{
 		&shared.RemoteLogin{},
 	}},
 	{"System Integrity", []check.Check{
+		&shared.PackageManagerSupplyChain{},
 		&shared.TeamReportSentCheck{},
 	}},
 }
