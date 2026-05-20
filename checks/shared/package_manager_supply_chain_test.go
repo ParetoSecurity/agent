@@ -30,6 +30,9 @@ func TestPackageManagerSupplyChain_IsRunnable(t *testing.T) {
 	check = testPackageManagerSupplyChain(home, nil, map[string]bool{"npm": true})
 	assert.True(t, check.IsRunnable())
 
+	check = testPackageManagerSupplyChain(home, nil, map[string]bool{"pnpm": true})
+	assert.True(t, check.IsRunnable())
+
 	writeFile(t, filepath.Join(home, ".npmrc"), "")
 	check = testPackageManagerSupplyChain(home, nil, nil)
 	assert.True(t, check.IsRunnable())
@@ -44,6 +47,9 @@ save-exact=true
 `)
 	writeFile(t, filepath.Join(home, ".yarnrc.yml"), `
 npmMinimalAgeGate: 10080
+`)
+	writeFile(t, filepath.Join(home, ".config", "pnpm", "config.yaml"), `
+minimumReleaseAge: 10080
 `)
 	writeFile(t, filepath.Join(home, ".bunfig.toml"), `
 [install]
@@ -65,6 +71,7 @@ username = __token__
 	assert.Equal(t, stringsJoin(
 		"~/.npmrc delays npm-compatible package releases and pins exact versions",
 		"~/.yarnrc.yml delays Yarn package releases",
+		filepath.Join(home, ".config", "pnpm", "config.yaml")+" delays pnpm package releases",
 		"~/.bunfig.toml delays Bun package releases",
 		filepath.Join(home, ".config", "uv", "uv.toml")+" excludes Python packages newer than 7 days",
 		"~/.pypirc has no plaintext credentials",
@@ -80,6 +87,9 @@ save-exact=false
 `)
 	writeFile(t, filepath.Join(home, ".yarnrc.yml"), `
 npmMinimalAgeGate: 10079
+`)
+	writeFile(t, filepath.Join(home, ".config", "pnpm", "config.yaml"), `
+minimumReleaseAge: 10079
 `)
 	writeFile(t, filepath.Join(home, ".bunfig.toml"), `
 [install]
@@ -103,6 +113,7 @@ password = pypi-secret
 		"~/.npmrc minimum-release-age is below 10080 minutes",
 		"~/.npmrc save-exact is not enabled",
 		"~/.yarnrc.yml npmMinimalAgeGate is below 10080 minutes",
+		"pnpm minimumReleaseAge is below 10080 minutes",
 		"~/.bunfig.toml minimumReleaseAge is below 604800 seconds",
 		"uv exclude-newer is below 7 days",
 		"~/.pypirc contains plaintext credentials",
@@ -114,6 +125,7 @@ func TestPackageManagerSupplyChain_RunFailsWhenBinaryConfigIsMissing(t *testing.
 	check := testPackageManagerSupplyChain(home, nil, map[string]bool{
 		"npm":  true,
 		"yarn": true,
+		"pnpm": true,
 		"bun":  true,
 		"uv":   true,
 	})
@@ -124,6 +136,7 @@ func TestPackageManagerSupplyChain_RunFailsWhenBinaryConfigIsMissing(t *testing.
 	assert.Equal(t, stringsJoin(
 		filepath.Join(home, ".npmrc")+" is missing",
 		filepath.Join(home, ".yarnrc.yml")+" is missing",
+		filepath.Join(home, ".config", "pnpm", "config.yaml")+" is missing",
 		filepath.Join(home, ".bunfig.toml")+" is missing",
 		filepath.Join(home, ".config", "uv", "uv.toml")+" is missing",
 	), check.Status())
@@ -175,6 +188,36 @@ exclude-newer = "7d"
 	assert.Equal(t, uvConfig+" excludes Python packages newer than 7 days", check.Status())
 }
 
+func TestPackageManagerSupplyChain_PnpmConfigPath(t *testing.T) {
+	home := t.TempDir()
+
+	check := testPackageManagerSupplyChain(home, nil, nil)
+	check.GOOS = "linux"
+	assert.Equal(t, filepath.Join(home, ".config", "pnpm", "config.yaml"), check.pnpmConfigPath())
+
+	check = testPackageManagerSupplyChain(home, nil, nil)
+	check.GOOS = "darwin"
+	assert.Equal(t, filepath.Join(home, "Library", "Preferences", "pnpm", "config.yaml"), check.pnpmConfigPath())
+
+	check = testPackageManagerSupplyChain(home, nil, nil)
+	check.GOOS = "windows"
+	assert.Equal(t, filepath.Join(home, "AppData", "Local", "pnpm", "config", "config.yaml"), check.pnpmConfigPath())
+}
+
+func TestPackageManagerSupplyChain_PnpmConfigPathUsesXdgConfigHome(t *testing.T) {
+	home := t.TempDir()
+	configHome := filepath.Join(home, "xdg")
+	check := testPackageManagerSupplyChain(home, nil, nil)
+	check.Getenv = func(name string) string {
+		if name == "XDG_CONFIG_HOME" {
+			return configHome
+		}
+		return ""
+	}
+
+	assert.Equal(t, filepath.Join(configHome, "pnpm", "config.yaml"), check.pnpmConfigPath())
+}
+
 func TestKeyValuePairsPreservesQuotedCommentCharacters(t *testing.T) {
 	values := keyValuePairs(`
 single = 'abc#123;456' # comment
@@ -190,6 +233,7 @@ plain = abc # comment
 func testPackageManagerSupplyChain(home string, files map[string]string, binaries map[string]bool) *PackageManagerSupplyChain {
 	return &PackageManagerSupplyChain{
 		HomeDir: home,
+		GOOS:    "linux",
 		ReadFile: func(path string) ([]byte, error) {
 			if files != nil {
 				if contents, ok := files[path]; ok {
