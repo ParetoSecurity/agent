@@ -138,7 +138,7 @@ func (p *PackageManagerSupplyChain) hasConfigFile() bool {
 }
 
 func (p *PackageManagerSupplyChain) hasPackageManagerBinary() bool {
-	return p.anyBinaryInstalled("npm", "yarn", "bun", "uv")
+	return p.anyBinaryInstalled("npm", "yarn", "pnpm", "bun", "uv")
 }
 
 func (p *PackageManagerSupplyChain) anyBinaryInstalled(names ...string) bool {
@@ -164,6 +164,12 @@ func (p *PackageManagerSupplyChain) configs() []packageManagerConfig {
 			binaries:   []string{"yarn"},
 			validate:   validateYarnrc,
 			passDetail: "~/.yarnrc.yml delays Yarn package releases",
+		},
+		{
+			path:       p.pnpmConfigPath(),
+			binaries:   []string{"pnpm"},
+			validate:   validatePnpmConfig,
+			passDetail: p.pnpmConfigPath() + " delays pnpm package releases",
 		},
 		{
 			path:       filepath.Join(home, ".bunfig.toml"),
@@ -247,6 +253,25 @@ func (p *PackageManagerSupplyChain) uvConfigPath() string {
 	return filepath.Join(configHome, "uv", "uv.toml")
 }
 
+func (p *PackageManagerSupplyChain) pnpmConfigPath() string {
+	if configHome := p.env("XDG_CONFIG_HOME"); configHome != "" {
+		return filepath.Join(configHome, "pnpm", "config.yaml")
+	}
+
+	switch p.goos() {
+	case "windows":
+		localAppData := p.env("LOCALAPPDATA")
+		if localAppData == "" {
+			localAppData = filepath.Join(p.homeDir(), "AppData", "Local")
+		}
+		return filepath.Join(localAppData, "pnpm", "config", "config.yaml")
+	case "darwin":
+		return filepath.Join(p.homeDir(), "Library", "Preferences", "pnpm", "config.yaml")
+	default:
+		return filepath.Join(p.homeDir(), ".config", "pnpm", "config.yaml")
+	}
+}
+
 func (p *PackageManagerSupplyChain) env(name string) string {
 	if p.Getenv != nil {
 		return p.Getenv(name)
@@ -282,6 +307,18 @@ func validateYarnrc(contents string) []string {
 	values := keyValuePairs(contents)
 	if integerValue(values["npmminimalagegate"]) < minReleaseAgeMinutes {
 		return []string{"~/.yarnrc.yml npmMinimalAgeGate is below 10080 minutes"}
+	}
+	return nil
+}
+
+func validatePnpmConfig(contents string) []string {
+	values := keyValuePairs(contents)
+	releaseAge := integerValue(values["minimumreleaseage"])
+	if releaseAge == 0 {
+		releaseAge = integerValue(values["minimum-release-age"])
+	}
+	if releaseAge < minReleaseAgeMinutes {
+		return []string{"pnpm minimumReleaseAge is below 10080 minutes"}
 	}
 	return nil
 }
