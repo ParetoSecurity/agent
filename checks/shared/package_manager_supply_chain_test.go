@@ -188,6 +188,35 @@ exclude-newer = "7d"
 	assert.Equal(t, uvConfig+" excludes Python packages newer than 7 days", check.Status())
 }
 
+func TestPackageManagerSupplyChain_RunAcceptsTopLevelUvExcludeNewer(t *testing.T) {
+	home := t.TempDir()
+	writeFile(t, filepath.Join(home, ".config", "uv", "uv.toml"), `
+exclude-newer = "7d"
+`)
+	check := testPackageManagerSupplyChain(home, nil, map[string]bool{"uv": true})
+
+	require.NoError(t, check.Run())
+
+	assert.True(t, check.Passed())
+	assert.Equal(t, filepath.Join(home, ".config", "uv", "uv.toml")+" excludes Python packages newer than 7 days", check.Status())
+}
+
+func TestPackageManagerSupplyChain_RunUsesExplicitTopLevelUvExcludeNewer(t *testing.T) {
+	home := t.TempDir()
+	writeFile(t, filepath.Join(home, ".config", "uv", "uv.toml"), `
+exclude-newer = "0d"
+
+[pip]
+exclude-newer = "7d"
+`)
+	check := testPackageManagerSupplyChain(home, nil, map[string]bool{"uv": true})
+
+	require.NoError(t, check.Run())
+
+	assert.False(t, check.Passed())
+	assert.Equal(t, "uv exclude-newer is below 7 days", check.Status())
+}
+
 func TestPackageManagerSupplyChain_PnpmConfigPath(t *testing.T) {
 	home := t.TempDir()
 
