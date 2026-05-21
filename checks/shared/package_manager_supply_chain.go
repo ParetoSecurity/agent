@@ -333,7 +333,13 @@ func validateBunfig(contents string) []string {
 
 func validateUv(contents string) []string {
 	values := scopedKeyValuePairs(contents)
-	if durationSeconds(values["pip.exclude-newer"]) < minReleaseAgeSeconds {
+	var excludeNewer int
+	if value, ok := values["exclude-newer"]; ok {
+		excludeNewer = durationSeconds(value)
+	} else {
+		excludeNewer = durationSeconds(values["pip.exclude-newer"])
+	}
+	if excludeNewer < minReleaseAgeSeconds {
 		return []string{"uv exclude-newer is below 7 days"}
 	}
 	return nil
