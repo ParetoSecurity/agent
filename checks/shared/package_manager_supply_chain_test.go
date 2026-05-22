@@ -57,7 +57,7 @@ minimumReleaseAge = 604800
 `)
 	writeFile(t, filepath.Join(home, ".config", "uv", "uv.toml"), `
 [pip]
-exclude-newer = "7d"
+exclude-newer = "7 days"
 `)
 	writeFile(t, filepath.Join(home, ".pypirc"), `
 [pypi]
@@ -172,7 +172,7 @@ func TestPackageManagerSupplyChain_RunUsesUvXdgConfigHome(t *testing.T) {
 	uvConfig := filepath.Join(configHome, "uv", "uv.toml")
 	writeFile(t, uvConfig, `
 [pip]
-exclude-newer = "7d"
+exclude-newer = "7 days"
 `)
 	check := testPackageManagerSupplyChain(home, nil, map[string]bool{"uv": true})
 	check.Getenv = func(name string) string {
@@ -191,7 +191,7 @@ exclude-newer = "7d"
 func TestPackageManagerSupplyChain_RunAcceptsTopLevelUvExcludeNewer(t *testing.T) {
 	home := t.TempDir()
 	writeFile(t, filepath.Join(home, ".config", "uv", "uv.toml"), `
-exclude-newer = "7d"
+exclude-newer = "7 days"
 `)
 	check := testPackageManagerSupplyChain(home, nil, map[string]bool{"uv": true})
 
