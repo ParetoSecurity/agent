@@ -429,16 +429,16 @@ func durationSeconds(value string) int {
 		return 0
 	}
 
-	switch strings.TrimPrefix(normalized, number) {
-	case "s":
+	switch strings.TrimSpace(strings.TrimPrefix(normalized, number)) {
+	case "s", "second", "seconds":
 		return amount
-	case "m":
+	case "m", "minute", "minutes":
 		return amount * 60
-	case "h":
+	case "h", "hour", "hours":
 		return amount * 60 * 60
-	case "d":
+	case "d", "day", "days":
 		return amount * 24 * 60 * 60
-	case "w":
+	case "w", "week", "weeks":
 		return amount * minReleaseAgeSeconds
 	default:
 		return 0
