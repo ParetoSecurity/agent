@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -134,9 +135,32 @@ func ReportToTeam(initial bool) error {
 	}
 	log.WithField("response", res).Debug("API Response")
 
+	if err := updateConfigFromDeviceAuthResponse(res); err != nil {
+		return err
+	}
+
 	shared.Config.LastTeamReportSuccess = time.Now().UnixMilli()
 	if err := shared.SaveConfig(); err != nil {
 		log.WithError(err).Warn("failed to save last team report success timestamp")
 	}
+	return nil
+}
+
+func updateConfigFromDeviceAuthResponse(res string) error {
+	var response DeviceEnrollmentResponse
+	if err := json.Unmarshal([]byte(res), &response); err != nil {
+		return nil
+	}
+	if response.Auth == "" {
+		return nil
+	}
+
+	teamID, err := extractTeamIDFromAuth(response.Auth)
+	if err != nil {
+		return fmt.Errorf("failed to parse moved device auth: %w", err)
+	}
+
+	shared.Config.AuthToken = response.Auth
+	shared.Config.TeamID = teamID
 	return nil
 }

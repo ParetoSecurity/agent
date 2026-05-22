@@ -222,6 +222,38 @@ func TestReportToTeam(t *testing.T) {
 
 	gock.Clean()
 
+	// Test moved device auth handling.
+	movedAuth := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZWFtX2lkIjoibmV3VGVhbSIsInN1YiI6InVzZXJAZXhhbXBsZS5jb20ifQ.signature"
+	shared.Config.TeamID = "oldTeam"
+	shared.Config.AuthToken = "oldToken"
+	shared.Config.LastTeamReportSuccess = 0
+	gock.New(defaultReportURL).
+		Patch("/api/v1/team/" + shared.Config.TeamID + "/device").
+		Reply(200).
+		JSON(map[string]string{
+			"auth": movedAuth,
+		})
+
+	err = ReportToTeam(false)
+	if err != nil {
+		t.Fatalf("ReportToTeam (moved device) failed: %v", err)
+	}
+	if shared.Config.TeamID != "newTeam" {
+		t.Fatalf("expected TeamID to be newTeam, got %s", shared.Config.TeamID)
+	}
+	if shared.Config.AuthToken != movedAuth {
+		t.Fatalf("expected AuthToken to be updated")
+	}
+	if shared.Config.LastTeamReportSuccess == 0 {
+		t.Fatalf("expected LastTeamReportSuccess to be set after moved device report")
+	}
+
+	if !gock.IsDone() {
+		t.Errorf("pending mocks: %v", gock.Pending())
+	}
+
+	gock.Clean()
+
 	// Test API error handling.
 	gock.New(defaultReportURL).
 		Patch("/api/v1/team/" + shared.Config.TeamID + "/device").
