@@ -42,7 +42,6 @@ func TestPackageManagerSupplyChain_RunPassesWithProtectedConfigs(t *testing.T) {
 	home := t.TempDir()
 	writeFile(t, filepath.Join(home, ".npmrc"), `
 min-release-age=7
-minimum-release-age=10080
 save-exact=true
 `)
 	writeFile(t, filepath.Join(home, ".yarnrc.yml"), `
@@ -109,15 +108,130 @@ password = pypi-secret
 
 	assert.False(t, check.Passed())
 	assert.Equal(t, stringsJoin(
-		"~/.npmrc min-release-age is below 7 days",
-		"~/.npmrc minimum-release-age is below 10080 minutes",
+		"~/.npmrc release age is below 7 days; set either min-release-age >= 7 or minimum-release-age >= 10080",
 		"~/.npmrc save-exact is not enabled",
 		"~/.yarnrc.yml npmMinimalAgeGate is below 10080 minutes",
-		"pnpm minimumReleaseAge is below 10080 minutes",
+		filepath.Join(home, ".config", "pnpm", "config.yaml")+" minimumReleaseAge is below 10080 minutes",
 		"~/.bunfig.toml minimumReleaseAge is below 604800 seconds",
 		"uv exclude-newer is below 7 days",
 		"~/.pypirc contains plaintext credentials",
 	), check.Status())
+}
+
+func TestPackageManagerSupplyChain_RunPassesWithMinimumReleaseAgeOnly(t *testing.T) {
+	home := t.TempDir()
+	writeFile(t, filepath.Join(home, ".npmrc"), `
+minimum-release-age=10080
+save-exact=true
+`)
+	check := testPackageManagerSupplyChain(home, nil, nil)
+
+	require.NoError(t, check.Run())
+
+	assert.True(t, check.Passed())
+	assert.Equal(t, "~/.npmrc delays npm-compatible package releases and pins exact versions", check.Status())
+}
+
+func TestPackageManagerSupplyChain_RunPassesWithMinimumReleaseAgeOnlyAndOldNpm(t *testing.T) {
+	home := t.TempDir()
+	writeFile(t, filepath.Join(home, ".npmrc"), `
+minimum-release-age=10080
+save-exact=true
+`)
+	check := testPackageManagerSupplyChain(home, nil, map[string]bool{"npm": true})
+	check.Versions = map[string]string{"npm": "11.13.0"}
+
+	require.NoError(t, check.Run())
+
+	assert.True(t, check.Passed())
+	assert.Equal(t, "~/.npmrc delays npm-compatible package releases and pins exact versions", check.Status())
+}
+
+func TestPackageManagerSupplyChain_RunFailsWithUnsupportedNpmVersion(t *testing.T) {
+	home := t.TempDir()
+	writeFile(t, filepath.Join(home, ".npmrc"), `
+min-release-age=7
+save-exact=true
+`)
+	check := testPackageManagerSupplyChain(home, nil, map[string]bool{"npm": true})
+	check.Versions = map[string]string{"npm": "11.13.0"}
+
+	require.NoError(t, check.Run())
+
+	assert.False(t, check.Passed())
+	assert.Equal(t, "npm is older than 11.14.0 and does not enforce ~/.npmrc min-release-age", check.Status())
+}
+
+func TestPackageManagerSupplyChain_RunFailsWithPrereleaseNpmVersion(t *testing.T) {
+	home := t.TempDir()
+	writeFile(t, filepath.Join(home, ".npmrc"), `
+min-release-age=7
+save-exact=true
+`)
+	check := testPackageManagerSupplyChain(home, nil, map[string]bool{"npm": true})
+	check.Versions = map[string]string{"npm": "11.14.0-rc.1"}
+
+	require.NoError(t, check.Run())
+
+	assert.False(t, check.Passed())
+	assert.Equal(t, "npm is older than 11.14.0 and does not enforce ~/.npmrc min-release-age", check.Status())
+}
+
+func TestPackageManagerSupplyChain_RunFailsWithUnknownNpmVersion(t *testing.T) {
+	home := t.TempDir()
+	writeFile(t, filepath.Join(home, ".npmrc"), `
+min-release-age=7
+save-exact=true
+`)
+	check := testPackageManagerSupplyChain(home, nil, map[string]bool{"npm": true})
+	check.Versions = map[string]string{"npm": ""}
+
+	require.NoError(t, check.Run())
+
+	assert.False(t, check.Passed())
+	assert.Equal(t, "npm version could not be determined, so ~/.npmrc min-release-age could not be verified", check.Status())
+}
+
+func TestPackageManagerSupplyChain_RunPassesWithSupportedNpmVersion(t *testing.T) {
+	home := t.TempDir()
+	writeFile(t, filepath.Join(home, ".npmrc"), `
+min-release-age=7
+save-exact=true
+`)
+	check := testPackageManagerSupplyChain(home, nil, map[string]bool{"npm": true})
+	check.Versions = map[string]string{"npm": "11.14.0"}
+
+	require.NoError(t, check.Run())
+
+	assert.True(t, check.Passed())
+	assert.Equal(t, "~/.npmrc delays npm-compatible package releases and pins exact versions", check.Status())
+}
+
+func TestPackageManagerSupplyChain_ReadsNpmVersionThroughRunner(t *testing.T) {
+	home := t.TempDir()
+	writeFile(t, filepath.Join(home, ".npmrc"), `
+min-release-age=7
+save-exact=true
+`)
+	check := testPackageManagerSupplyChain(home, nil, map[string]bool{"npm": true})
+	check.RunCommand = func(name string, args ...string) ([]byte, error) {
+		assert.Equal(t, "/usr/bin/npm", name)
+		assert.Equal(t, []string{"--version"}, args)
+		return []byte("11.14.0\n"), nil
+	}
+
+	require.NoError(t, check.Run())
+
+	assert.True(t, check.Passed())
+}
+
+func TestPackageManagerSupplyChain_VersionAtLeast(t *testing.T) {
+	assert.False(t, versionAtLeast("", "11.14.0"))
+	assert.False(t, versionAtLeast("11.13.0", "11.14.0"))
+	assert.False(t, versionAtLeast("11.14.0-rc.1", "11.14.0"))
+	assert.True(t, versionAtLeast("11.14.0", "11.14.0"))
+	assert.True(t, versionAtLeast("v11.14.0", "11.14.0"))
+	assert.True(t, versionAtLeast("12", "11.14.0"))
 }
 
 func TestPackageManagerSupplyChain_RunFailsWhenBinaryConfigIsMissing(t *testing.T) {
@@ -136,10 +250,26 @@ func TestPackageManagerSupplyChain_RunFailsWhenBinaryConfigIsMissing(t *testing.
 	assert.Equal(t, stringsJoin(
 		filepath.Join(home, ".npmrc")+" is missing",
 		filepath.Join(home, ".yarnrc.yml")+" is missing",
-		filepath.Join(home, ".config", "pnpm", "config.yaml")+" is missing",
+		"pnpm config is missing (checked "+filepath.Join(home, ".config", "pnpm", "rc")+", "+filepath.Join(home, ".config", "pnpm", "config.yaml")+")",
 		filepath.Join(home, ".bunfig.toml")+" is missing",
 		filepath.Join(home, ".config", "uv", "uv.toml")+" is missing",
 	), check.Status())
+}
+
+func TestPackageManagerSupplyChain_RunUsesActivePnpmConfig(t *testing.T) {
+	home := t.TempDir()
+	writeFile(t, filepath.Join(home, ".config", "pnpm", "config.yaml"), `
+minimumReleaseAge: 10079
+`)
+	writeFile(t, filepath.Join(home, ".config", "pnpm", "rc"), `
+minimum-release-age=10080
+`)
+	check := testPackageManagerSupplyChain(home, nil, map[string]bool{"pnpm": true})
+
+	require.NoError(t, check.Run())
+
+	assert.True(t, check.Passed())
+	assert.Equal(t, filepath.Join(home, ".config", "pnpm", "rc")+" delays pnpm package releases", check.Status())
 }
 
 func TestPackageManagerSupplyChain_WindowsUvConfigPath(t *testing.T) {
@@ -222,15 +352,29 @@ func TestPackageManagerSupplyChain_PnpmConfigPath(t *testing.T) {
 
 	check := testPackageManagerSupplyChain(home, nil, nil)
 	check.GOOS = "linux"
-	assert.Equal(t, filepath.Join(home, ".config", "pnpm", "config.yaml"), check.pnpmConfigPath())
+	assert.Equal(t, filepath.Join(home, ".config", "pnpm", "rc"), check.pnpmConfigPath())
+	assert.Equal(t, []string{
+		filepath.Join(home, ".config", "pnpm", "rc"),
+		filepath.Join(home, ".config", "pnpm", "config.yaml"),
+	}, check.pnpmConfigPaths())
 
 	check = testPackageManagerSupplyChain(home, nil, nil)
 	check.GOOS = "darwin"
-	assert.Equal(t, filepath.Join(home, "Library", "Preferences", "pnpm", "config.yaml"), check.pnpmConfigPath())
+	assert.Equal(t, filepath.Join(home, "Library", "Preferences", "pnpm", "rc"), check.pnpmConfigPath())
+	assert.Equal(t, []string{
+		filepath.Join(home, "Library", "Preferences", "pnpm", "rc"),
+		filepath.Join(home, "Library", "Preferences", "pnpm", "config.yaml"),
+		filepath.Join(home, ".config", "pnpm", "rc"),
+		filepath.Join(home, ".config", "pnpm", "config.yaml"),
+	}, check.pnpmConfigPaths())
 
 	check = testPackageManagerSupplyChain(home, nil, nil)
 	check.GOOS = "windows"
-	assert.Equal(t, filepath.Join(home, "AppData", "Local", "pnpm", "config", "config.yaml"), check.pnpmConfigPath())
+	assert.Equal(t, filepath.Join(home, "AppData", "Local", "pnpm", "config", "rc"), check.pnpmConfigPath())
+	assert.Equal(t, []string{
+		filepath.Join(home, "AppData", "Local", "pnpm", "config", "rc"),
+		filepath.Join(home, "AppData", "Local", "pnpm", "config", "config.yaml"),
+	}, check.pnpmConfigPaths())
 }
 
 func TestPackageManagerSupplyChain_PnpmConfigPathUsesXdgConfigHome(t *testing.T) {
@@ -244,7 +388,32 @@ func TestPackageManagerSupplyChain_PnpmConfigPathUsesXdgConfigHome(t *testing.T)
 		return ""
 	}
 
-	assert.Equal(t, filepath.Join(configHome, "pnpm", "config.yaml"), check.pnpmConfigPath())
+	assert.Equal(t, filepath.Join(configHome, "pnpm", "rc"), check.pnpmConfigPath())
+	assert.Equal(t, []string{
+		filepath.Join(configHome, "pnpm", "rc"),
+		filepath.Join(configHome, "pnpm", "config.yaml"),
+	}, check.pnpmConfigPaths())
+}
+
+func TestPackageManagerSupplyChain_RunUsesPnpmXdgConfigHomeRc(t *testing.T) {
+	home := t.TempDir()
+	configHome := filepath.Join(home, "xdg")
+	pnpmConfig := filepath.Join(configHome, "pnpm", "rc")
+	writeFile(t, pnpmConfig, `
+minimum-release-age=10080
+`)
+	check := testPackageManagerSupplyChain(home, nil, map[string]bool{"pnpm": true})
+	check.Getenv = func(name string) string {
+		if name == "XDG_CONFIG_HOME" {
+			return configHome
+		}
+		return ""
+	}
+
+	require.NoError(t, check.Run())
+
+	assert.True(t, check.Passed())
+	assert.Equal(t, pnpmConfig+" delays pnpm package releases", check.Status())
 }
 
 func TestKeyValuePairsPreservesQuotedCommentCharacters(t *testing.T) {

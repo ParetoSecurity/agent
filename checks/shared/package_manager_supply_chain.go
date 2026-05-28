@@ -13,10 +13,11 @@ const minReleaseAgeSeconds = 7 * 24 * 60 * 60
 const minReleaseAgeMinutes = 7 * 24 * 60
 
 type packageManagerConfig struct {
-	path       string
+	paths      []string
 	binaries   []string
-	validate   func(string) []string
-	passDetail string
+	validate   func(string, string) []string
+	missing    func([]string) string
+	passDetail func(string) string
 }
 
 // PackageManagerSupplyChain verifies package managers delay newly published packages.
@@ -30,6 +31,8 @@ type PackageManagerSupplyChain struct {
 	FileExists func(string) bool
 	LookPath   func(string) (string, error)
 	Getenv     func(string) string
+	RunCommand func(string, ...string) ([]byte, error)
+	Versions   map[string]string
 }
 
 // Name returns the name of the check.
@@ -102,12 +105,12 @@ func (p *PackageManagerSupplyChain) validationFailures() []string {
 	var failures []string
 
 	for _, config := range p.configs() {
-		if contents, ok := p.readConfig(config.path); ok {
-			failures = append(failures, config.validate(contents)...)
+		if contents, path, ok := p.activeConfig(config.paths); ok {
+			failures = append(failures, config.validate(contents, path)...)
 			continue
 		}
 		if p.anyBinaryInstalled(config.binaries...) {
-			failures = append(failures, config.path+" is missing")
+			failures = append(failures, config.missing(config.paths))
 		}
 	}
 
@@ -118,8 +121,8 @@ func (p *PackageManagerSupplyChain) passingDetails() []string {
 	var details []string
 
 	for _, config := range p.configs() {
-		if contents, ok := p.readConfig(config.path); ok && len(config.validate(contents)) == 0 {
-			details = append(details, config.passDetail)
+		if contents, path, ok := p.activeConfig(config.paths); ok && len(config.validate(contents, path)) == 0 {
+			details = append(details, config.passDetail(path))
 		}
 	}
 	if len(details) == 0 {
@@ -130,8 +133,10 @@ func (p *PackageManagerSupplyChain) passingDetails() []string {
 
 func (p *PackageManagerSupplyChain) hasConfigFile() bool {
 	for _, config := range p.configs() {
-		if p.fileExists(config.path) {
-			return true
+		for _, path := range config.paths {
+			if p.fileExists(path) {
+				return true
+			}
 		}
 	}
 	return false
@@ -154,41 +159,55 @@ func (p *PackageManagerSupplyChain) configs() []packageManagerConfig {
 	home := p.homeDir()
 	return []packageManagerConfig{
 		{
-			path:       filepath.Join(home, ".npmrc"),
+			paths:      []string{filepath.Join(home, ".npmrc")},
 			binaries:   []string{"npm"},
-			validate:   validateNpmrc,
-			passDetail: "~/.npmrc delays npm-compatible package releases and pins exact versions",
+			validate:   p.validateNpmConfig,
+			missing:    firstConfigPathMissing,
+			passDetail: func(string) string { return "~/.npmrc delays npm-compatible package releases and pins exact versions" },
 		},
 		{
-			path:       filepath.Join(home, ".yarnrc.yml"),
+			paths:      []string{filepath.Join(home, ".yarnrc.yml")},
 			binaries:   []string{"yarn"},
-			validate:   validateYarnrc,
-			passDetail: "~/.yarnrc.yml delays Yarn package releases",
+			validate:   func(contents string, _ string) []string { return validateYarnrc(contents) },
+			missing:    firstConfigPathMissing,
+			passDetail: func(string) string { return "~/.yarnrc.yml delays Yarn package releases" },
 		},
 		{
-			path:       p.pnpmConfigPath(),
+			paths:      p.pnpmConfigPaths(),
 			binaries:   []string{"pnpm"},
 			validate:   validatePnpmConfig,
-			passDetail: p.pnpmConfigPath() + " delays pnpm package releases",
+			missing:    pnpmConfigMissing,
+			passDetail: func(path string) string { return path + " delays pnpm package releases" },
 		},
 		{
-			path:       filepath.Join(home, ".bunfig.toml"),
+			paths:      []string{filepath.Join(home, ".bunfig.toml")},
 			binaries:   []string{"bun"},
-			validate:   validateBunfig,
-			passDetail: "~/.bunfig.toml delays Bun package releases",
+			validate:   func(contents string, _ string) []string { return validateBunfig(contents) },
+			missing:    firstConfigPathMissing,
+			passDetail: func(string) string { return "~/.bunfig.toml delays Bun package releases" },
 		},
 		{
-			path:       p.uvConfigPath(),
+			paths:      []string{p.uvConfigPath()},
 			binaries:   []string{"uv"},
-			validate:   validateUv,
-			passDetail: p.uvConfigPath() + " excludes Python packages newer than 7 days",
+			validate:   func(contents string, _ string) []string { return validateUv(contents) },
+			missing:    firstConfigPathMissing,
+			passDetail: func(path string) string { return path + " excludes Python packages newer than 7 days" },
 		},
 		{
-			path:       filepath.Join(home, ".pypirc"),
-			validate:   validatePypirc,
-			passDetail: "~/.pypirc has no plaintext credentials",
+			paths:      []string{filepath.Join(home, ".pypirc")},
+			validate:   func(contents string, _ string) []string { return validatePypirc(contents) },
+			missing:    firstConfigPathMissing,
+			passDetail: func(string) string { return "~/.pypirc has no plaintext credentials" },
 		},
 	}
+}
+
+func firstConfigPathMissing(paths []string) string {
+	return paths[0] + " is missing"
+}
+
+func pnpmConfigMissing(paths []string) string {
+	return "pnpm config is missing (checked " + strings.Join(paths, ", ") + ")"
 }
 
 func (p *PackageManagerSupplyChain) readConfig(path string) (string, bool) {
@@ -197,6 +216,15 @@ func (p *PackageManagerSupplyChain) readConfig(path string) (string, bool) {
 		return "", false
 	}
 	return string(contents), true
+}
+
+func (p *PackageManagerSupplyChain) activeConfig(paths []string) (string, string, bool) {
+	for _, path := range paths {
+		if contents, ok := p.readConfig(path); ok {
+			return contents, path, true
+		}
+	}
+	return "", "", false
 }
 
 func (p *PackageManagerSupplyChain) readFile(path string) ([]byte, error) {
@@ -219,6 +247,28 @@ func (p *PackageManagerSupplyChain) lookPath(name string) (string, error) {
 		return p.LookPath(name)
 	}
 	return exec.LookPath(name)
+}
+
+func (p *PackageManagerSupplyChain) packageManagerVersion(name string) string {
+	if version, ok := p.Versions[name]; ok {
+		return version
+	}
+	path, err := p.lookPath(name)
+	if err != nil {
+		return ""
+	}
+	output, err := p.runCommand(path, "--version")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(output))
+}
+
+func (p *PackageManagerSupplyChain) runCommand(name string, args ...string) ([]byte, error) {
+	if p.RunCommand != nil {
+		return p.RunCommand(name, args...)
+	}
+	return exec.Command(name, args...).Output()
 }
 
 func (p *PackageManagerSupplyChain) homeDir() string {
@@ -253,9 +303,12 @@ func (p *PackageManagerSupplyChain) uvConfigPath() string {
 	return filepath.Join(configHome, "uv", "uv.toml")
 }
 
-func (p *PackageManagerSupplyChain) pnpmConfigPath() string {
+func (p *PackageManagerSupplyChain) pnpmConfigPaths() []string {
 	if configHome := p.env("XDG_CONFIG_HOME"); configHome != "" {
-		return filepath.Join(configHome, "pnpm", "config.yaml")
+		return []string{
+			filepath.Join(configHome, "pnpm", "rc"),
+			filepath.Join(configHome, "pnpm", "config.yaml"),
+		}
 	}
 
 	switch p.goos() {
@@ -264,12 +317,27 @@ func (p *PackageManagerSupplyChain) pnpmConfigPath() string {
 		if localAppData == "" {
 			localAppData = filepath.Join(p.homeDir(), "AppData", "Local")
 		}
-		return filepath.Join(localAppData, "pnpm", "config", "config.yaml")
+		return []string{
+			filepath.Join(localAppData, "pnpm", "config", "rc"),
+			filepath.Join(localAppData, "pnpm", "config", "config.yaml"),
+		}
 	case "darwin":
-		return filepath.Join(p.homeDir(), "Library", "Preferences", "pnpm", "config.yaml")
+		return []string{
+			filepath.Join(p.homeDir(), "Library", "Preferences", "pnpm", "rc"),
+			filepath.Join(p.homeDir(), "Library", "Preferences", "pnpm", "config.yaml"),
+			filepath.Join(p.homeDir(), ".config", "pnpm", "rc"),
+			filepath.Join(p.homeDir(), ".config", "pnpm", "config.yaml"),
+		}
 	default:
-		return filepath.Join(p.homeDir(), ".config", "pnpm", "config.yaml")
+		return []string{
+			filepath.Join(p.homeDir(), ".config", "pnpm", "rc"),
+			filepath.Join(p.homeDir(), ".config", "pnpm", "config.yaml"),
+		}
 	}
+}
+
+func (p *PackageManagerSupplyChain) pnpmConfigPath() string {
+	return p.pnpmConfigPaths()[0]
 }
 
 func (p *PackageManagerSupplyChain) env(name string) string {
@@ -286,21 +354,85 @@ func (p *PackageManagerSupplyChain) goos() string {
 	return runtime.GOOS
 }
 
+func (p *PackageManagerSupplyChain) validateNpmConfig(contents string, _ string) []string {
+	failures := validateNpmrc(contents)
+	if len(failures) != 0 || !p.anyBinaryInstalled("npm") || !npmConfigUsesMinReleaseAge(contents) {
+		return failures
+	}
+	version := p.packageManagerVersion("npm")
+	if version == "" {
+		failures = append(failures, "npm version could not be determined, so ~/.npmrc min-release-age could not be verified")
+		return failures
+	}
+	if !versionAtLeast(version, "11.14.0") {
+		failures = append(failures, "npm is older than 11.14.0 and does not enforce ~/.npmrc min-release-age")
+	}
+	return failures
+}
+
+func npmConfigUsesMinReleaseAge(contents string) bool {
+	_, ok := keyValuePairs(contents)["min-release-age"]
+	return ok
+}
+
 func validateNpmrc(contents string) []string {
 	values := keyValuePairs(contents)
 	var failures []string
 
-	if integerValue(values["min-release-age"]) < 7 {
-		failures = append(failures, "~/.npmrc min-release-age is below 7 days")
-	}
-	if integerValue(values["minimum-release-age"]) < minReleaseAgeMinutes {
-		failures = append(failures, "~/.npmrc minimum-release-age is below 10080 minutes")
+	if integerValue(values["min-release-age"]) < 7 && integerValue(values["minimum-release-age"]) < minReleaseAgeMinutes {
+		failures = append(failures, "~/.npmrc release age is below 7 days; set either min-release-age >= 7 or minimum-release-age >= 10080")
 	}
 	if strings.ToLower(values["save-exact"]) != "true" {
 		failures = append(failures, "~/.npmrc save-exact is not enabled")
 	}
 
 	return failures
+}
+
+func versionAtLeast(version string, minimumVersion string) bool {
+	if version == "" || strings.Contains(version, "-") {
+		return false
+	}
+	current := versionComponents(version)
+	minimum := versionComponents(minimumVersion)
+	length := len(current)
+	if len(minimum) > length {
+		length = len(minimum)
+	}
+	for index := 0; index < length; index++ {
+		currentPart := 0
+		if index < len(current) {
+			currentPart = current[index]
+		}
+		minimumPart := 0
+		if index < len(minimum) {
+			minimumPart = minimum[index]
+		}
+		if currentPart != minimumPart {
+			return currentPart > minimumPart
+		}
+	}
+	return true
+}
+
+func versionComponents(version string) []int {
+	parts := strings.Split(strings.TrimLeft(version, "vV"), ".")
+	components := make([]int, 0, len(parts))
+	for _, part := range parts {
+		number := ""
+		for _, character := range part {
+			if character < '0' || character > '9' {
+				break
+			}
+			number += string(character)
+		}
+		component, err := strconv.Atoi(number)
+		if err != nil {
+			component = 0
+		}
+		components = append(components, component)
+	}
+	return components
 }
 
 func validateYarnrc(contents string) []string {
@@ -311,14 +443,14 @@ func validateYarnrc(contents string) []string {
 	return nil
 }
 
-func validatePnpmConfig(contents string) []string {
+func validatePnpmConfig(contents string, path string) []string {
 	values := keyValuePairs(contents)
 	releaseAge := integerValue(values["minimumreleaseage"])
 	if releaseAge == 0 {
 		releaseAge = integerValue(values["minimum-release-age"])
 	}
 	if releaseAge < minReleaseAgeMinutes {
-		return []string{"pnpm minimumReleaseAge is below 10080 minutes"}
+		return []string{path + " minimumReleaseAge is below 10080 minutes"}
 	}
 	return nil
 }
