@@ -55,13 +55,6 @@ jobs:
               apt-get install -y nftables
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
-          - distro: debian-12
-            image: jrei/systemd-debian:12
-            setup: |
-              apt-get update
-              apt-get upgrade -y
-            installer: "apt-get install -y"
-            verify_package: "dpkg -l paretosecurity"
           - distro: debian-13
             image: jrei/systemd-debian:13
             setup: |
