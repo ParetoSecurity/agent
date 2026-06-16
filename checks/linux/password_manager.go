@@ -107,7 +107,7 @@ func isPackageInstalled(pkgName string) bool {
 		log.Debug("pacman package manager found")
 	}
 	if _, err := shared.RunCommand("which", "nix-store"); err == nil {
-		pkgManagers["nix"] = "if [ -e ~/.nix-profile ]; then nix-store -q --requisites /run/current-system ~/.nix-profile; else nix-store -q --requisites /run/current-system; fi"
+		pkgManagers["nix"] = "if [ -e ~/.nix-profile ]; then nix-store -q --requisites ~/.nix-profile; fi"
 		log.Debug("nix package manager found")
 	}
 
