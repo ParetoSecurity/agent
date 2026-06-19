@@ -258,7 +258,7 @@ jobs:
         distribution: [debian/13, ubuntu/26.04, ubuntu/25.10, ubuntu/24.04, ubuntu/22.04, fedora/44, fedora/43, archlinux]
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Download build
         uses: actions/download-artifact@v8
         with:
@@ -330,7 +330,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
       - name: Set up Go
