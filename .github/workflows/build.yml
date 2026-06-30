@@ -258,7 +258,7 @@ jobs:
         distribution: [debian/13, debian/12, ubuntu/26.04, ubuntu/25.10, ubuntu/24.04, ubuntu/22.04, fedora/44, fedora/43, archlinux]
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Download build
         uses: actions/download-artifact@v8
         with:
@@ -330,7 +330,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
       - name: Set up Go
@@ -338,7 +338,7 @@ jobs:
         with:
           go-version: stable
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           # either 'goreleaser' (default) or 'goreleaser-pro'
           distribution: goreleaser
