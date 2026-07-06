@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
+	"strconv"
 
 	"github.com/ParetoSecurity/agent/notify"
 	shared "github.com/ParetoSecurity/agent/shared"
@@ -12,6 +14,15 @@ import (
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 )
+
+// host is untrusted input from an external URL; require explicit opt-in before trusting it.
+// https://github.com/teamniteo/pareto/issues/863
+const allowHostOverrideEnv = "PARETO_ALLOW_HOST_OVERRIDE"
+
+func hostOverrideAllowed() bool {
+	allowed, _ := strconv.ParseBool(os.Getenv(allowHostOverrideEnv))
+	return allowed
+}
 
 var linkCmd = &cobra.Command{
 	Use:   "link <url>",
@@ -52,6 +63,13 @@ func runLinkCommand(teamURL string) error {
 	if err != nil {
 		log.WithError(err).Warn("failed to parse enrollment URL")
 		return err
+	}
+
+	// Only honor an explicit host override when opted in via env var; otherwise
+	// always enroll against the production Pareto Cloud API.
+	if host != "" && !hostOverrideAllowed() {
+		log.Warnf("ignoring host override from link URL; set %s=1 to allow it", allowHostOverrideEnv)
+		host = ""
 	}
 
 	// Enroll the device
