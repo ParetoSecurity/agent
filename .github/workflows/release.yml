@@ -188,6 +188,9 @@ jobs:
       - name: Create RPM repository
         run: mv dist/*.rpm apt/rpm && createrepo_c apt/rpm
 
+      - name: Verify RPM repo enforces signature checks
+        run: grep -qx 'gpgcheck=1' apt/rpm/paretosecurity.repo
+
       - name: Create Arch repository
         continue-on-error: true
         run: |
