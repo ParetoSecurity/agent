@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"os"
 	"testing"
 
 	"github.com/ParetoSecurity/agent/shared"
@@ -83,6 +84,84 @@ func TestRunLinkCommand_Success(t *testing.T) {
 	assert.Equal(t, "2429c49e-37bb-41bb-9077-6bb6202e255b", shared.Config.TeamID)
 	assert.NotEmpty(t, shared.Config.AuthToken)
 	assert.Equal(t, "https://cloud.paretosecurity.com", shared.Config.TeamAPI)
+}
+
+func TestRunLinkCommand_HostOverrideIgnoredByDefault(t *testing.T) {
+	defer gock.Off()
+
+	tempDir := t.TempDir()
+	originalConfigPath := shared.ConfigPath
+	shared.ConfigPath = tempDir + "/config.toml"
+	defer func() {
+		shared.ConfigPath = originalConfigPath
+	}()
+
+	// Only the production host should ever be hit, even though the URL asks for an attacker host.
+	gock.New("https://cloud.paretosecurity.com").
+		Post("/api/v1/team/enroll").
+		Reply(200).
+		JSON(map[string]string{
+			"auth": "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJ0ZWFtX2lkIjoiMjQyOWM0OWUtMzdiYi00MWJiLTkwNzctNmJiNjIwMmUyNTViIiwic3ViIjoianRAZXhhbXBsZS5jb20iLCJpYXQiOjE3MzY0MTc0MTB9.test",
+		})
+	gock.New("https://cloud.paretosecurity.com").
+		Patch("/api/v1/team/2429c49e-37bb-41bb-9077-6bb6202e255b/device").
+		Reply(200).
+		JSON(map[string]string{"status": "ok"})
+
+	shared.Config.TeamID = ""
+	shared.Config.AuthToken = ""
+	shared.Config.TeamAPI = ""
+	defer func() {
+		shared.Config.TeamID = ""
+		shared.Config.AuthToken = ""
+		shared.Config.TeamAPI = ""
+	}()
+
+	os.Unsetenv(allowHostOverrideEnv)
+
+	err := runLinkCommand("paretosecurity://linkDevice?invite_id=test-invite-123&host=https://attacker.example.com")
+	assert.NoError(t, err)
+	assert.Equal(t, "https://cloud.paretosecurity.com", shared.Config.TeamAPI)
+	assert.True(t, gock.IsDone())
+}
+
+func TestRunLinkCommand_HostOverrideAllowedWhenOptedIn(t *testing.T) {
+	defer gock.Off()
+
+	tempDir := t.TempDir()
+	originalConfigPath := shared.ConfigPath
+	shared.ConfigPath = tempDir + "/config.toml"
+	defer func() {
+		shared.ConfigPath = originalConfigPath
+	}()
+
+	os.Setenv(allowHostOverrideEnv, "1")
+	defer os.Unsetenv(allowHostOverrideEnv)
+
+	gock.New("https://staging.example.com").
+		Post("/api/v1/team/enroll").
+		Reply(200).
+		JSON(map[string]string{
+			"auth": "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJ0ZWFtX2lkIjoiMjQyOWM0OWUtMzdiYi00MWJiLTkwNzctNmJiNjIwMmUyNTViIiwic3ViIjoianRAZXhhbXBsZS5jb20iLCJpYXQiOjE3MzY0MTc0MTB9.test",
+		})
+	gock.New("https://staging.example.com").
+		Patch("/api/v1/team/2429c49e-37bb-41bb-9077-6bb6202e255b/device").
+		Reply(200).
+		JSON(map[string]string{"status": "ok"})
+
+	shared.Config.TeamID = ""
+	shared.Config.AuthToken = ""
+	shared.Config.TeamAPI = ""
+	defer func() {
+		shared.Config.TeamID = ""
+		shared.Config.AuthToken = ""
+		shared.Config.TeamAPI = ""
+	}()
+
+	err := runLinkCommand("paretosecurity://linkDevice?invite_id=test-invite-123&host=https://staging.example.com")
+	assert.NoError(t, err)
+	assert.Equal(t, "https://staging.example.com", shared.Config.TeamAPI)
+	assert.True(t, gock.IsDone())
 }
 
 func TestRunLinkCommand_RelinkSuccess(t *testing.T) {
