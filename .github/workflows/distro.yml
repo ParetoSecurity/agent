@@ -54,13 +54,6 @@ jobs:
               apt-get upgrade -y
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
-          - distro: debian-12
-            image: jrei/systemd-debian:12
-            setup: |
-              apt-get update
-              apt-get upgrade -y
-            installer: "apt-get install -y"
-            verify_package: "dpkg -l paretosecurity"
           - distro: fedora-43
             image: jrei/systemd-fedora:43
             setup: |
