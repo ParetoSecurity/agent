@@ -24,7 +24,7 @@ jobs:
       - name: Run Windows schema
         run: agent_windows_amd64_v1/paretosecurity schema > windows.json
       - name: Upload Windows schema
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
         with:
           files: windows.json
         env:
@@ -94,13 +94,13 @@ jobs:
       - name: Create ZIP package (x64)
         run: Compress-Archive -Path paretosecurity-tray.exe, paretosecurity.exe -DestinationPath paretosecurity_windows_amd64.zip
       - name: Upload Windows Installer (x64)
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
         with:
           files: paretosecurity-installer-amd64.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload Windows ZIP Package (x64)
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
         with:
           files: paretosecurity_windows_amd64.zip
         env:
@@ -123,7 +123,7 @@ jobs:
         run: agent_linux_amd64_v1/paretosecurity schema > linux.json
 
       - name: Upload Linux schema
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
         with:
           files: linux.json
         env:
@@ -214,7 +214,7 @@ jobs:
             gpg --detach-sign --no-armor --batch --yes apt/aur/stable/$arch/*_$arch.archlinux.pkg.tar.zst ; \
           done
           
-      - uses: ryand56/r2-upload-action@b801a390acbdeb034c5e684ff5e1361c06639e7c # latest
+      - uses: ryand56/r2-upload-action@33ebb7a494b3a8a3c5ed2ea6bbdc72e707090317 # latest
         with:
           r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
           r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
