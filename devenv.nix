@@ -98,7 +98,7 @@ in
 
   # https://devenv.sh/pre-commit-hooks/
   git-hooks.hooks = {
-    nixfmt-rfc-style.enable = true;
+    nixfmt.enable = true;
     deadnix.enable = true;
     statix.enable = true;
     gofmt.enable = true;
