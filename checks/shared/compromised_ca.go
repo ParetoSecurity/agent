@@ -235,10 +235,30 @@ func (c *CompromisedCA) certifiBundlePaths() []string {
 			if len(paths) >= maxCertifiBundles {
 				return paths
 			}
+			if c.certifiUsesSystemBundle(match) {
+				continue
+			}
 			paths = append(paths, match)
 		}
 	}
 	return paths
+}
+
+// certifiUsesSystemBundle reports whether the certifi package of a cacert.pem
+// was patched to load a system bundle, so it never reads that cacert.pem.
+// Debian 12, Ubuntu 22.04 and Ubuntu 24.04 ship such a stale cacert.pem.
+// The system bundle is scanned separately.
+func (c *CompromisedCA) certifiUsesSystemBundle(cacert string) bool {
+	core, err := c.readFile(filepath.Join(filepath.Dir(cacert), "core.py"))
+	if err != nil {
+		return false
+	}
+	for _, bundle := range c.systemBundlePaths() {
+		if strings.Contains(string(core), bundle) {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *CompromisedCA) displayPath(path string) string {

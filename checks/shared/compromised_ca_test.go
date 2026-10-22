@@ -121,6 +121,56 @@ func TestCompromisedCA_FindsPipxCertifiAndShortensHome(t *testing.T) {
 		"~/.local/share/pipx/venvs/tool/lib/python3.12/site-packages/certifi/cacert.pem: Pareto Test Root CA")
 }
 
+func TestCompromisedCA_SkipsCertifiPatchedToUseSystemBundle(t *testing.T) {
+	tests := []struct {
+		name    string
+		corepy  string
+		skipped bool
+	}{
+		{
+			name:    "Debian 12 and Ubuntu 24.04",
+			corepy:  "DEBIAN_CA_CERTS_PATH = '/etc/ssl/certs/ca-certificates.crt'\n\ndef where() -> str:\n    return DEBIAN_CA_CERTS_PATH\n",
+			skipped: true,
+		},
+		{
+			name:    "Ubuntu 22.04",
+			corepy:  "This module returns the installation location of cacert.pem or its contents.\nDEBIAN_CA_CERTS_PATH = '/etc/ssl/certs/ca-certificates.crt'\n",
+			skipped: true,
+		},
+		{
+			name:    "upstream certifi",
+			corepy:  "def where() -> str:\n    return str(files(\"certifi\").joinpath(\"cacert.pem\"))\n",
+			skipped: false,
+		},
+		{
+			name:    "no core.py",
+			skipped: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			home := t.TempDir()
+			certifi := filepath.Join(home, ".local/lib/python3.12/site-packages/certifi")
+			bundle := writeBundle(t, filepath.Join(certifi, "cacert.pem"), testCAPEM)
+			if tt.corepy != "" {
+				writeBundle(t, filepath.Join(certifi, "core.py"), tt.corepy)
+			}
+
+			check := CompromisedCA{GOOS: "linux", HomeDir: home, Blocklist: testCABlocklist}
+			require.NoError(t, check.Run())
+
+			if tt.skipped {
+				assert.NotContains(t, check.certifiBundlePaths(), bundle)
+				assert.True(t, check.Passed())
+			} else {
+				assert.Contains(t, check.certifiBundlePaths(), bundle)
+				assert.False(t, check.Passed())
+			}
+		})
+	}
+}
+
 func TestCompromisedCA_CapsCertifiBundles(t *testing.T) {
 	var matches []string
 	for i := 0; i < maxCertifiBundles+10; i++ {
