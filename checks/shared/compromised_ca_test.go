@@ -87,7 +87,7 @@ func TestCompromisedCA_SymlinkedBundleIsScannedOnce(t *testing.T) {
 	link := filepath.Join(dir, "openssl-cert.pem")
 	require.NoError(t, os.Symlink(bundle, link))
 
-	check := CompromisedCA{BundlePaths: []string{bundle, link}, Blocklist: testCABlocklist}
+	check := CompromisedCA{BundlePaths: []string{bundle, link}, Blocklist: testCABlocklist, HomeDir: "/nonexistent"}
 	assert.Equal(t, []string{bundle}, check.bundlePaths())
 
 	require.NoError(t, check.Run())
