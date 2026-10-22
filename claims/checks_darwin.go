@@ -20,6 +20,7 @@ var All = []Claim{
 	}},
 	{"System Integrity", []check.Check{
 		&shared.PackageManagerSupplyChain{},
+		&shared.CompromisedCA{},
 		&shared.TeamReportSentCheck{},
 	}},
 }

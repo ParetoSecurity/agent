@@ -29,6 +29,7 @@ var All = []Claim{
 		&checks.SecureBoot{},
 		&checks.EncryptingFS{},
 		&shared.PackageManagerSupplyChain{},
+		&shared.CompromisedCA{},
 		&shared.TeamReportSentCheck{},
 	}},
 }
