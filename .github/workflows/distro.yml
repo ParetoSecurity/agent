@@ -47,6 +47,14 @@ jobs:
               apt-get install -y nftables
             installer: "apt-get install -y"
             verify_package: "dpkg -l paretosecurity"
+          - distro: ubuntu-26.10
+            image: jrei/systemd-ubuntu:26.10
+            setup: |
+              apt-get update
+              apt-get upgrade -y
+              apt-get install -y nftables
+            installer: "apt-get install -y"
+            verify_package: "dpkg -l paretosecurity"
           - distro: debian-13
             image: jrei/systemd-debian:13
             setup: |
@@ -145,6 +153,8 @@ jobs:
           docker exec -u alice runner paretosecurity config disable 7436553a-ae52-479b-937b-2ae14d15a520  # updates
           docker exec -u alice runner paretosecurity config disable 44e4754a-0b42-4964-9cc2-b88b2023cb1e  # self-check
           docker exec -u alice runner paretosecurity config disable 2e46c89a-5461-4865-a92e-3b799c12034a  # firewall
+          # TODO: remove once a release skips the unused certifi cacert.pem shipped on Debian 12 / Ubuntu 22.04 / 24.04
+          docker exec -u alice runner paretosecurity config disable 9af95e09-1aa3-464b-8c32-d760c21e7f51  # compromised CA
 
           # Run checks
           docker exec -u alice runner paretosecurity check

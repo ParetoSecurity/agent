@@ -3,20 +3,25 @@ import os
 import yaml
 import re
 import time
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Set, Tuple
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import LiteralScalarString, DoubleQuotedScalarString
 from ruamel.yaml.comments import CommentedSeq
 
 """
-This script checks the currently supported versions of ubuntu, debian and fedora on https://endoflife.date/ 
+This script checks the currently supported versions of ubuntu, debian and fedora on https://endoflife.date/
 and updates the .github/workflows/distro.yml and .github/workflows/build.yml files accordingly.
+
+The build.yml matrix runs on Incus, so a distro is only added there once https://images.linuxcontainers.org/
+publishes an image for it, which usually lags a few weeks behind the distro release.
 
 It automatically runs every Monday at 8:30 AM CEST, via a Github Action, which creates a pull request if any changes have been made.
 It can also be run manually.
 """
 
 IGNORED_DISTROS: List[str] = ['arch']
+
+INCUS_IMAGES_URL = 'https://images.linuxcontainers.org/streams/v1/images.json'
 
 MAX_RETRIES = 3
 RETRY_DELAY = 10
@@ -62,6 +67,36 @@ def get_supported_distros() -> Tuple[List[str], List[str]]:
             failed.append(distro)
 
     return supported, failed
+
+
+def get_incus_images() -> Optional[Set[str]]:
+    """
+    Fetch the amd64 image aliases published on images.linuxcontainers.org (e.g. "ubuntu/26.04").
+    Retries failed API calls up to MAX_RETRIES times with RETRY_DELAY seconds between attempts.
+
+    Returns None if the image index could not be fetched.
+    """
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            response = requests.get(INCUS_IMAGES_URL, timeout=30)
+            response.raise_for_status()
+            products = response.json()['products']
+
+            aliases = set()
+            for product in products.values():
+                if product.get('arch') == 'amd64':
+                    aliases.update(product.get('aliases', '').split(','))
+
+            return aliases
+
+        except (requests.exceptions.RequestException, KeyError, TypeError, ValueError) as e:
+            if attempt < MAX_RETRIES:
+                print(f"Error fetching Incus images (attempt {attempt}/{MAX_RETRIES}): {e}. Retrying in {RETRY_DELAY}s...")
+                time.sleep(RETRY_DELAY)
+            else:
+                print(f"Error fetching Incus images: failed after {MAX_RETRIES} attempts: {e}")
+
+    return None
 
 
 def get_current_distros() -> Optional[List[Dict[str, Any]]]:
@@ -259,18 +294,47 @@ def add_distro(distro: str) -> None:
         yaml.dump(data, f)
 
 
-def update_build_yml(supported_distros: List[str]) -> None:
+def get_current_build_distros() -> List[str]:
+    """Read the current distribution matrix from build.yml file."""
+    current = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(current, "..", "build.yml")
+
+    with open(path, 'r') as f:
+        data = yaml.safe_load(f)
+
+    return data['jobs']['checks-on-linux']['strategy']['matrix']['distribution']
+
+
+def get_build_distros(supported_distros: List[str], incus_images: Set[str]) -> Tuple[List[str], List[str]]:
+    """
+    Map supported distros to Incus image names for the build.yml matrix.
+
+    Returns:
+        Tuple containing:
+        - List[str]: Images to test against in build.yml (e.g., "ubuntu/24.04"), ending with archlinux
+        - List[str]: Supported distros left out because they have no Incus image yet
+    """
+    build_distros = []
+    missing_images = []
+
+    for d in supported_distros:
+        image = d.replace('-', '/')
+        if image in incus_images:
+            build_distros.append(image)
+        else:
+            missing_images.append(d)
+
+    build_distros.append('archlinux')
+
+    return build_distros, missing_images
+
+
+def update_build_yml(build_distros: List[str]) -> None:
     """ Update the distribution matrix in the build.yml file. """
 
     current = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(current, "..", "build.yml")
-    
-    new_matrix = []
-    for d in supported_distros:
-        new_matrix.append(d.replace('-', '/'))
-    
-    new_matrix.append('archlinux')
-    
+
     yaml = YAML()
     yaml.preserve_quotes = True
     yaml.default_flow_style = None
@@ -280,7 +344,7 @@ def update_build_yml(supported_distros: List[str]) -> None:
     with open(path, 'r') as f:
         data = yaml.load(f)
         
-    inline_matrix = CommentedSeq(new_matrix)
+    inline_matrix = CommentedSeq(build_distros)
     inline_matrix.fa.set_flow_style()
     
     data['jobs']['checks-on-linux']['strategy']['matrix']['distribution'] = inline_matrix
@@ -326,7 +390,8 @@ def main() -> None:
     
     Compares currently supported distros from endoflife.date with the
     distro.yml matrix and updates it as needed. Also updates the build.yml
-    matrix. Creates GitHub Actions outputs for the workflow to use.
+    matrix with the supported distros that have an Incus image available.
+    Creates GitHub Actions outputs for the workflow to use.
     """
 
     supported_distros, failed_families = get_supported_distros()
@@ -336,12 +401,12 @@ def main() -> None:
     if failed_families:
         preserve_failed_families(supported_distros, failed_families, current_distro_names)
 
+    added_distros = []
+    removed_distros = []
+
     if set(supported_distros) != set(current_distro_names):
         print("Updating supported distros in .github/workflows/distro.yml")
-        
-        added_distros = []
-        removed_distros = []
-        
+
         for distro in current_distro_names:
             if distro not in supported_distros:
                 print(f"The {distro} distro is not supported, removing from the matrix.")
@@ -354,25 +419,56 @@ def main() -> None:
                 added_distros.append(distro)
                 add_distro(distro)
 
-        print("Updating supported distros in .github/workflows/build.yml")
-        update_build_yml(supported_distros)
+    current_build_distros = get_current_build_distros()
 
+    incus_images = get_incus_images()
+    if incus_images is None:
+        print("Warning: Could not fetch Incus images. Only keeping images already in build.yml.")
+        incus_images = set(current_build_distros)
+
+    build_distros, missing_images = get_build_distros(supported_distros, incus_images)
+    for distro in missing_images:
+        print(f"No Incus image for {distro} yet, leaving it out of build.yml.")
+
+    enabled_images = [
+        d for d in build_distros
+        if d not in current_build_distros and d.replace('/', '-') not in added_distros
+    ]
+
+    build_changed = set(build_distros) != set(current_build_distros)
+    if build_changed:
+        print("Updating supported distros in .github/workflows/build.yml")
+        update_build_yml(build_distros)
+
+    if added_distros or removed_distros or build_changed:
         set_github_output("changes_made", "true")
-        
+
         pr_description = "Update supported Linux distribution versions based on https://endoflife.date/\n\n"
-        
+
         if added_distros:
             pr_description += "### Added distros:\n"
             for distro in added_distros:
                 pr_description += f"- {distro}\n"
             pr_description += "\n"
-        
+
         if removed_distros:
             pr_description += "### Removed distros (reached end-of-life):\n"
             for distro in removed_distros:
                 pr_description += f"- {distro}\n"
             pr_description += "\n"
-        
+
+        if enabled_images:
+            pr_description += "### Added to build.yml (Incus image now available):\n"
+            for image in enabled_images:
+                pr_description += f"- {image}\n"
+            pr_description += "\n"
+
+        if missing_images:
+            pr_description += "### Not in build.yml yet (no image on https://images.linuxcontainers.org/):\n"
+            for distro in missing_images:
+                pr_description += f"- {distro}\n"
+            pr_description += "\n"
+
         set_github_output("pr_description", pr_description.rstrip())
 
     else:
