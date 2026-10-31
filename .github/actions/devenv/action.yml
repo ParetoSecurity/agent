@@ -1,9 +1,6 @@
 name: "Devenv setup"
 description: "Setup devenv for running tests and linters"
 inputs:
-  authToken:
-    description: "Cachix auth token"
-    required: true
   devenv:
     description: "Devenv version to install"
     required: false
@@ -11,29 +8,16 @@ inputs:
 runs:
   using: "composite"
   steps:
-  - name: namespacelabs/nscloud-cache-action cannot mkdir /nix so we do it manually
-    shell: bash
-    run: |
-      sudo mkdir /nix
-      sudo chown $USER /nix
-
-  - uses: namespacelabs/nscloud-cache-action@v1
-    with:
-      path: |
-        /home/runner/go/pkg/mod
-        /nix
-        ~/.cache
-        .devenv
-
   - uses: cachix/install-nix-action@v31
     with:
       extra_nix_config: |
         system-features = kvm nixos-test
-  - uses: cachix/cachix-action@v16
+  - uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7
     with:
-      name: niteo
-      authToken: ${{ inputs.authToken }}
-
+      # Matrix jobs share one snapshot instead of caching eleven copies of Nix.
+      primary-key: nix-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('**/*.nix', 'flake.lock', 'devenv.lock', '.github/actions/devenv/action.yml') }}
+      restore-prefixes-first-match: nix-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-
+      gc-max-store-size-linux: 2G
   - name: Install devenv.sh
     shell: bash
     run: |

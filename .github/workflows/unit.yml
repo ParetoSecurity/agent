@@ -42,12 +42,10 @@ jobs:
         GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
   test:
     name: Tests
-    runs-on: namespace-profile-pareto-linux
+    runs-on: ubuntu-26.04
     steps:
-    - uses: namespacelabs/nscloud-checkout-action@66f2dc6f6c42a8ac6c4e53473c4840006822831e # v6
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
     - uses: ./.github/actions/devenv
-      with:
-        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
     - run: devenv test -d
     - name: Archive code coverage results
       uses: actions/upload-artifact@v7
