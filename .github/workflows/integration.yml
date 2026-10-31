@@ -11,7 +11,7 @@ on:
 jobs:
   check-on-nix:
     name: "Check: ${{ matrix.check }}"
-    runs-on: namespace-profile-pareto-linux
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -31,9 +31,11 @@ jobs:
           ]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Enable KVM for NixOS test VMs
+        run: |
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
       - uses: ./.github/actions/devenv
-        with:
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
       - run: chmod o+rx /home/runner
         name: Update /home/runner permissions so that Nix is happy
 
