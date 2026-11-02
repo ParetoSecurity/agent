@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 
 const minReleaseAgeSeconds = 7 * 24 * 60 * 60
 const minReleaseAgeMinutes = 7 * 24 * 60
+const minReleaseAgeDays = 7
 
 type packageManagerConfig struct {
 	paths      []string
@@ -18,6 +20,12 @@ type packageManagerConfig struct {
 	validate   func(string, string) []string
 	missing    func([]string) string
 	passDetail func(string) string
+	// minimumVersion is set when only newer tool versions enforce the setting.
+	minimumVersion string
+	// setting names the cooldown key in version gate messages.
+	setting string
+	// usesSetting reports whether the config sets the version-gated key.
+	usesSetting func(string) bool
 }
 
 // PackageManagerSupplyChain verifies package managers delay newly published packages.
@@ -106,7 +114,11 @@ func (p *PackageManagerSupplyChain) validationFailures() []string {
 
 	for _, config := range p.configs() {
 		if contents, path, ok := p.activeConfig(config.paths); ok {
-			failures = append(failures, config.validate(contents, path)...)
+			configFailures := config.validate(contents, path)
+			if len(configFailures) == 0 && config.minimumVersion != "" && config.usesSetting(contents) {
+				configFailures = p.versionGateFailures(config, path)
+			}
+			failures = append(failures, configFailures...)
 			continue
 		}
 		if p.anyBinaryInstalled(config.binaries...) {
@@ -143,7 +155,37 @@ func (p *PackageManagerSupplyChain) hasConfigFile() bool {
 }
 
 func (p *PackageManagerSupplyChain) hasPackageManagerBinary() bool {
-	return p.anyBinaryInstalled("npm", "yarn", "pnpm", "bun", "uv")
+	for _, config := range p.configs() {
+		if p.anyBinaryInstalled(config.binaries...) {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *PackageManagerSupplyChain) firstInstalledBinary(names []string) string {
+	for _, name := range names {
+		if _, err := p.lookPath(name); err == nil {
+			return name
+		}
+	}
+	return ""
+}
+
+func (p *PackageManagerSupplyChain) versionGateFailures(config packageManagerConfig, path string) []string {
+	binary := p.firstInstalledBinary(config.binaries)
+	if binary == "" {
+		return nil
+	}
+	description := p.displayPath(path) + " " + config.setting
+	version := p.packageManagerVersion(binary)
+	if version == "" {
+		return []string{binary + " version could not be determined, so " + description + " could not be verified"}
+	}
+	if !versionAtLeast(version, config.minimumVersion) {
+		return []string{binary + " is older than " + config.minimumVersion + " and does not enforce " + description}
+	}
+	return nil
 }
 
 func (p *PackageManagerSupplyChain) anyBinaryInstalled(names ...string) bool {
@@ -158,19 +200,26 @@ func (p *PackageManagerSupplyChain) anyBinaryInstalled(names ...string) bool {
 func (p *PackageManagerSupplyChain) configs() []packageManagerConfig {
 	home := p.homeDir()
 	return []packageManagerConfig{
+		// JavaScript / Node.js
 		{
-			paths:      []string{filepath.Join(home, ".npmrc")},
-			binaries:   []string{"npm"},
-			validate:   p.validateNpmConfig,
-			missing:    firstConfigPathMissing,
-			passDetail: func(string) string { return "~/.npmrc delays npm-compatible package releases and pins exact versions" },
+			paths:          []string{filepath.Join(home, ".npmrc")},
+			binaries:       []string{"npm"},
+			validate:       func(contents string, _ string) []string { return validateNpmrc(contents) },
+			missing:        firstConfigPathMissing,
+			passDetail:     func(string) string { return "~/.npmrc delays npm-compatible package releases and pins exact versions" },
+			minimumVersion: "11.14.0",
+			setting:        "min-release-age",
+			usesSetting:    hasKey("min-release-age"),
 		},
 		{
-			paths:      []string{filepath.Join(home, ".yarnrc.yml")},
-			binaries:   []string{"yarn"},
-			validate:   func(contents string, _ string) []string { return validateYarnrc(contents) },
-			missing:    firstConfigPathMissing,
-			passDetail: func(string) string { return "~/.yarnrc.yml delays Yarn package releases" },
+			paths:          []string{filepath.Join(home, ".yarnrc.yml")},
+			binaries:       []string{"yarn"},
+			validate:       func(contents string, _ string) []string { return validateYarnrc(contents) },
+			missing:        firstConfigPathMissing,
+			passDetail:     func(string) string { return "~/.yarnrc.yml delays Yarn package releases" },
+			minimumVersion: "4.11.0",
+			setting:        "npmMinimalAgeGate",
+			usesSetting:    hasKey("npmminimalagegate"),
 		},
 		{
 			paths:      p.pnpmConfigPaths(),
@@ -186,10 +235,12 @@ func (p *PackageManagerSupplyChain) configs() []packageManagerConfig {
 			missing:    firstConfigPathMissing,
 			passDetail: func(string) string { return "~/.bunfig.toml delays Bun package releases" },
 		},
+
+		// Python
 		{
 			paths:      []string{p.uvConfigPath()},
 			binaries:   []string{"uv"},
-			validate:   func(contents string, _ string) []string { return validateUv(contents) },
+			validate:   validateUv,
 			missing:    firstConfigPathMissing,
 			passDetail: func(path string) string { return path + " excludes Python packages newer than 7 days" },
 		},
@@ -199,6 +250,100 @@ func (p *PackageManagerSupplyChain) configs() []packageManagerConfig {
 			missing:    firstConfigPathMissing,
 			passDetail: func(string) string { return "~/.pypirc has no plaintext credentials" },
 		},
+		{
+			paths:          p.pipConfigPaths(),
+			binaries:       []string{"pip", "pip3"},
+			validate:       validatePipConf,
+			missing:        firstConfigPathMissing,
+			passDetail:     func(path string) string { return path + " delays pip package releases" },
+			minimumVersion: "26.1.0",
+			setting:        "uploaded-prior-to",
+			usesSetting:    hasKey("uploaded-prior-to"),
+		},
+		{
+			paths:          p.poetryConfigPaths(),
+			binaries:       []string{"poetry"},
+			validate:       validatePoetryConfig,
+			missing:        firstConfigPathMissing,
+			passDetail:     func(path string) string { return path + " delays Poetry package releases" },
+			minimumVersion: "2.4.0",
+			setting:        "solver.min-release-age",
+			usesSetting:    hasTomlKey("solver.min-release-age"),
+		},
+		{
+			paths:          p.pdmConfigPaths(),
+			binaries:       []string{"pdm"},
+			validate:       validatePdmConfig,
+			missing:        firstConfigPathMissing,
+			passDetail:     func(path string) string { return path + " delays PDM package releases" },
+			minimumVersion: "2.27.0",
+			setting:        "strategy.exclude-newer",
+			usesSetting:    hasTomlKey("strategy.exclude-newer", "strategy.exclude_newer"),
+		},
+		{
+			paths:          p.condaConfigPaths(),
+			binaries:       []string{"conda"},
+			validate:       validateCondarc,
+			missing:        firstConfigPathMissing,
+			passDetail:     func(path string) string { return path + " delays conda package releases" },
+			minimumVersion: "26.9.0",
+			setting:        "exclude_newer",
+			usesSetting:    hasKey("exclude_newer", "exclude-newer"),
+		},
+
+		// Ruby
+		{
+			paths:          []string{p.bundlerConfigPath()},
+			binaries:       []string{"bundle", "bundler"},
+			validate:       validateBundleConfig,
+			missing:        firstConfigPathMissing,
+			passDetail:     func(path string) string { return path + " delays Bundler package releases" },
+			minimumVersion: "4.0.13",
+			setting:        "BUNDLE_COOLDOWN",
+			usesSetting:    hasKey("bundle_cooldown"),
+		},
+
+		// Elixir
+		{
+			paths:      []string{p.hexConfigPath()},
+			binaries:   []string{"mix"},
+			validate:   validateHexConfig,
+			missing:    firstConfigPathMissing,
+			passDetail: func(path string) string { return path + " delays Hex package releases" },
+		},
+
+		// Tool version managers
+		{
+			paths:      []string{p.miseConfigPath()},
+			binaries:   []string{"mise"},
+			validate:   validateMiseConfig,
+			missing:    firstConfigPathMissing,
+			passDetail: func(path string) string { return path + " delays mise package releases" },
+		},
+	}
+}
+
+func hasKey(keys ...string) func(string) bool {
+	return func(contents string) bool {
+		values := keyValuePairs(contents)
+		for _, key := range keys {
+			if _, ok := values[key]; ok {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+func hasTomlKey(keys ...string) func(string) bool {
+	return func(contents string) bool {
+		values := scopedKeyValuePairs(contents)
+		for _, key := range keys {
+			if _, ok := values[key]; ok {
+				return true
+			}
+		}
+		return false
 	}
 }
 
@@ -251,7 +396,7 @@ func (p *PackageManagerSupplyChain) lookPath(name string) (string, error) {
 
 func (p *PackageManagerSupplyChain) packageManagerVersion(name string) string {
 	if version, ok := p.Versions[name]; ok {
-		return version
+		return versionToken(version)
 	}
 	path, err := p.lookPath(name)
 	if err != nil {
@@ -261,7 +406,18 @@ func (p *PackageManagerSupplyChain) packageManagerVersion(name string) string {
 	if err != nil {
 		return ""
 	}
-	return strings.TrimSpace(string(output))
+	return versionToken(string(output))
+}
+
+// versionToken extracts the version number from `--version` output such as
+// "11.14.0", "pip 26.1.0 from ..." or "Bundler version 4.0.13".
+func versionToken(output string) string {
+	for _, field := range strings.Fields(output) {
+		if field[0] >= '0' && field[0] <= '9' {
+			return field
+		}
+	}
+	return strings.TrimSpace(output)
 }
 
 func (p *PackageManagerSupplyChain) runCommand(name string, args ...string) ([]byte, error) {
@@ -287,20 +443,158 @@ func (p *PackageManagerSupplyChain) uvConfigPath() string {
 		return configFile
 	}
 	if p.goos() == "windows" {
-		appData := p.AppDataDir
-		if appData == "" {
-			appData = p.env("APPDATA")
-		}
-		if appData == "" {
-			appData = filepath.Join(p.homeDir(), "AppData", "Roaming")
-		}
-		return filepath.Join(appData, "uv", "uv.toml")
+		return filepath.Join(p.appDataDir(), "uv", "uv.toml")
 	}
-	configHome := p.env("XDG_CONFIG_HOME")
-	if configHome == "" {
-		configHome = filepath.Join(p.homeDir(), ".config")
+	return filepath.Join(p.configHome(), "uv", "uv.toml")
+}
+
+// displayPath abbreviates paths under the home directory to ~/...
+func (p *PackageManagerSupplyChain) displayPath(path string) string {
+	home := p.homeDir()
+	if relative, err := filepath.Rel(home, path); home != "" && err == nil && !strings.HasPrefix(relative, "..") {
+		return "~/" + filepath.ToSlash(relative)
 	}
-	return filepath.Join(configHome, "uv", "uv.toml")
+	return path
+}
+
+func (p *PackageManagerSupplyChain) configHome() string {
+	if configHome := p.env("XDG_CONFIG_HOME"); configHome != "" {
+		return configHome
+	}
+	return filepath.Join(p.homeDir(), ".config")
+}
+
+func (p *PackageManagerSupplyChain) appDataDir() string {
+	if p.AppDataDir != "" {
+		return p.AppDataDir
+	}
+	if appData := p.env("APPDATA"); appData != "" {
+		return appData
+	}
+	return filepath.Join(p.homeDir(), "AppData", "Roaming")
+}
+
+func (p *PackageManagerSupplyChain) localAppDataDir() string {
+	if localAppData := p.env("LOCALAPPDATA"); localAppData != "" {
+		return localAppData
+	}
+	return filepath.Join(p.homeDir(), "AppData", "Local")
+}
+
+func (p *PackageManagerSupplyChain) applicationSupportDir(name string) string {
+	return filepath.Join(p.homeDir(), "Library", "Application Support", name)
+}
+
+// pipConfigPaths lists pip's user config files. On macOS pip reads
+// ~/Library/Application Support/pip when that directory exists and
+// ~/.config/pip otherwise; ~/.pip is the legacy location.
+// https://pip.pypa.io/en/stable/topics/configuration/#location
+func (p *PackageManagerSupplyChain) pipConfigPaths() []string {
+	if configFile := p.env("PIP_CONFIG_FILE"); configFile != "" {
+		return []string{configFile}
+	}
+	switch p.goos() {
+	case "windows":
+		return []string{
+			filepath.Join(p.appDataDir(), "pip", "pip.ini"),
+			filepath.Join(p.homeDir(), "pip", "pip.ini"),
+		}
+	case "darwin":
+		return []string{
+			filepath.Join(p.configHome(), "pip", "pip.conf"),
+			filepath.Join(p.applicationSupportDir("pip"), "pip.conf"),
+			filepath.Join(p.homeDir(), ".pip", "pip.conf"),
+		}
+	default:
+		return []string{
+			filepath.Join(p.configHome(), "pip", "pip.conf"),
+			filepath.Join(p.homeDir(), ".pip", "pip.conf"),
+		}
+	}
+}
+
+// poetryConfigPaths follows platformdirs, so macOS uses
+// ~/Library/Application Support/pypoetry rather than ~/.config/pypoetry.
+// ~/.config is kept for users who already configured it there.
+// https://python-poetry.org/docs/configuration/
+func (p *PackageManagerSupplyChain) poetryConfigPaths() []string {
+	if configDir := p.env("POETRY_CONFIG_DIR"); configDir != "" {
+		return []string{filepath.Join(configDir, "config.toml")}
+	}
+	switch p.goos() {
+	case "windows":
+		return []string{filepath.Join(p.appDataDir(), "pypoetry", "config.toml")}
+	case "darwin":
+		return []string{
+			filepath.Join(p.applicationSupportDir("pypoetry"), "config.toml"),
+			filepath.Join(p.configHome(), "pypoetry", "config.toml"),
+		}
+	default:
+		return []string{filepath.Join(p.configHome(), "pypoetry", "config.toml")}
+	}
+}
+
+// pdmConfigPaths follows platformdirs, so macOS uses
+// ~/Library/Application Support/pdm and Windows %LOCALAPPDATA%\pdm\pdm.
+// https://pdm-project.org/latest/usage/config/
+func (p *PackageManagerSupplyChain) pdmConfigPaths() []string {
+	switch p.goos() {
+	case "windows":
+		return []string{filepath.Join(p.localAppDataDir(), "pdm", "pdm", "config.toml")}
+	case "darwin":
+		return []string{
+			filepath.Join(p.applicationSupportDir("pdm"), "config.toml"),
+			filepath.Join(p.configHome(), "pdm", "config.toml"),
+		}
+	default:
+		return []string{filepath.Join(p.configHome(), "pdm", "config.toml")}
+	}
+}
+
+// condaConfigPaths lists the user-level .condarc locations conda searches.
+// https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html
+func (p *PackageManagerSupplyChain) condaConfigPaths() []string {
+	if configFile := p.env("CONDARC"); configFile != "" {
+		return []string{configFile}
+	}
+	return []string{
+		filepath.Join(p.homeDir(), ".condarc"),
+		filepath.Join(p.configHome(), "conda", ".condarc"),
+		filepath.Join(p.homeDir(), ".conda", ".condarc"),
+	}
+}
+
+// bundlerConfigPath is where `bundle config set --global` writes.
+// https://bundler.io/man/bundle-config.1.html
+func (p *PackageManagerSupplyChain) bundlerConfigPath() string {
+	if configFile := p.env("BUNDLE_USER_CONFIG"); configFile != "" {
+		return configFile
+	}
+	if userHome := p.env("BUNDLE_USER_HOME"); userHome != "" {
+		return filepath.Join(userHome, "config")
+	}
+	return filepath.Join(p.homeDir(), ".bundle", "config")
+}
+
+// hexConfigPath is where `mix hex.config` writes.
+// https://hexdocs.pm/hex/Mix.Tasks.Hex.Config.html
+func (p *PackageManagerSupplyChain) hexConfigPath() string {
+	if hexHome := p.env("HEX_HOME"); hexHome != "" {
+		return filepath.Join(hexHome, "hex.config")
+	}
+	return filepath.Join(p.homeDir(), ".hex", "hex.config")
+}
+
+// miseConfigPath is mise's global config file.
+// https://mise.jdx.dev/configuration.html
+func (p *PackageManagerSupplyChain) miseConfigPath() string {
+	if configFile := p.env("MISE_GLOBAL_CONFIG_FILE"); configFile != "" {
+		return configFile
+	}
+	if configDir := p.env("MISE_CONFIG_DIR"); configDir != "" {
+		return filepath.Join(configDir, "config.toml")
+	}
+	return filepath.Join(p.configHome(), "mise", "config.toml")
 }
 
 func (p *PackageManagerSupplyChain) pnpmConfigPaths() []string {
@@ -352,27 +646,6 @@ func (p *PackageManagerSupplyChain) goos() string {
 		return p.GOOS
 	}
 	return runtime.GOOS
-}
-
-func (p *PackageManagerSupplyChain) validateNpmConfig(contents string, _ string) []string {
-	failures := validateNpmrc(contents)
-	if len(failures) != 0 || !p.anyBinaryInstalled("npm") || !npmConfigUsesMinReleaseAge(contents) {
-		return failures
-	}
-	version := p.packageManagerVersion("npm")
-	if version == "" {
-		failures = append(failures, "npm version could not be determined, so ~/.npmrc min-release-age could not be verified")
-		return failures
-	}
-	if !versionAtLeast(version, "11.14.0") {
-		failures = append(failures, "npm is older than 11.14.0 and does not enforce ~/.npmrc min-release-age")
-	}
-	return failures
-}
-
-func npmConfigUsesMinReleaseAge(contents string) bool {
-	_, ok := keyValuePairs(contents)["min-release-age"]
-	return ok
 }
 
 func validateNpmrc(contents string) []string {
@@ -437,8 +710,8 @@ func versionComponents(version string) []int {
 
 func validateYarnrc(contents string) []string {
 	values := keyValuePairs(contents)
-	if integerValue(values["npmminimalagegate"]) < minReleaseAgeMinutes {
-		return []string{"~/.yarnrc.yml npmMinimalAgeGate is below 10080 minutes"}
+	if yarnAgeGateSeconds(values["npmminimalagegate"]) < minReleaseAgeSeconds {
+		return []string{"~/.yarnrc.yml npmMinimalAgeGate is below 7 days; set it to at least 7d or 10080"}
 	}
 	return nil
 }
@@ -457,22 +730,97 @@ func validatePnpmConfig(contents string, path string) []string {
 
 func validateBunfig(contents string) []string {
 	values := scopedKeyValuePairs(contents)
-	if integerValue(values["install.minimumReleaseAge"]) < minReleaseAgeSeconds {
+	if cooldownSeconds(values["install.minimumReleaseAge"]) < minReleaseAgeSeconds {
 		return []string{"~/.bunfig.toml minimumReleaseAge is below 604800 seconds"}
 	}
 	return nil
 }
 
-func validateUv(contents string) []string {
+func validateUv(contents string, path string) []string {
 	values := scopedKeyValuePairs(contents)
-	var excludeNewer int
-	if value, ok := values["exclude-newer"]; ok {
-		excludeNewer = durationSeconds(value)
-	} else {
-		excludeNewer = durationSeconds(values["pip.exclude-newer"])
+	value, ok := values["exclude-newer"]
+	if !ok {
+		value = values["pip.exclude-newer"]
 	}
-	if excludeNewer < minReleaseAgeSeconds {
-		return []string{"uv exclude-newer is below 7 days"}
+	return durationCooldownFailures(value, path+" exclude-newer", "7 days")
+}
+
+func validatePipConf(contents string, path string) []string {
+	value := keyValuePairs(contents)["uploaded-prior-to"]
+	switch {
+	case value == "":
+		return []string{path + " uploaded-prior-to is not set; set it to a duration like P7D"}
+	case isAbsoluteTimestamp(value):
+		return []string{path + " uploaded-prior-to is an absolute timestamp that goes stale; set it to a duration like P7D"}
+	case iso8601DurationSeconds(value) < minReleaseAgeSeconds:
+		return []string{path + " uploaded-prior-to is below 7 days; set it to at least P7D"}
+	}
+	return nil
+}
+
+func validatePoetryConfig(contents string, path string) []string {
+	values := scopedKeyValuePairs(contents)
+	if integerValue(values["solver.min-release-age"]) < minReleaseAgeDays {
+		return []string{path + " solver.min-release-age is below 7 days; set it to at least 7"}
+	}
+	return nil
+}
+
+func validatePdmConfig(contents string, path string) []string {
+	values := scopedKeyValuePairs(contents)
+	value, ok := values["strategy.exclude-newer"]
+	if !ok {
+		value = values["strategy.exclude_newer"]
+	}
+	return durationCooldownFailures(value, path+" strategy.exclude-newer", "7d")
+}
+
+func validateCondarc(contents string, path string) []string {
+	values := keyValuePairs(contents)
+	value, ok := values["exclude_newer"]
+	if !ok {
+		value, ok = values["exclude-newer"]
+	}
+	if !ok {
+		return []string{path + " exclude_newer is not set; set it to at least 7d"}
+	}
+	failures := durationCooldownFailures(value, path+" exclude_newer", "7d")
+	if len(failures) == 0 && strings.ToLower(values["solver"]) != "classic" {
+		failures = append(failures, path+" solver must be classic; the default solver does not support exclude_newer")
+	}
+	return failures
+}
+
+func validateBundleConfig(contents string, path string) []string {
+	// Bundler rejects anything that is not a whole number of days.
+	if integerValue(keyValuePairs(contents)["bundle_cooldown"]) < minReleaseAgeDays {
+		return []string{path + " BUNDLE_COOLDOWN is below 7 days; set it to at least 7 with bundle config set --global cooldown 7"}
+	}
+	return nil
+}
+
+func validateHexConfig(contents string, path string) []string {
+	if hexCooldownSeconds(contents) < minReleaseAgeSeconds {
+		return []string{path + " cooldown is below 7 days; set it to at least 7d with mix hex.config cooldown 7d"}
+	}
+	return nil
+}
+
+func validateMiseConfig(contents string, path string) []string {
+	values := scopedKeyValuePairs(contents)
+	return durationCooldownFailures(values["settings.minimum_release_age"], path+" settings.minimum_release_age", "7d")
+}
+
+// durationCooldownFailures validates settings that accept relative durations
+// or absolute timestamps, where only durations keep working as time passes.
+func durationCooldownFailures(value string, setting string, hint string) []string {
+	switch {
+	case value == "":
+		return []string{setting + " is not set; set it to at least " + hint}
+	case isAbsoluteTimestamp(value):
+		return []string{setting + " is an absolute timestamp that goes stale; set it to a relative duration like " + hint}
+	case cooldownSeconds(value) < minReleaseAgeSeconds:
+		return []string{setting + " is below 7 days; set it to at least " + hint}
 	}
 	return nil
 }
@@ -543,38 +891,108 @@ func integerValue(value string) int {
 	return parsed
 }
 
+// yarnAgeGateSeconds treats a bare npmMinimalAgeGate number as minutes; only
+// values with a unit suffix are durations.
+func yarnAgeGateSeconds(value string) int {
+	normalized := strings.TrimSpace(unquote(value))
+	if minutes, err := strconv.Atoi(normalized); err == nil {
+		return minutes * 60
+	}
+	return cooldownSeconds(normalized)
+}
+
+func cooldownSeconds(value string) int {
+	if seconds := iso8601DurationSeconds(value); seconds > 0 {
+		return seconds
+	}
+	return durationSeconds(value)
+}
+
+// durationSeconds parses plain seconds or compound relative durations such
+// as "7 days", "3d12h" or "1h30m".
 func durationSeconds(value string) int {
 	normalized := strings.ToLower(strings.TrimSpace(unquote(value)))
 	if seconds, err := strconv.Atoi(normalized); err == nil {
 		return seconds
 	}
 
-	number := ""
-	for _, character := range normalized {
-		if character < '0' || character > '9' {
-			break
+	total := 0
+	rest := normalized
+	for rest != "" {
+		digits := leadingRun(rest, func(character rune) bool { return character >= '0' && character <= '9' })
+		amount, err := strconv.Atoi(digits)
+		if err != nil {
+			return 0
 		}
-		number += string(character)
+		rest = strings.TrimLeft(rest[len(digits):], " \t")
+		unit := leadingRun(rest, func(character rune) bool { return character >= 'a' && character <= 'z' })
+		seconds, ok := durationUnitSeconds[unit]
+		if !ok {
+			return 0
+		}
+		rest = strings.TrimLeft(rest[len(unit):], " \t")
+		total += amount * seconds
 	}
-	amount, err := strconv.Atoi(number)
-	if err != nil {
-		return 0
-	}
+	return total
+}
 
-	switch strings.TrimSpace(strings.TrimPrefix(normalized, number)) {
-	case "s", "second", "seconds":
-		return amount
-	case "m", "minute", "minutes":
-		return amount * 60
-	case "h", "hour", "hours":
-		return amount * 60 * 60
-	case "d", "day", "days":
-		return amount * 24 * 60 * 60
-	case "w", "week", "weeks":
-		return amount * minReleaseAgeSeconds
-	default:
+var durationUnitSeconds = map[string]int{
+	"ms": 0, "millisecond": 0, "milliseconds": 0,
+	"s": 1, "second": 1, "seconds": 1,
+	"m": 60, "minute": 60, "minutes": 60,
+	"h": 60 * 60, "hour": 60 * 60, "hours": 60 * 60,
+	"d": 24 * 60 * 60, "day": 24 * 60 * 60, "days": 24 * 60 * 60,
+	"w": minReleaseAgeSeconds, "week": minReleaseAgeSeconds, "weeks": minReleaseAgeSeconds,
+	"mo": 30 * 24 * 60 * 60, "month": 30 * 24 * 60 * 60, "months": 30 * 24 * 60 * 60,
+}
+
+func leadingRun(value string, matches func(rune) bool) string {
+	for index, character := range value {
+		if !matches(character) {
+			return value[:index]
+		}
+	}
+	return value
+}
+
+var iso8601DurationPattern = regexp.MustCompile(`^p(?:(\d+)w)?(?:(\d+)d)?(?:t(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?)?$`)
+
+// iso8601DurationSeconds parses durations such as "P7D" or "PT168H".
+func iso8601DurationSeconds(value string) int {
+	normalized := strings.ToLower(strings.TrimSpace(unquote(value)))
+	match := iso8601DurationPattern.FindStringSubmatch(normalized)
+	if len(normalized) < 2 || match == nil {
 		return 0
 	}
+	total := 0
+	for index, seconds := range []int{minReleaseAgeSeconds, 24 * 60 * 60, 60 * 60, 60, 1} {
+		if amount, err := strconv.Atoi(match[index+1]); err == nil {
+			total += amount * seconds
+		}
+	}
+	return total
+}
+
+func isAbsoluteTimestamp(value string) bool {
+	normalized := strings.TrimSpace(unquote(value))
+	return normalized != "" && normalized[0] >= '0' && normalized[0] <= '9' && strings.Contains(normalized, "-")
+}
+
+var (
+	hexQuotedCooldownPattern = regexp.MustCompile(`cooldown\s*,\s*<<"([^"]+)"`)
+	hexDaysCooldownPattern   = regexp.MustCompile(`cooldown\s*,\s*(\d+)`)
+)
+
+// hexCooldownSeconds reads the cooldown from hex.config, which stores Erlang
+// terms such as {cooldown,<<"7d">>}. or {cooldown,7}. (days).
+func hexCooldownSeconds(contents string) int {
+	if match := hexQuotedCooldownPattern.FindStringSubmatch(contents); match != nil {
+		return durationSeconds(match[1])
+	}
+	if match := hexDaysCooldownPattern.FindStringSubmatch(contents); match != nil {
+		return integerValue(match[1]) * 24 * 60 * 60
+	}
+	return 0
 }
 
 func stripComment(line string) string {

@@ -110,10 +110,10 @@ password = pypi-secret
 	assert.Equal(t, stringsJoin(
 		"~/.npmrc release age is below 7 days; set either min-release-age >= 7 or minimum-release-age >= 10080",
 		"~/.npmrc save-exact is not enabled",
-		"~/.yarnrc.yml npmMinimalAgeGate is below 10080 minutes",
+		"~/.yarnrc.yml npmMinimalAgeGate is below 7 days; set it to at least 7d or 10080",
 		filepath.Join(home, ".config", "pnpm", "config.yaml")+" minimumReleaseAge is below 10080 minutes",
 		"~/.bunfig.toml minimumReleaseAge is below 604800 seconds",
-		"uv exclude-newer is below 7 days",
+		filepath.Join(home, ".config", "uv", "uv.toml")+" exclude-newer is below 7 days; set it to at least 7 days",
 		"~/.pypirc contains plaintext credentials",
 	), check.Status())
 }
@@ -344,7 +344,7 @@ exclude-newer = "7d"
 	require.NoError(t, check.Run())
 
 	assert.False(t, check.Passed())
-	assert.Equal(t, "uv exclude-newer is below 7 days", check.Status())
+	assert.Equal(t, filepath.Join(home, ".config", "uv", "uv.toml")+" exclude-newer is below 7 days; set it to at least 7 days", check.Status())
 }
 
 func TestPackageManagerSupplyChain_PnpmConfigPath(t *testing.T) {
