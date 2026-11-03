@@ -24,6 +24,7 @@ var All = []Claim{
 		&checks.WindowsDefender{},
 		&checks.DiskEncryption{},
 		&shared.PackageManagerSupplyChain{},
+		&shared.EditorExtensionsSupplyChain{},
 		&shared.TeamReportSentCheck{},
 	}},
 }
