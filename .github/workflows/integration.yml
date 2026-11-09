@@ -22,6 +22,8 @@ jobs:
             screenlock,
             screenlock-plasma5,
             secureboot,
+            ssh-config,
+            sudo,
             luks,
             zfs,
             help,

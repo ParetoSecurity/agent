@@ -45,6 +45,8 @@
             luks = pkgsOverlayed.testers.runNixOSTest ./test/integration/luks.nix;
             pwd-manager = pkgsOverlayed.testers.runNixOSTest ./test/integration/pwd-manager.nix;
             secureboot = pkgsOverlayed.testers.runNixOSTest ./test/integration/secureboot.nix;
+            ssh-config = pkgsOverlayed.testers.runNixOSTest ./test/integration/ssh-config.nix;
+            sudo = pkgsOverlayed.testers.runNixOSTest ./test/integration/sudo.nix;
             supply-chain = pkgsOverlayed.testers.runNixOSTest ./test/integration/supply-chain.nix;
             trayicon = pkgsOverlayed.testers.runNixOSTest ./test/integration/trayicon.nix;
             xfce = pkgsOverlayed.testers.runNixOSTest ./test/integration/desktop/xfce.nix;
