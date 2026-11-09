@@ -85,6 +85,14 @@ jobs:
               dnf -y install which
             installer: "dnf -y install"
             verify_package: "rpm -q paretosecurity"
+          - distro: fedora-45
+            image: jrei/systemd-fedora:45
+            setup: |
+              dnf -y update
+              dnf -y upgrade
+              dnf -y install which
+            installer: "dnf -y install"
+            verify_package: "rpm -q paretosecurity"
           - distro: arch
             image: carlodepieri/docker-archlinux-systemd
             setup: |
