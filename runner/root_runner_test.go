@@ -136,3 +136,35 @@ func (m *mockConn) SetReadDeadline(t time.Time) error {
 func (m *mockConn) SetWriteDeadline(t time.Time) error {
 	return nil
 }
+
+// callerMockCheck records the caller uid the root runner hands it.
+type callerMockCheck struct {
+	MockCheck
+	callerUID int
+	called    bool
+}
+
+func (c *callerMockCheck) SetCallerUID(uid int) {
+	c.callerUID = uid
+	c.called = true
+}
+
+func TestHandleConnectionPassesCallerUID(t *testing.T) {
+	uuid := "caller-uuid"
+	inputJSON, _ := json.Marshal(map[string]string{"uuid": uuid})
+	conn := &mockConn{readData: string(inputJSON)}
+
+	mockCheck := &callerMockCheck{MockCheck: MockCheck{
+		UUIDValue:         uuid,
+		RequiresRootValue: true,
+		PassedValue:       true,
+		StatusValue:       "Check passed",
+	}}
+	claims.All = []claims.Claim{{Checks: []check.Check{mockCheck}}}
+
+	HandleConnection(conn)
+
+	assert.True(t, mockCheck.called, "SetCallerUID should be called before Run")
+	// A mock connection is not a Unix socket, so the kernel reports no peer.
+	assert.Equal(t, -1, mockCheck.callerUID)
+}

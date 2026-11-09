@@ -11,6 +11,8 @@ var All = []Claim{
 		&checks.PasswordManagerCheck{},
 		&checks.ScreensaverTimeout{},
 		&checks.ScreensaverPassword{},
+		&shared.SSHAgentForwarding{},
+		&shared.SSHHostKeyVerification{},
 	}},
 	{"Application Updates", []check.Check{
 		&shared.ParetoUpdated{},

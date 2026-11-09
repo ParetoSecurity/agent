@@ -13,6 +13,9 @@ var All = []Claim{
 		&checks.PasswordToUnlock{},
 		&shared.SSHKeys{},
 		&shared.SSHKeysAlgo{},
+		&shared.SSHAgentForwarding{},
+		&shared.SSHHostKeyVerification{},
+		&checks.SudoRequiresPassword{},
 		&checks.PasswordManagerCheck{},
 	}},
 	{"Application Updates", []check.Check{
