@@ -9,6 +9,11 @@ import (
 	"github.com/caarlos0/log"
 )
 
+// callerAware is implemented by root checks that need the uid of the user who asked for them.
+type callerAware interface {
+	SetCallerUID(uid int)
+}
+
 type CheckStatus struct {
 	UUID    string `json:"uuid"`
 	Passed  bool   `json:"passed"`
@@ -39,6 +44,8 @@ func HandleConnection(conn net.Conn) {
 		return
 	}
 	log.Debugf("Received UUID: %s", uuid)
+	callerUID := peerUID(conn)
+	log.Debugf("Caller uid: %d", callerUID)
 
 	status := &CheckStatus{
 		UUID:    uuid,
@@ -49,6 +56,9 @@ func HandleConnection(conn net.Conn) {
 		for _, chk := range claim.Checks {
 			if chk.RequiresRoot() && uuid == chk.UUID() {
 				log.Infof("Running check %s\n", chk.UUID())
+				if aware, ok := chk.(callerAware); ok {
+					aware.SetCallerUID(callerUID)
+				}
 				if chk.Run() != nil {
 					log.Warnf("Failed to run check %s\n", chk.UUID())
 					continue

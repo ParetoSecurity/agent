@@ -10,6 +10,8 @@ var All = []Claim{
 	{"Access Security", []check.Check{
 		&shared.SSHKeys{},
 		&shared.SSHKeysAlgo{},
+		&shared.SSHAgentForwarding{},
+		&shared.SSHHostKeyVerification{},
 		&checks.PasswordManagerCheck{},
 	}},
 	{"Application Updates", []check.Check{
