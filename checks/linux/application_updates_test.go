@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"errors"
 	"os/exec"
 	"testing"
 
@@ -254,6 +255,44 @@ func TestApplicationUpdates_checkUpdates(t *testing.T) {
 				passed bool
 				detail string
 			}{false, "Updates available for: Flatpak, APT"},
+		},
+		{
+			name: "flatpak updates error does not hide apt updates",
+			mocks: []shared.RunCommandMock{
+				{Command: "flatpak", Args: []string{"remote-ls", "--app", "--updates", "--columns=application,version"}, Err: errors.New("probe failed")},
+				{Command: "flatpak", Args: []string{"list", "--app", "--columns=application,version"}, Out: ""},
+				{Command: "apt", Args: []string{"list", "--upgradable"}, Out: "vim/stable 8.2.0 amd64 [upgradable from: 8.1.0]\n"},
+			},
+			presentPackageManagers: []string{"flatpak", "apt"},
+			expected: struct {
+				passed bool
+				detail string
+			}{false, "Updates available for: APT; Could not check for updates: Flatpak"},
+		},
+		{
+			name: "flatpak list error does not hide apt updates",
+			mocks: []shared.RunCommandMock{
+				{Command: "flatpak", Args: []string{"remote-ls", "--app", "--updates", "--columns=application,version"}, Out: ""},
+				{Command: "flatpak", Args: []string{"list", "--app", "--columns=application,version"}, Err: errors.New("probe failed")},
+				{Command: "apt", Args: []string{"list", "--upgradable"}, Out: "vim/stable 8.2.0 amd64 [upgradable from: 8.1.0]\n"},
+			},
+			presentPackageManagers: []string{"flatpak", "apt"},
+			expected: struct {
+				passed bool
+				detail string
+			}{false, "Updates available for: APT; Could not check for updates: Flatpak"},
+		},
+		{
+			name: "flatpak error without other updates does not pass",
+			mocks: []shared.RunCommandMock{
+				{Command: "flatpak", Args: []string{"remote-ls", "--app", "--updates", "--columns=application,version"}, Err: errors.New("probe failed")},
+				{Command: "apt", Args: []string{"list", "--upgradable"}, Out: ""},
+			},
+			presentPackageManagers: []string{"flatpak", "apt"},
+			expected: struct {
+				passed bool
+				detail string
+			}{false, "Could not check for updates: Flatpak"},
 		},
 	}
 
