@@ -252,8 +252,48 @@ func Test_DefaultCheckConfig(t *testing.T) {
 	assert.NotNil(t, config.GetFailedChecks)
 	assert.NotNil(t, config.ReportToTeam)
 	assert.NotNil(t, config.RunnerCheck)
+	assert.NotNil(t, config.InFlightChecks)
 	assert.NotNil(t, config.LogFatal)
 	assert.NotNil(t, config.LogWarn)
 	assert.NotNil(t, config.LogErrorf)
 	assert.NotNil(t, config.LogWithError)
+}
+
+func Test_runCheckCommand_TimeoutNamesPendingChecks(t *testing.T) {
+	originalTimeout := shared.CheckTimeout
+	shared.CheckTimeout = 100 * time.Millisecond
+	defer func() { shared.CheckTimeout = originalTimeout }()
+
+	var fatalMsg string
+	config := &CheckConfig{
+		IsRoot:          func() bool { return false },
+		IsLinked:        func() bool { return false },
+		AllChecksPassed: func() bool { return true },
+		GetFailedChecks: func() []shared.LastState { return []shared.LastState{} },
+		ReportToTeam:    func(bool) error { return nil },
+		RunnerCheck: func(ctx context.Context, claims []claims.Claim, skipUUIDs []string, onlyUUID string) {
+			<-ctx.Done()
+		},
+		InFlightChecks: func() []string {
+			return []string{"Application Updates: Apps are up to date", "Password Manager: Password Manager Presence"}
+		},
+		LogFatal:  func(msg string) { fatalMsg = msg },
+		LogWarn:   func(msg string) {},
+		LogErrorf: func(format string, args ...interface{}) {},
+		LogWithError: func(err error) *log.Entry {
+			return log.WithError(err)
+		},
+	}
+
+	runCheckCommand(config, []string{}, "")
+
+	assert.Equal(t,
+		"Check run timed out, still waiting for: Application Updates: Apps are up to date, "+
+			"Password Manager: Password Manager Presence",
+		fatalMsg)
+}
+
+func Test_timeoutMessage_NoPendingChecks(t *testing.T) {
+	config := &CheckConfig{InFlightChecks: func() []string { return nil }}
+	assert.Equal(t, "Check run timed out, all checks finished but the run did not complete", timeoutMessage(config))
 }

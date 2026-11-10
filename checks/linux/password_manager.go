@@ -9,6 +9,16 @@ import (
 	"github.com/caarlos0/log"
 )
 
+// snapdSocketPath is where snapd listens; `snap list` fails without it.
+const snapdSocketPath = "/run/snapd.socket"
+
+// snapdSocketPresent reports whether snapd can be reached, so `snap list` is
+// only run when it can answer. It is a variable so tests can replace it.
+var snapdSocketPresent = func() bool {
+	_, err := os.Stat(snapdSocketPath)
+	return err == nil
+}
+
 type PasswordManagerCheck struct {
 	passed bool
 }
@@ -91,8 +101,12 @@ func isPackageInstalled(pkgName string) bool {
 		log.Debug("apt package manager found")
 	}
 	if _, err := shared.RunCommand("which", "snap"); err == nil {
-		pkgManagers["snap"] = "snap list"
-		log.Debug("snap package manager found")
+		if snapdSocketPresent() {
+			pkgManagers["snap"] = "snap list"
+			log.Debug("snap package manager found")
+		} else {
+			log.Debug("snap found, but snapd is not running, skipping snap packages")
+		}
 	}
 	if _, err := shared.RunCommand("which", "yum"); err == nil {
 		pkgManagers["yum"] = "yum list installed"
@@ -119,6 +133,9 @@ func isPackageInstalled(pkgName string) bool {
 			var err error
 			cached, err = shared.RunCommand("sh", "-c", baseCmd)
 			if err != nil {
+				// Remember the failure too, so a broken package manager
+				// is not asked again for every password manager name.
+				shared.SetCache(cacheKey, "", 10)
 				continue
 			}
 			shared.SetCache(cacheKey, cached, 10) // Cache for 10 seconds

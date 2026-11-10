@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"errors"
 	"os"
 	"testing"
 
@@ -256,6 +257,9 @@ func TestPasswordManagerCheck_Run_Linux(t *testing.T) {
 			shared.SetCache("pkg_flatpak", "", 0)
 			shared.SetCache("pkg_pacman", "", 0)
 			shared.SetCache("pkg_nix", "", 0)
+			original := snapdSocketPresent
+			t.Cleanup(func() { snapdSocketPresent = original })
+			snapdSocketPresent = func() bool { return true }
 
 			shared.RunCommandMocks = convertCommandMapToMocks(tt.mockCommands)
 
@@ -339,6 +343,9 @@ func TestPasswordManagerCheck_Run_BrowserExtensions(t *testing.T) {
 			shared.SetCache("pkg_flatpak", "", 0)
 			shared.SetCache("pkg_pacman", "", 0)
 			shared.SetCache("pkg_nix", "", 0)
+			original := snapdSocketPresent
+			t.Cleanup(func() { snapdSocketPresent = original })
+			snapdSocketPresent = func() bool { return true }
 			shared.RunCommandMocks = convertCommandMapToMocks(tt.mockCommands)
 
 			// Mock os.ReadDir
@@ -402,4 +409,38 @@ func TestPasswordManagerCheck_PassedMessage(t *testing.T) {
 	if pmc.PassedMessage() != expectedPassedMessage {
 		t.Errorf("Expected PassedMessage %s, got %s", expectedPassedMessage, pmc.PassedMessage())
 	}
+}
+
+func TestIsPackageInstalled_SkipsSnapWhenSnapdIsDown(t *testing.T) {
+	shared.SetCache("pkg_snap", "", 0)
+	original := snapdSocketPresent
+	t.Cleanup(func() { snapdSocketPresent = original })
+	snapdSocketPresent = func() bool { return false }
+
+	shared.RunCommandMocks = []shared.RunCommandMock{
+		{Command: "which", Args: []string{"bitwarden"}, Err: errors.New("exit status 1")},
+		{Command: "which", Args: []string{"snap"}, Out: "/usr/bin/snap"},
+		// Would match if `snap list` were run, which it must not be.
+		{Command: "sh", Args: []string{"-c", "snap list"}, Out: "bitwarden  1.0  stable  password manager"},
+	}
+
+	assert.False(t, isPackageInstalled("bitwarden"))
+}
+
+func TestIsPackageInstalled_CachesFailedPackageManager(t *testing.T) {
+	shared.SetCache("pkg_snap", "", 0)
+	original := snapdSocketPresent
+	t.Cleanup(func() { snapdSocketPresent = original })
+	snapdSocketPresent = func() bool { return true }
+
+	shared.RunCommandMocks = []shared.RunCommandMock{
+		{Command: "which", Args: []string{"bitwarden"}, Err: errors.New("exit status 1")},
+		{Command: "which", Args: []string{"snap"}, Out: "/usr/bin/snap"},
+		{Command: "sh", Args: []string{"-c", "snap list"}, Err: errors.New("exit status 1")},
+	}
+
+	assert.False(t, isPackageInstalled("bitwarden"))
+	cached, ok := shared.GetCache("pkg_snap")
+	assert.True(t, ok, "a failed package manager listing should be cached")
+	assert.Empty(t, cached)
 }

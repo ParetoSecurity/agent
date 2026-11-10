@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	sharedG "github.com/ParetoSecurity/agent/shared"
 )
 
 const minExtensionCooldownHours = 7 * 24
@@ -332,7 +334,9 @@ func (e *EditorExtensionsSupplyChain) runCommand(name string, args ...string) ([
 	if e.RunCommand != nil {
 		return e.RunCommand(name, args...)
 	}
-	return exec.Command(name, args...).Output()
+	cmd, done := sharedG.Command(name, args...)
+	output, err := cmd.Output()
+	return output, done(err)
 }
 
 func (e *EditorExtensionsSupplyChain) homeDir() string {

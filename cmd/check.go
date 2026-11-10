@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"strings"
 
 	"github.com/ParetoSecurity/agent/claims"
 	"github.com/ParetoSecurity/agent/runner"
@@ -35,6 +36,7 @@ type CheckConfig struct {
 	GetFailedChecks func() []shared.LastState
 	ReportToTeam    func(bool) error
 	RunnerCheck     func(context.Context, []claims.Claim, []string, string)
+	InFlightChecks  func() []string
 	LogFatal        func(string)
 	LogWarn         func(string)
 	LogErrorf       func(string, ...interface{})
@@ -50,6 +52,7 @@ func DefaultCheckConfig() *CheckConfig {
 		GetFailedChecks: shared.GetFailedChecks,
 		ReportToTeam:    team.ReportToTeam,
 		RunnerCheck:     runner.Check,
+		InFlightChecks:  runner.InFlightChecks,
 		LogFatal:        log.Fatal,
 		LogWarn:         log.Warn,
 		LogErrorf:       log.Errorf,
@@ -99,7 +102,21 @@ func runCheckCommand(config *CheckConfig, skipUUIDs []string, onlyUUID string) {
 		}
 
 	case <-ctx.Done():
-		config.LogFatal("Check run timed out")
+		config.LogFatal(timeoutMessage(config))
 
 	}
+}
+
+// timeoutMessage names the checks that were still running when the run timed
+// out, so the user knows which one hangs.
+func timeoutMessage(config *CheckConfig) string {
+	msg := "Check run timed out"
+	if config.InFlightChecks == nil {
+		return msg
+	}
+	pending := config.InFlightChecks()
+	if len(pending) == 0 {
+		return msg + ", all checks finished but the run did not complete"
+	}
+	return msg + ", still waiting for: " + strings.Join(pending, ", ")
 }

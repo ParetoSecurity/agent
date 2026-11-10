@@ -283,3 +283,48 @@ func TestWrapStatus(t *testing.T) {
 		})
 	}
 }
+
+// BlockingCheck is a DummyCheck whose Run waits until release is closed.
+type BlockingCheck struct {
+	DummyCheck
+	started chan struct{}
+	release chan struct{}
+}
+
+func (b *BlockingCheck) Run() error {
+	close(b.started)
+	<-b.release
+	return nil
+}
+
+func TestInFlightChecks_TracksRunningChecks(t *testing.T) {
+	blocking := &BlockingCheck{
+		DummyCheck: DummyCheck{name: "Hanging Check", runnable: true, uuid: "hanging-uuid"},
+		started:    make(chan struct{}),
+		release:    make(chan struct{}),
+	}
+	quick := &DummyCheck{name: "Quick Check", runnable: true, passedVal: true, uuid: "quick-uuid"}
+	claimsToRun := []claims.Claim{{Title: "Test Claim", Checks: []check.Check{blocking, quick}}}
+
+	done := make(chan struct{})
+	go func() {
+		captureOutput(func() { Check(context.Background(), claimsToRun, nil, "") })
+		close(done)
+	}()
+
+	<-blocking.started
+	// The quick check may still be finishing; wait until only the hanging one is left.
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) && len(InFlightChecks()) != 1 {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if got := InFlightChecks(); len(got) != 1 || got[0] != "Test Claim: Hanging Check" {
+		t.Fatalf("expected only the hanging check in flight, got %v", got)
+	}
+
+	close(blocking.release)
+	<-done
+	if got := InFlightChecks(); len(got) != 0 {
+		t.Fatalf("expected no checks in flight after the run, got %v", got)
+	}
+}
