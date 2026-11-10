@@ -2,6 +2,7 @@ package runner
 
 import (
 	"encoding/json"
+	"errors"
 	"net"
 	"strings"
 	"testing"
@@ -167,4 +168,21 @@ func TestHandleConnectionPassesCallerUID(t *testing.T) {
 	assert.True(t, mockCheck.called, "SetCallerUID should be called before Run")
 	// A mock connection is not a Unix socket, so the kernel reports no peer.
 	assert.Equal(t, -1, mockCheck.callerUID)
+}
+
+func TestHandleConnectionReportsCheckError(t *testing.T) {
+	previous := claims.All
+	t.Cleanup(func() { claims.All = previous })
+	claims.All = []claims.Claim{{Checks: []check.Check{&MockCheck{
+		UUIDValue:         "failed-check",
+		RequiresRootValue: true,
+		RunError:          errors.New("sudo listing could not be evaluated"),
+		PassedValue:       true,
+	}}}}
+	conn := &mockConn{readData: `{"uuid":"failed-check"}`}
+	HandleConnection(conn)
+	var response CheckStatus
+	assert.NoError(t, json.Unmarshal([]byte(conn.writtenData), &response))
+	assert.False(t, response.Passed)
+	assert.Equal(t, "sudo listing could not be evaluated", response.Details)
 }
