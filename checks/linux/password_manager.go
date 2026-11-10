@@ -91,8 +91,11 @@ func isPackageInstalled(pkgName string) bool {
 		log.Debug("apt package manager found")
 	}
 	if _, err := shared.RunCommand("which", "snap"); err == nil {
-		pkgManagers["snap"] = "snap list"
-		log.Debug("snap package manager found")
+		status, err := shared.RunCommand("systemctl", "is-active", "snapd")
+		if err == nil && strings.TrimSpace(status) == "active" {
+			pkgManagers["snap"] = "snap list"
+			log.Debug("snap package manager found")
+		}
 	}
 	if _, err := shared.RunCommand("which", "yum"); err == nil {
 		pkgManagers["yum"] = "yum list installed"
