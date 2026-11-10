@@ -49,7 +49,7 @@ output=$(run_check)
 elapsed=$(($(date +%s) - start))
 echo "$output"
 echo "check took ${elapsed}s"
-if grep -q "timed out" <<<"$output"; then
+if grep -qF "Check run timed out" <<<"$output"; then
 	fail "#655: check run timed out with snapd stopped"
 fi
 grep -q "Checks completed." <<<"$output" || fail "#655: check run did not complete"
@@ -70,7 +70,7 @@ echo "$output"
 echo "check took ${elapsed}s"
 rm -f /usr/local/bin/flatpak
 pkill -x sleep || true
-if grep -q "timed out" <<<"$output"; then
+if grep -qF "Check run timed out" <<<"$output"; then
 	fail "#655: check run timed out on a hanging command"
 fi
 grep -q "Checks completed." <<<"$output" || fail "#655: check run did not complete"

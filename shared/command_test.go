@@ -5,6 +5,9 @@ package shared
 import (
 	"context"
 	"errors"
+	"os"
+	"regexp"
+	"strconv"
 	"testing"
 	"time"
 
@@ -44,4 +47,18 @@ func TestCommand_KeepsResultOfCommandThatFinishes(t *testing.T) {
 	var exitErr interface{ ExitCode() int }
 	assert.True(t, errors.As(err, &exitErr), "got %v", err)
 	assert.Equal(t, 3, exitErr.ExitCode())
+}
+
+// The root helper is a oneshot systemd service that is killed after
+// TimeoutStartSec. A root check waiting on one hung command must still answer
+// in time, with room left for the rest of the check.
+func TestCommandTimeout_FitsRootHelperTimeout(t *testing.T) {
+	unit, err := os.ReadFile("../apt/paretosecurity.service")
+	assert.NoError(t, err)
+	match := regexp.MustCompile(`(?m)^TimeoutStartSec=(\d+)$`).FindSubmatch(unit)
+	if assert.NotNil(t, match, "TimeoutStartSec not found in paretosecurity.service") {
+		seconds, _ := strconv.Atoi(string(match[1]))
+		helperTimeout := time.Duration(seconds) * time.Second
+		assert.Less(t, CommandTimeout+commandWaitDelay, helperTimeout-10*time.Second)
+	}
 }

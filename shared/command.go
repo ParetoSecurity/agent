@@ -13,13 +13,16 @@ import (
 
 // CommandTimeout bounds every external command a check runs, so one command
 // that never returns (a daemon that does not answer, a prompt that waits for
-// input) cannot hang the whole check run. Can be overridden for testing.
-var CommandTimeout = 30 * time.Second
+// input) cannot hang the whole check run. It must stay well under the root
+// helper's TimeoutStartSec (apt/paretosecurity.service): systemd kills the
+// helper at that point, and a root check that waits on a hung command would
+// lose its result. Can be overridden for testing.
+var CommandTimeout = 15 * time.Second
 
 // commandWaitDelay is how long to wait for the output pipes to close after a
 // timed out command is killed. Children it started (as with `sh -c`) may hold
 // them open after it has gone.
-var commandWaitDelay = 5 * time.Second
+var commandWaitDelay = 2 * time.Second
 
 // Command returns an exec.Cmd that is killed once CommandTimeout has passed.
 // Call done with the error the command returned once it has finished: it
