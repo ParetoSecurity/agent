@@ -203,15 +203,16 @@ jobs:
             if [ "$arch" = "aarch64" ]; then mv $file ${file/arm64/aarch64} ; fi ; \
             echo "Processing arch $arch..." && \
             mkdir -p apt/aur/stable/$arch && \
-            cp dist/*_$arch.archlinux.pkg.tar.zst apt/aur/stable/$arch && \
+            package="apt/aur/stable/$arch/paretosecurity_${GITHUB_REF_NAME#v}_$arch.archlinux.pkg.tar.zst" && \
+            cp dist/*_$arch.archlinux.pkg.tar.zst "$package" && \
             repo-add \
               --verify \
               --sign \
               --new \
               --remove \
               --prevent-downgrade \
-              apt/aur/stable/$arch/paretosecurity.db.tar.gz apt/aur/stable/$arch/*_$arch.archlinux.pkg.tar.zst && \
-            gpg --detach-sign --no-armor --batch --yes apt/aur/stable/$arch/*_$arch.archlinux.pkg.tar.zst ; \
+              apt/aur/stable/$arch/paretosecurity.db.tar.gz "$package" && \
+            gpg --detach-sign --no-armor --batch --yes "$package" ; \
           done
           
       - uses: ryand56/r2-upload-action@33ebb7a494b3a8a3c5ed2ea6bbdc72e707090317 # latest
