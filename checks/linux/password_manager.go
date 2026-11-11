@@ -9,16 +9,6 @@ import (
 	"github.com/caarlos0/log"
 )
 
-// snapdSocketPath is where snapd listens; `snap list` fails without it.
-const snapdSocketPath = "/run/snapd.socket"
-
-// snapdSocketPresent reports whether snapd can be reached, so `snap list` is
-// only run when it can answer. It is a variable so tests can replace it.
-var snapdSocketPresent = func() bool {
-	_, err := os.Stat(snapdSocketPath)
-	return err == nil
-}
-
 type PasswordManagerCheck struct {
 	passed bool
 }
@@ -101,11 +91,10 @@ func isPackageInstalled(pkgName string) bool {
 		log.Debug("apt package manager found")
 	}
 	if _, err := shared.RunCommand("which", "snap"); err == nil {
-		if snapdSocketPresent() {
+		status, err := shared.RunCommand("systemctl", "is-active", "snapd")
+		if err == nil && strings.TrimSpace(status) == "active" {
 			pkgManagers["snap"] = "snap list"
 			log.Debug("snap package manager found")
-		} else {
-			log.Debug("snap found, but snapd is not running, skipping snap packages")
 		}
 	}
 	if _, err := shared.RunCommand("which", "yum"); err == nil {

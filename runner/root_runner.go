@@ -59,7 +59,8 @@ func HandleConnection(conn net.Conn) {
 				if aware, ok := chk.(callerAware); ok {
 					aware.SetCallerUID(callerUID)
 				}
-				if chk.Run() != nil {
+				if err := chk.Run(); err != nil {
+					status.Details = err.Error()
 					log.Warnf("Failed to run check %s\n", chk.UUID())
 					continue
 				}
