@@ -117,20 +117,21 @@ func TestPasswordManagerCheck_Run_Linux(t *testing.T) {
 		{
 			name: "Bitwarden present via snap",
 			mockCommands: map[string]string{
-				"which bitwarden":     "not found",
-				"which 1password":     "not found",
-				"which dashlane":      "not found",
-				"which keepassx":      "not found",
-				"which keepassxc":     "not found",
-				"which gnome-keyring": "not found",
-				"which rbw":           "not found",
-				"which dpkg":          "not found",
-				"which snap":          "/usr/bin/snap",
-				"sh -c snap list":     "bitwarden  1.0  stable  password manager",
-				"which yum":           "not found",
-				"which flatpak":       "not found",
-				"which pacman":        "not found",
-				"which nix-store":     "not found",
+				"which bitwarden":           "not found",
+				"which 1password":           "not found",
+				"which dashlane":            "not found",
+				"which keepassx":            "not found",
+				"which keepassxc":           "not found",
+				"which gnome-keyring":       "not found",
+				"which rbw":                 "not found",
+				"which dpkg":                "not found",
+				"which snap":                "/usr/bin/snap",
+				"systemctl is-active snapd": "active",
+				"sh -c snap list":           "bitwarden  1.0  stable  password manager",
+				"which yum":                 "not found",
+				"which flatpak":             "not found",
+				"which pacman":              "not found",
+				"which nix-store":           "not found",
 			},
 			expectedPassed: true,
 			expectedStatus: "Password manager is present",
@@ -401,5 +402,21 @@ func TestPasswordManagerCheck_PassedMessage(t *testing.T) {
 	expectedPassedMessage := "Password manager is present"
 	if pmc.PassedMessage() != expectedPassedMessage {
 		t.Errorf("Expected PassedMessage %s, got %s", expectedPassedMessage, pmc.PassedMessage())
+	}
+}
+
+func TestPackageInstalledWithInactiveSnapd(t *testing.T) {
+	previous := shared.RunCommandMocks
+	t.Cleanup(func() { shared.RunCommandMocks = previous; shared.SetCache("pkg_snap", "", 0) })
+	for _, status := range []string{"inactive", "failed", ""} {
+		t.Run(status, func(t *testing.T) {
+			shared.SetCache("pkg_snap", "", 0)
+			shared.RunCommandMocks = convertCommandMapToMocks(map[string]string{
+				"which snap":                "/usr/bin/snap",
+				"systemctl is-active snapd": status,
+				"sh -c snap list":           "bitwarden 1.0 stable",
+			})
+			assert.False(t, isPackageInstalled("bitwarden"))
+		})
 	}
 }
