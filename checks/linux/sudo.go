@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ParetoSecurity/agent/shared"
 	"github.com/caarlos0/log"
 )
 
@@ -252,9 +253,10 @@ func (s *SudoRequiresPassword) runCommand(name string, args ...string) (string, 
 	if s.RunCommand != nil {
 		return s.RunCommand(name, args...)
 	}
-	cmd := exec.Command(name, args...)
+	cmd, done := shared.Command(name, args...)
 	cmd.Env = []string{"LC_ALL=C", "PATH=/run/wrappers/bin:/usr/bin:/bin:/usr/sbin:/sbin"}
 	output, err := cmd.CombinedOutput()
+	err = done(err)
 	log.WithField("cmd", name+" "+strings.Join(args, " ")).WithError(err).Debug(string(output))
 	return string(output), err
 }

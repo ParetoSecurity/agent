@@ -325,6 +325,59 @@ jobs:
           sudo incus exec pareto -- /opt/paretosecurity status
 
 
+  regressions-on-debian:
+    name: "Regression tests on debian/13"
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Download build
+        uses: actions/download-artifact@v8
+        with:
+          name: build
+      - name: Install Incus
+        run: |
+          sudo wget -O /etc/apt/keyrings/zabbly.asc https://pkgs.zabbly.com/key.asc
+          sudo sh -c 'cat <<EOF > /etc/apt/sources.list.d/zabbly-incus-stable.sources
+          Enabled: yes
+          Types: deb
+          URIs: https://pkgs.zabbly.com/incus/stable
+          Suites: $(. /etc/os-release && echo ${VERSION_CODENAME})
+          Components: main
+          Architectures: $(dpkg --print-architecture)
+          Signed-By: /etc/apt/keyrings/zabbly.asc
+
+          EOF'
+          sudo apt update
+          sudo systemctl stop docker
+          sudo apt purge docker -y
+          sudo nft flush ruleset
+          sudo apt install -y incus
+          sudo chmod 666 /var/lib/incus/unix.socket
+
+      - name: Prepare container
+        run: |
+          sudo incus admin init --auto
+          chmod +x agent_linux_amd64_v1/paretosecurity
+          sudo incus launch images:debian/13 pareto
+          sudo incus file push agent_linux_amd64_v1/paretosecurity pareto/opt/paretosecurity
+          sudo incus file push apt/install.sh pareto/opt/install.sh
+          sudo incus file push test/debian/regressions.sh pareto/opt/regressions.sh
+          sleep 10
+
+      - name: Install ParetoSecurity and swap in this build
+        run: |
+          sudo incus exec pareto -- env PARETO_APT_OPTS="--no-install-recommends" bash /opt/install.sh
+          # The root helper runs /usr/bin/paretosecurity, so it must be this build too.
+          sudo incus exec pareto -- install -m 0755 /opt/paretosecurity /usr/bin/paretosecurity
+          sudo incus exec pareto -- systemctl daemon-reload
+          sudo incus exec pareto -- systemctl enable --now paretosecurity.socket
+
+      - name: Run regression tests
+        run: |
+          sudo incus exec pareto -- bash /opt/regressions.sh
+
   build:
     name: Unstable build
     runs-on: ubuntu-latest

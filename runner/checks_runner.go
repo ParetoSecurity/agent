@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"sync"
 
 	"github.com/fatih/color"
@@ -42,6 +43,30 @@ func wrapStatus(chk check.Check, err error) string {
 		return fmt.Sprintf("%s %s", color.GreenString("[OK]"), chk.Status())
 	}
 	return fmt.Sprintf("%s %s", color.RedString("[FAIL]"), chk.Status())
+}
+
+// inFlight holds the checks that have started but not finished yet, keyed by
+// UUID, so a timed out run can say which checks it was still waiting for.
+var inFlight sync.Map
+
+func markStarted(claim claims.Claim, chk check.Check) {
+	inFlight.Store(chk.UUID(), fmt.Sprintf("%s: %s", claim.Title, chk.Name()))
+}
+
+func markFinished(chk check.Check) {
+	inFlight.Delete(chk.UUID())
+}
+
+// InFlightChecks returns the names of the checks that are still running,
+// sorted, as "Claim: Check".
+func InFlightChecks() []string {
+	names := []string{}
+	inFlight.Range(func(_, value any) bool {
+		names = append(names, value.(string))
+		return true
+	})
+	sort.Strings(names)
+	return names
 }
 
 // Check runs a series of checks concurrently for a list of claims.
@@ -85,6 +110,8 @@ func Check(ctx context.Context, claimsTorun []claims.Claim, skipUUIDs []string, 
 						return
 					}
 					hasError := false
+					markStarted(claim, chk)
+					defer markFinished(chk)
 					if chk.RequiresRoot() {
 						log.Debug("Running check via root helper")
 						// Run as root

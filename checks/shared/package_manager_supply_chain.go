@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+
+	sharedG "github.com/ParetoSecurity/agent/shared"
 )
 
 const minReleaseAgeSeconds = 7 * 24 * 60 * 60
@@ -424,7 +426,9 @@ func (p *PackageManagerSupplyChain) runCommand(name string, args ...string) ([]b
 	if p.RunCommand != nil {
 		return p.RunCommand(name, args...)
 	}
-	return exec.Command(name, args...).Output()
+	cmd, done := sharedG.Command(name, args...)
+	output, err := cmd.Output()
+	return output, done(err)
 }
 
 func (p *PackageManagerSupplyChain) homeDir() string {

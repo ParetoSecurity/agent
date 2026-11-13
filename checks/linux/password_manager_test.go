@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"errors"
 	"os"
 	"testing"
 
@@ -419,4 +420,22 @@ func TestPackageInstalledWithInactiveSnapd(t *testing.T) {
 			assert.False(t, isPackageInstalled("bitwarden"))
 		})
 	}
+}
+
+func TestIsPackageInstalled_CachesFailedPackageManager(t *testing.T) {
+	shared.SetCache("pkg_snap", "", 0)
+	previous := shared.RunCommandMocks
+	t.Cleanup(func() { shared.RunCommandMocks = previous; shared.SetCache("pkg_snap", "", 0) })
+
+	shared.RunCommandMocks = []shared.RunCommandMock{
+		{Command: "which", Args: []string{"bitwarden"}, Err: errors.New("exit status 1")},
+		{Command: "which", Args: []string{"snap"}, Out: "/usr/bin/snap"},
+		{Command: "systemctl", Args: []string{"is-active", "snapd"}, Out: "active"},
+		{Command: "sh", Args: []string{"-c", "snap list"}, Err: errors.New("exit status 1")},
+	}
+
+	assert.False(t, isPackageInstalled("bitwarden"))
+	cached, ok := shared.GetCache("pkg_snap")
+	assert.True(t, ok, "a failed package manager listing should be cached")
+	assert.Empty(t, cached)
 }

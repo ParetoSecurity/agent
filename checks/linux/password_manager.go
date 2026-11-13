@@ -122,6 +122,9 @@ func isPackageInstalled(pkgName string) bool {
 			var err error
 			cached, err = shared.RunCommand("sh", "-c", baseCmd)
 			if err != nil {
+				// Remember the failure too, so a broken package manager
+				// is not asked again for every password manager name.
+				shared.SetCache(cacheKey, "", 10)
 				continue
 			}
 			shared.SetCache(cacheKey, cached, 10) // Cache for 10 seconds

@@ -5,7 +5,6 @@ package shared
 import (
 	"errors"
 
-	"os/exec"
 	"strings"
 	"testing"
 
@@ -40,9 +39,10 @@ func RunCommand(name string, arg ...string) (string, error) {
 		return "", errors.New("RunCommand fixture not found: " + name + " " + strings.TrimSpace(strings.Join(arg, " ")))
 	}
 
-	cmd := exec.Command(name, arg...)
+	cmd, done := Command(name, arg...)
 
 	output, err := cmd.CombinedOutput()
+	err = done(err)
 	log.WithField("cmd", string(name+" "+strings.TrimSpace(strings.Join(arg, " ")))).WithError(err).Debug(string(output))
 	return string(output), err
 }

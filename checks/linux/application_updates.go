@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/ParetoSecurity/agent/shared"
@@ -43,23 +44,16 @@ func (f *ApplicationUpdates) parseFlatpak(updateLines string) (apps map[string]s
 
 func (f *ApplicationUpdates) checkUpdates() (bool, string) {
 	updates := []string{}
+	// failed lists the package managers that could not be asked for updates.
+	// They keep the check from passing, but the other managers are still checked.
+	failed := []string{}
 
 	// Check flatpak
 	if _, err := lookPath("flatpak"); err == nil {
-		updatesOutput, err := shared.RunCommand("flatpak", "remote-ls", "--app", "--updates", "--columns=application,version")
-		if err != nil {
+		if hasUpdates, err := f.flatpakHasUpdates(); err != nil {
 			log.WithError(err).Error("Failed to check flatpak updates")
-			return true, "Flatpak updates check failed"
-		}
-		installedOutput, err := shared.RunCommand("flatpak", "list", "--app", "--columns=application,version")
-		if err != nil {
-			log.WithError(err).Error("Failed to list installed flatpak apps")
-			return true, "Flatpak installed apps check failed"
-		}
-		installedApps := f.parseFlatpak(string(installedOutput))
-		updatableApps := f.parseFlatpak(string(updatesOutput))
-		log.WithField("updates", updatableApps).WithField("installed", installedApps).Debug("Flatpak updates")
-		if len(updatableApps) > 0 {
+			failed = append(failed, "Flatpak")
+		} else if hasUpdates {
 			updates = append(updates, "Flatpak")
 		}
 	}
@@ -108,11 +102,33 @@ func (f *ApplicationUpdates) checkUpdates() (bool, string) {
 		}
 	}
 
-	if len(updates) == 0 {
+	details := []string{}
+	if len(updates) > 0 {
+		details = append(details, "Updates available for: "+strings.Join(lo.Uniq(updates), ", "))
+	}
+	if len(failed) > 0 {
+		details = append(details, "Could not check for updates: "+strings.Join(failed, ", "))
+	}
+	if len(details) == 0 {
 		return true, "All packages are up to date"
 	}
-	updates = lo.Uniq(updates)
-	return false, "Updates available for: " + strings.Join(updates, ", ")
+	return false, strings.Join(details, "; ")
+}
+
+// flatpakHasUpdates reports whether any installed flatpak app has an update.
+func (f *ApplicationUpdates) flatpakHasUpdates() (bool, error) {
+	updatesOutput, err := shared.RunCommand("flatpak", "remote-ls", "--app", "--updates", "--columns=application,version")
+	if err != nil {
+		return false, fmt.Errorf("flatpak remote-ls: %w", err)
+	}
+	installedOutput, err := shared.RunCommand("flatpak", "list", "--app", "--columns=application,version")
+	if err != nil {
+		return false, fmt.Errorf("flatpak list: %w", err)
+	}
+	installedApps := f.parseFlatpak(installedOutput)
+	updatableApps := f.parseFlatpak(updatesOutput)
+	log.WithField("updates", updatableApps).WithField("installed", installedApps).Debug("Flatpak updates")
+	return len(updatableApps) > 0, nil
 }
 
 // Run executes the check
