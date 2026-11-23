@@ -105,7 +105,7 @@ jobs:
     name: Test on ${{ matrix.distro }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
 
       - name: Run ${{ matrix.distro }} container with systemd
         run: |

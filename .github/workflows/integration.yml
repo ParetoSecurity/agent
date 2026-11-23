@@ -32,12 +32,12 @@ jobs:
             autologin,
           ]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@v7.0.0
       - name: Enable KVM for NixOS test VMs
         run: |
           test -c /dev/kvm
           sudo chmod a+rw /dev/kvm
-      - uses: ./.github/actions/devenv
+      - uses: $/.github/actions/devenv
       - run: chmod o+rx /home/runner
         name: Update /home/runner permissions so that Nix is happy
 

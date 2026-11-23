@@ -31,7 +31,7 @@ jobs:
     if: ${{ github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'}}
     steps:
     - id: metadata
-      uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+      uses: dependabot/fetch-metadata@v3.1.0
       with:
         github-token: "${{ secrets.GITHUB_TOKEN }}"
     - run: |
@@ -44,15 +44,15 @@ jobs:
     name: Tests
     runs-on: ubuntu-26.04
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-    - uses: ./.github/actions/devenv
+    - uses: actions/checkout@v7.0.0
+    - uses: $/.github/actions/devenv
     - run: devenv test -d
     - name: Archive code coverage results
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@v7.0.2
       with:
         name: code-coverage
         path: coverage.txt # Make sure to use the same file name you chose for the "-coverprofile" in the "Test" step
-    - uses: actions/setup-go@v7
+    - uses: actions/setup-go@v7.1.0
       with:
         go-version: 1.24
       if: github.ref == 'refs/heads/main'
