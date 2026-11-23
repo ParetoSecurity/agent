@@ -67,6 +67,12 @@ Checks are organized by platform in `/checks/{darwin,linux,windows,shared}/` and
 - CGO disabled for all builds
 - Version info injected via ldflags
 
+## GitHub Actions
+- `uses:` lines carry version tags; `.github/workflows/actions.lock` holds the commit each one runs
+- Never edit `actions.lock` by hand: after changing any `uses:` line, run `gh actions-lock` to regenerate it
+- The `verify-lockfile` workflow fails a pull request whose lockfile is out of date
+- Dependabot moves action versions and updates `actions.lock` in the same pull request
+
 ## Adding New Checks
 1. Create struct implementing Check interface
 2. Place in appropriate platform directory

@@ -8,11 +8,11 @@ inputs:
 runs:
   using: "composite"
   steps:
-  - uses: cachix/install-nix-action@v31
+  - uses: cachix/install-nix-action@v31.11.5
     with:
       extra_nix_config: |
         system-features = kvm nixos-test
-  - uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7
+  - uses: nix-community/cache-nix-action@v7.0.2
     with:
       # Matrix jobs share one snapshot instead of caching eleven copies of Nix.
       primary-key: nix-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('**/*.nix', 'flake.lock', 'devenv.lock', '.github/actions/devenv/action.yml') }}
