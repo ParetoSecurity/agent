@@ -32,7 +32,7 @@ jobs:
             autologin,
           ]
     steps:
-      - uses: actions/checkout@v7.0.0
+      - uses: actions/checkout@v7.0.1
       - name: Enable KVM for NixOS test VMs
         run: |
           test -c /dev/kvm
