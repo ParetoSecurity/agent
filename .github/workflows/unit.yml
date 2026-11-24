@@ -44,7 +44,7 @@ jobs:
     name: Tests
     runs-on: ubuntu-26.04
     steps:
-    - uses: actions/checkout@v7.0.0
+    - uses: actions/checkout@v7.0.1
     - uses: $/.github/actions/devenv
     - run: devenv test -d
     - name: Archive code coverage results
